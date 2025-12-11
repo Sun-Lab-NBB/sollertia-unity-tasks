@@ -53,7 +53,7 @@ namespace Gimbl
                 {
                     if (i < _monitors.Count)
                     {
-                        refreshedMonitors[i].cameraInstanceId = _monitors[i].cameraInstanceId;
+                        refreshedMonitors[i].cameraEntityId = _monitors[i].cameraEntityId;
                     }
                 }
                 _monitors = refreshedMonitors;
@@ -66,17 +66,17 @@ namespace Gimbl
             {
                 Monitor monitor = _monitors[i];
                 EditorGUILayout.LabelField("Monitor " + (i + 1).ToString() + " at (" + monitor.left + ", " + monitor.top + ")");
-                Camera oldCamera = (Camera)EditorUtility.InstanceIDToObject(monitor.cameraInstanceId);
+                Camera oldCamera = (Camera)EditorUtility.EntityIdToObject(monitor.cameraEntityId);
                 Camera newCamera = (Camera)EditorGUILayout.ObjectField("Camera", oldCamera, typeof(Camera), true);
                 if (newCamera != null)
                 {
                     // Make sure the camera is viewed only once.
 
-                    int instanceId = newCamera.GetInstanceID();
+                    EntityId entityId = newCamera.GetEntityId();
                     bool alreadyUsed = false;
                     foreach (Monitor other in _monitors)
                     {
-                        if (other.cameraInstanceId == instanceId)
+                        if (other.cameraEntityId == entityId)
                         {
                             alreadyUsed = true;
                             break;
@@ -84,12 +84,12 @@ namespace Gimbl
                     }
                     if (!alreadyUsed)
                     {
-                        monitor.cameraInstanceId = instanceId;
+                        monitor.cameraEntityId = entityId;
                     }
                 }
                 else
                 {
-                    monitor.cameraInstanceId = 0;
+                    monitor.cameraEntityId = EntityId.None;
                 }
                 if (newCamera != oldCamera) { SaveCameras(); }
             }
@@ -118,7 +118,7 @@ namespace Gimbl
 
             foreach (Monitor monitor in _monitors)
                 {
-                    Camera camera = (Camera)EditorUtility.InstanceIDToObject(monitor.cameraInstanceId);
+                    Camera camera = (Camera)EditorUtility.EntityIdToObject(monitor.cameraEntityId);
                     if (camera != null)
                     {
                         FullScreenView window = EditorWindow.CreateInstance<FullScreenView>();
@@ -135,7 +135,7 @@ namespace Gimbl
                         int height = (int)(monitor.height / monitor.pixelsPerPoint);
 
                         window.position = new Rect(x, y, width, height);
-                        window.cameraInstanceId = camera.GetInstanceID();
+                        window.cameraEntityId = camera.GetEntityId();
 
                         // Using ShowPopup() eliminates all borders and window decorations.
 
@@ -150,7 +150,7 @@ namespace Gimbl
             EditorPrefs.SetInt(NumMonitorsPersistenceKey(), _monitors.Count);
             for (int i = 0; i < _monitors.Count; i++)
             {
-                Camera camera = (Camera)EditorUtility.InstanceIDToObject(_monitors[i].cameraInstanceId);
+                Camera camera = (Camera)EditorUtility.EntityIdToObject(_monitors[i].cameraEntityId);
                 string path = (camera != null) ? PathName(camera.gameObject) : "";
                 EditorPrefs.SetString(CameraNamePersistenceKey(i), path);
             }
@@ -170,7 +170,7 @@ namespace Gimbl
                         Camera camera = obj.GetComponent<Camera>();
                         if (camera != null)
                         {
-                            _monitors[i].cameraInstanceId = camera.GetInstanceID();
+                            _monitors[i].cameraEntityId = camera.GetEntityId();
                         }
                     }
                 }
@@ -200,7 +200,7 @@ namespace Gimbl
             _savedFullScreenViews.cameraNames.Clear();
             for (int i = 0; i < _monitors.Count; i++)
             {
-                Camera camera = (Camera)EditorUtility.InstanceIDToObject(_monitors[i].cameraInstanceId);
+                Camera camera = (Camera)EditorUtility.EntityIdToObject(_monitors[i].cameraEntityId);
                 string path = (camera != null) ? PathName(camera.gameObject) : "";
                 _savedFullScreenViews.cameraNames.Add(path);
             }
@@ -227,7 +227,7 @@ namespace Gimbl
                             Camera camera = obj.GetComponent<Camera>();
                             if (camera != null)
                             {
-                                _monitors[i].cameraInstanceId = camera.GetInstanceID();
+                                _monitors[i].cameraEntityId = camera.GetEntityId();
                             }
                         }
                     }
@@ -288,7 +288,7 @@ namespace Gimbl
     {
         public static List<FullScreenView> views;
 
-        public int cameraInstanceId;
+        public EntityId cameraEntityId;
         private Camera _camera;
         private bool _rendering = false;
 
@@ -324,7 +324,7 @@ namespace Gimbl
 
                 if (_camera == null)
                 {
-                    _camera = (Camera)EditorUtility.InstanceIDToObject(cameraInstanceId);
+                    _camera = (Camera)EditorUtility.EntityIdToObject(cameraEntityId);
                     if (_camera)
                     {
                         _camera.enabled = false;
@@ -395,7 +395,7 @@ namespace Gimbl
         public int width;
         public int height;
         public float pixelsPerPoint;
-        public int cameraInstanceId;
+        public EntityId cameraEntityId;
 
         static public List<Monitor> EnumeratedMonitors()
         {
@@ -474,7 +474,7 @@ namespace Gimbl
             width = w;
             height = h;
             pixelsPerPoint = 1.0f;
-            cameraInstanceId = 0;
+            cameraEntityId = EntityId.None;
         }
 
         private delegate bool MonitorEnumProc(IntPtr hMonitor, IntPtr hdc, ref RectApi pRect, IntPtr dwData);

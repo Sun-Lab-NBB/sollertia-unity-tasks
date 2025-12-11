@@ -1,6 +1,8 @@
 {
     "name": "JaneliaVR",
-    "references": [],
+    "references": [
+        "Unity.InputSystem"
+    ],
     "optionalUnityReferences": [],
     "includePlatforms": [],
     "excludePlatforms": [],

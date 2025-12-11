@@ -18,7 +18,7 @@ public class ActorWindow : EditorWindow
         public string typeName;
         public bool[] show = { false, false, false, false, false };
         public string name = "";
-        public int selectedInstanceId;
+        public EntityId selectedEntityId;
         public Rect editRect = new Rect(); // stores location editing window.
         private T _selectedObj;
         public T selectedObj
@@ -29,8 +29,8 @@ public class ActorWindow : EditorWindow
                 if (!UnityEngine.Object.ReferenceEquals(value,_selectedObj))
                 {
                     _selectedObj = value;
-                    if (value!=null) { selectedInstanceId = value.GetInstanceID(); }
-                    else { selectedInstanceId = 0; }
+                    if (value!=null) { selectedEntityId = value.GetEntityId(); }
+                    else { selectedEntityId = EntityId.None; }
                 }
             }
         }
@@ -169,11 +169,11 @@ public class ActorWindow : EditorWindow
         if (settings.selectedObj == null)
         {
             T obj = null;
-            // Check if instance ID is valid
-            if (settings.selectedInstanceId != 0)
+            // Check if entity ID is valid
+            if (settings.selectedEntityId != EntityId.None)
             {
-                try { obj = (T)EditorUtility.InstanceIDToObject(settings.selectedInstanceId); }
-                catch (System.InvalidCastException) { obj = null; } // catches changed instanceID on restart.
+                try { obj = (T)EditorUtility.EntityIdToObject(settings.selectedEntityId); }
+                catch (System.InvalidCastException) { obj = null; } // catches changed entityID on restart.
             }
             // Otherwise find first on list.
             if (obj==null){ obj = FindAnyObjectByType<T>();}

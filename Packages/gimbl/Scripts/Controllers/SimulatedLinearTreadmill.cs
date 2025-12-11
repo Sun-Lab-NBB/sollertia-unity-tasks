@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
 using SharpDX.DirectInput;
+using UnityEngine.InputSystem;
 
 namespace Gimbl
 {
@@ -13,13 +14,31 @@ namespace Gimbl
         private float moveControl;
         private float passedTime;
         private bool[] buttonPresses = new bool[4];
+
+        // Input System
+        private SimulatedInput _input;
+
         public void Start()
         {
+            // Initialize Input System for keyboard/mouse simulation.
+            _input = new SimulatedInput();
+            _input.Enable();
+
             // Acquire gamepad if selected.
             if (settings.gamepadSettings.selectedGamepad > 0) gamepad.Acquire(settings.gamepadSettings.selectedGamepad - 1);
             // Setup MQTT Channels for button presses.
             gamepad.SetupChannels(settings.buttonTopics);
         }
+
+        private void OnDestroy()
+        {
+            if (_input != null)
+            {
+                _input.Disable();
+                _input.Dispose();
+            }
+        }
+
         public new void Update()
         {
             GetSimulatedInput();
@@ -31,12 +50,12 @@ namespace Gimbl
             // Keyboard mouse.
             if (settings.gamepadSettings.selectedGamepad == 0)
             {
-                moveControl = Input.GetAxis("Vertical") * passedTime * 0.008f;
+                moveControl = _input.Player.Movement.ReadValue<Vector2>().y * passedTime * 0.008f;
                 // Check button presses.
-                buttonPresses[0] = Input.GetButtonDown("Fire1");
-                buttonPresses[1] = Input.GetButtonDown("Fire2");
-                buttonPresses[2] = Input.GetButtonDown("Fire3");
-                buttonPresses[3] = Input.GetButtonDown("Jump");
+                buttonPresses[0] = _input.Player.Fire1.WasPressedThisFrame();
+                buttonPresses[1] = _input.Player.Fire2.WasPressedThisFrame();
+                buttonPresses[2] = _input.Player.Fire3.WasPressedThisFrame();
+                buttonPresses[3] = _input.Player.Jump.WasPressedThisFrame();
                 if (this.Actor !=null) { gamepad.SendChannels(buttonPresses);  }
             }
             //Gamepad.
