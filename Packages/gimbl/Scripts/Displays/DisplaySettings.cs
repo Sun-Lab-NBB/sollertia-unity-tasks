@@ -12,4 +12,3 @@ namespace Gimbl
         public float heightInVR = 0.2f;
     }
 }
-

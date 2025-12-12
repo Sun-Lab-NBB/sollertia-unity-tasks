@@ -12,7 +12,5 @@ namespace Gimbl
         public bool loopPath = false;
         public string[] buttonTopics;
         public GamepadSettings gamepadSettings;
-
     }
 }
-

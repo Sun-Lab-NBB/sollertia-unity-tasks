@@ -1,8 +1,8 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
 using System.Linq;
 using SharpDX.DirectInput;
+using UnityEngine;
 using UnityEngine.InputSystem;
 
 namespace Gimbl
@@ -25,7 +25,8 @@ namespace Gimbl
             _input.Enable();
 
             // Acquire gamepad if selected.
-            if (settings.gamepadSettings.selectedGamepad > 0) gamepad.Acquire(settings.gamepadSettings.selectedGamepad - 1);
+            if (settings.gamepadSettings.selectedGamepad > 0)
+                gamepad.Acquire(settings.gamepadSettings.selectedGamepad - 1);
             // Setup MQTT Channels for button presses.
             gamepad.SetupChannels(settings.buttonTopics);
         }
@@ -44,6 +45,7 @@ namespace Gimbl
             GetSimulatedInput();
             ProcessMovement();
         }
+
         public void GetSimulatedInput()
         {
             passedTime = (float)stopwatch.Elapsed.TotalMilliseconds;
@@ -56,21 +58,27 @@ namespace Gimbl
                 buttonPresses[1] = _input.Player.Fire2.WasPressedThisFrame();
                 buttonPresses[2] = _input.Player.Fire3.WasPressedThisFrame();
                 buttonPresses[3] = _input.Player.Jump.WasPressedThisFrame();
-                if (this.Actor !=null) { gamepad.SendChannels(buttonPresses);  }
+                if (this.Actor != null)
+                {
+                    gamepad.SendChannels(buttonPresses);
+                }
             }
             //Gamepad.
             else
             {
                 gamepad.joystick.GetCurrentState(ref state);
                 moveControl = -gamepad.normRange(state.Y) * passedTime * 0.15f;
-                if (Mathf.Abs(moveControl) < 0.075) moveControl = 0;
+                if (Mathf.Abs(moveControl) < 0.075)
+                    moveControl = 0;
                 moveControl *= 0.05f;
                 // Check button that have changed to On.
-                if (this.Actor != null) { gamepad.SendChannels(gamepad.checkButtonChange(state)); }
+                if (this.Actor != null)
+                {
+                    gamepad.SendChannels(gamepad.checkButtonChange(state));
+                }
             }
             stopwatch.Restart();
             movement.Add(moveControl, 0, 0);
         }
-
     }
 }

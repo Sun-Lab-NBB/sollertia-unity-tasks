@@ -1,9 +1,9 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
-using UnityEditor;
-using UnityEngine.SceneManagement;
 using Gimbl;
+using UnityEditor;
+using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class MainWindow : EditorWindow
 {
@@ -24,7 +24,9 @@ public class MainWindow : EditorWindow
         public bool externalStart = false;
         public bool externalLog = false;
     }
-    [SerializeField] private SessionMenuSettings sessionSettings = new SessionMenuSettings();
+
+    [SerializeField]
+    private SessionMenuSettings sessionSettings = new SessionMenuSettings();
 
     [MenuItem("Window/Gimbl")]
     public static void ShowWindow()
@@ -38,17 +40,24 @@ public class MainWindow : EditorWindow
             DisplaysWindow.ShowWindow();
         }
     }
+
     private void OnEnable()
     {
         InitializeScene();
     }
+
     private void OnGUI()
     {
-        scrollPosition = EditorGUILayout.BeginScrollView(scrollPosition, GUILayout.Height(position.height), GUILayout.Width(position.width));
+        scrollPosition = EditorGUILayout.BeginScrollView(
+            scrollPosition,
+            GUILayout.Height(position.height),
+            GUILayout.Width(position.width)
+        );
 
         #region MQTT
         // MQTT Settings.
-        if (EditorApplication.isPlaying) GUI.enabled = false; // disable on play.
+        if (EditorApplication.isPlaying)
+            GUI.enabled = false; // disable on play.
         EditorGUILayout.BeginVertical(LayoutSettings.mainBox.style);
         EditorGUILayout.LabelField("MQTT", LayoutSettings.sectionLabel);
         _client.ip = EditorGUILayout.TextField("ip: ", _client.ip, GUILayout.Width(300));
@@ -68,10 +77,26 @@ public class MainWindow : EditorWindow
         if (sessionSettings.isFold)
         {
             EditorGUILayout.BeginVertical(LayoutSettings.subBox.style);
-            bool newExternalStart = EditorGUILayout.Toggle("External Start Trigger", sessionSettings.externalStart, LayoutSettings.editFieldOp);
-            if (newExternalStart != sessionSettings.externalStart) { sessionSettings.externalStart= newExternalStart; EditorPrefs.SetBool("Gimbl_externalStart", newExternalStart); }
-            bool newExternalLog = EditorGUILayout.Toggle("External Log Naming", sessionSettings.externalLog, LayoutSettings.editFieldOp);
-            if (newExternalLog != sessionSettings.externalLog) { sessionSettings.externalLog = newExternalLog; EditorPrefs.SetBool("Gimbl_externalLog", newExternalLog); }
+            bool newExternalStart = EditorGUILayout.Toggle(
+                "External Start Trigger",
+                sessionSettings.externalStart,
+                LayoutSettings.editFieldOp
+            );
+            if (newExternalStart != sessionSettings.externalStart)
+            {
+                sessionSettings.externalStart = newExternalStart;
+                EditorPrefs.SetBool("Gimbl_externalStart", newExternalStart);
+            }
+            bool newExternalLog = EditorGUILayout.Toggle(
+                "External Log Naming",
+                sessionSettings.externalLog,
+                LayoutSettings.editFieldOp
+            );
+            if (newExternalLog != sessionSettings.externalLog)
+            {
+                sessionSettings.externalLog = newExternalLog;
+                EditorPrefs.SetBool("Gimbl_externalLog", newExternalLog);
+            }
             EditorGUILayout.EndVertical();
         }
 
@@ -89,14 +114,25 @@ public class MainWindow : EditorWindow
         {
             EditorGUILayout.BeginVertical(LayoutSettings.subBox.style);
             EditorGUILayout.BeginHorizontal(LayoutSettings.editFieldOp);
-                int newDuration = EditorGUILayout.IntField("Dark Duration: ", PlayerPrefs.GetInt("Gimbl_BlinkDuration",2000));
-                EditorGUILayout.LabelField("(ms)", GUILayout.Width(50));
-            if (newDuration != duration) { PlayerPrefs.SetInt("Gimbl_BlinkDuration", newDuration); duration = newDuration; }
+            int newDuration = EditorGUILayout.IntField(
+                "Dark Duration: ",
+                PlayerPrefs.GetInt("Gimbl_BlinkDuration", 2000)
+            );
+            EditorGUILayout.LabelField("(ms)", GUILayout.Width(50));
+            if (newDuration != duration)
+            {
+                PlayerPrefs.SetInt("Gimbl_BlinkDuration", newDuration);
+                duration = newDuration;
+            }
             EditorGUILayout.EndHorizontal();
             EditorGUILayout.BeginHorizontal(LayoutSettings.editFieldOp);
-                int newFadeTime = EditorGUILayout.IntField("Fade Time: ", PlayerPrefs.GetInt("Gimbl_BlinkFadeTime",3000));
-            EditorGUILayout.LabelField("(ms)", GUILayout.Width(50)) ;
-                if (newFadeTime != fadeTime) { PlayerPrefs.SetInt("Gimbl_BlinkFadeTime", newFadeTime); fadeTime = newFadeTime; }
+            int newFadeTime = EditorGUILayout.IntField("Fade Time: ", PlayerPrefs.GetInt("Gimbl_BlinkFadeTime", 3000));
+            EditorGUILayout.LabelField("(ms)", GUILayout.Width(50));
+            if (newFadeTime != fadeTime)
+            {
+                PlayerPrefs.SetInt("Gimbl_BlinkFadeTime", newFadeTime);
+                fadeTime = newFadeTime;
+            }
             EditorGUILayout.EndHorizontal();
             EditorGUILayout.EndVertical();
         }
@@ -105,9 +141,15 @@ public class MainWindow : EditorWindow
 
         #region Export/Import.
         EditorGUILayout.BeginVertical(LayoutSettings.mainBox.style);
-        EditorGUILayout.LabelField("Setup",LayoutSettings.sectionLabel);
-        if (GUILayout.Button("Export Setup")) {  ExportSetup(); }
-        if (GUILayout.Button("Import Setup")) { ImportSetup();}
+        EditorGUILayout.LabelField("Setup", LayoutSettings.sectionLabel);
+        if (GUILayout.Button("Export Setup"))
+        {
+            ExportSetup();
+        }
+        if (GUILayout.Button("Import Setup"))
+        {
+            ImportSetup();
+        }
         EditorGUILayout.EndVertical();
         #endregion
 
@@ -118,10 +160,14 @@ public class MainWindow : EditorWindow
     private void InitializeScene()
     {
         // Create settings folders.
-        if (!AssetDatabase.IsValidFolder("Assets/VRSettings")) AssetDatabase.CreateFolder("Assets", "VRSettings");
-        if (!AssetDatabase.IsValidFolder("Assets/VRSettings/Controllers")) AssetDatabase.CreateFolder("Assets/VRSettings", "Controllers");
-        if (!AssetDatabase.IsValidFolder("Assets/VRSettings/Displays")) AssetDatabase.CreateFolder("Assets/VRSettings", "Displays");
-        if (!AssetDatabase.IsValidFolder("Assets/VRSettings/Actors")) AssetDatabase.CreateFolder("Assets/VRSettings", "Actors");
+        if (!AssetDatabase.IsValidFolder("Assets/VRSettings"))
+            AssetDatabase.CreateFolder("Assets", "VRSettings");
+        if (!AssetDatabase.IsValidFolder("Assets/VRSettings/Controllers"))
+            AssetDatabase.CreateFolder("Assets/VRSettings", "Controllers");
+        if (!AssetDatabase.IsValidFolder("Assets/VRSettings/Displays"))
+            AssetDatabase.CreateFolder("Assets/VRSettings", "Displays");
+        if (!AssetDatabase.IsValidFolder("Assets/VRSettings/Actors"))
+            AssetDatabase.CreateFolder("Assets/VRSettings", "Actors");
 
         // Check for main default objects.
         GameObject obj;
@@ -142,9 +188,10 @@ public class MainWindow : EditorWindow
                 // Things have changed. Mark scene for save.
                 UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
             }
-            else obj = GameObject.Find(objName);
+            else
+                obj = GameObject.Find(objName);
             switch (objName)
-            {  
+            {
                 // Assign for controls.
                 case "MQTT Client":
                     _client = obj.GetComponent<Gimbl.MQTTClient>();
@@ -161,13 +208,14 @@ public class MainWindow : EditorWindow
         }
         // Set client IP settings from stored.
         _client.ip = EditorPrefs.GetString("SunLabVRPC_MQTT_IP");
-        if (_client.ip == "") _client.ip = "127.0.0.1";
+        if (_client.ip == "")
+            _client.ip = "127.0.0.1";
         _client.port = EditorPrefs.GetInt("SunLabVRPC_MQTT_Port");
-        if (_client.port == 0) _client.port = 1883;
+        if (_client.port == 0)
+            _client.port = 1883;
         // Set default properties.
         sessionSettings.externalStart = EditorPrefs.GetBool("Gimbl_externalStart", false);
         sessionSettings.externalLog = EditorPrefs.GetBool("Gimbl_externalLog", false);
-
     }
 
     private void ExportSetup()
@@ -178,39 +226,47 @@ public class MainWindow : EditorWindow
         // File dialogue.
         string[] s = Application.dataPath.Split('/');
         string projectName = s[s.Length - 2];
-        string outputFile = EditorUtility.SaveFilePanel("Save Setup as..",
-            "",
-            projectName,
-            "gimblsetup");
-        if (outputFile.Length == 0) return;
+        string outputFile = EditorUtility.SaveFilePanel("Save Setup as..", "", projectName, "gimblsetup");
+        if (outputFile.Length == 0)
+            return;
         // Create temporary asset where everything will be stored.
         PrefabUtility.SaveAsPrefabAsset(GameObject.Find("Actors"), "Assets/tempActors.prefab");
         PrefabUtility.SaveAsPrefabAsset(GameObject.Find("Controllers"), "Assets/tempControllers.prefab");
         // Create Package.
-        string[] assetBundle = new string[] { "Assets/tempActors.prefab", "Assets/tempControllers.prefab","Assets/VRSettings/Displays/savedFullScreenViews.asset" };
+        string[] assetBundle = new string[]
+        {
+            "Assets/tempActors.prefab",
+            "Assets/tempControllers.prefab",
+            "Assets/VRSettings/Displays/savedFullScreenViews.asset",
+        };
         AssetDatabase.ExportPackage(assetBundle, outputFile, ExportPackageOptions.IncludeDependencies);
         // Remove tmeporary assets.
         AssetDatabase.DeleteAsset("Assets/tempActors.prefab");
         AssetDatabase.DeleteAsset("Assets/tempControllers.prefab");
-
     }
 
     private void ImportSetup()
     {
         // Import dialogue (Continue: Yes/No)
-        bool choice =  EditorUtility.DisplayDialog("Erase current setup?",
-        "Importing this setup will remove all current Actors,Controllers and Displays", "Continue", "Cancel");
-        if (!choice) return;
+        bool choice = EditorUtility.DisplayDialog(
+            "Erase current setup?",
+            "Importing this setup will remove all current Actors,Controllers and Displays",
+            "Continue",
+            "Cancel"
+        );
+        if (!choice)
+            return;
         // File Dialogue.
         string inputFile = EditorUtility.OpenFilePanel("Import Setup", Application.dataPath, "gimblsetup");
-        if (inputFile.Length == 0) return;
+        if (inputFile.Length == 0)
+            return;
         // Remove Actors and Controllers (repopulate..)
         DestroyImmediate(GameObject.Find("Actors"));
         DestroyImmediate(GameObject.Find("Controllers"));
         //Import package.
         AssetDatabase.ImportPackage(inputFile, false);
         //Instantiate Actors.
-        Object actObj = AssetDatabase.LoadAssetAtPath("Assets/tempActors.prefab",typeof(Object));
+        Object actObj = AssetDatabase.LoadAssetAtPath("Assets/tempActors.prefab", typeof(Object));
         GameObject actors = Instantiate(actObj) as GameObject;
         actors.name = "Actors";
         //Instantiate Controllers..
@@ -224,7 +280,7 @@ public class MainWindow : EditorWindow
         foreach (ActorObject act in actors.GetComponentsInChildren<ActorObject>())
         {
             //Create layer.
-            if (LayerMask.NameToLayer(act.name)==-1)
+            if (LayerMask.NameToLayer(act.name) == -1)
             {
                 TagLayerEditor.TagsAndLayers.AddLayer(act.name);
             }
@@ -234,7 +290,11 @@ public class MainWindow : EditorWindow
             // Set Culling mask.
             if (act.gameObject.GetComponentInChildren<DisplayObject>() != null)
             {
-                foreach (Camera cam in act.gameObject.GetComponentInChildren<DisplayObject>().GetComponentsInChildren<Camera>())
+                foreach (
+                    Camera cam in act
+                        .gameObject.GetComponentInChildren<DisplayObject>()
+                        .GetComponentsInChildren<Camera>()
+                )
                 {
                     cam.cullingMask = -1; // show everything
                     cam.cullingMask &= ~(1 << LayerMask.NameToLayer(act.name));

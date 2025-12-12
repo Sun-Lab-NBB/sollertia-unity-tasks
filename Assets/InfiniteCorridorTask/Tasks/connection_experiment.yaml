@@ -39,20 +39,20 @@ cues:
 # Each segment is a sequence of cues with optional transition probabilities.
 segments:
   - name: "Segment_abc"
-    cue_sequence: ["A", "Gray", "B", "Gray", "C", "Gray"]
-    transition_probabilities: [0.5, 0.5, 0.0, 0.0]
+    cue_sequence: [ "A", "Gray", "B", "Gray", "C", "Gray" ]
+    transition_probabilities: [ 0.5, 0.5, 0.0, 0.0 ]
 
   - name: "Segment_abca"
-    cue_sequence: ["A", "Gray", "B", "Gray", "C", "Gray", "A", "Gray"]
-    transition_probabilities: [0.0, 0.0, 0.5, 0.5]
+    cue_sequence: [ "A", "Gray", "B", "Gray", "C", "Gray", "A", "Gray" ]
+    transition_probabilities: [ 0.0, 0.0, 0.5, 0.5 ]
 
   - name: "Segment_defg"
-    cue_sequence: ["D", "Gray", "E", "Gray", "F", "Gray", "G", "Gray"]
-    transition_probabilities: [0.0, 0.0, 0.5, 0.5]
+    cue_sequence: [ "D", "Gray", "E", "Gray", "F", "Gray", "G", "Gray" ]
+    transition_probabilities: [ 0.0, 0.0, 0.5, 0.5 ]
 
   - name: "Segment_defgd"
-    cue_sequence: ["D", "Gray", "E", "Gray", "F", "Gray", "G", "Gray", "D", "Gray"]
-    transition_probabilities: [0.5, 0.5, 0.0, 0.0]
+    cue_sequence: [ "D", "Gray", "E", "Gray", "F", "Gray", "G", "Gray", "D", "Gray" ]
+    transition_probabilities: [ 0.5, 0.5, 0.0, 0.0 ]
 
 # VR environment configuration
 vr_environment:
@@ -92,7 +92,7 @@ experiment_states:
     experiment_state_code: 1
     system_state_code: 0
     state_duration_s: 300.0
-    supported_trial_structures: ["short_trial", "long_trial"]
+    supported_trial_structures: [ "short_trial", "long_trial" ]
     reinforcing_initial_guided_trials: 10
     reinforcing_recovery_failed_threshold: 5
     reinforcing_recovery_guided_trials: 3

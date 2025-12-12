@@ -1,16 +1,21 @@
-using UnityEngine;
-using Gimbl;
-using System.Diagnostics;
-
 /// <summary>
-/// Tracks whether an animal has occupied a zone for a required duration.
-/// Used for trial types that require occupancy-based stimulus disarming.
+/// Provides the OccupancyZone class that tracks whether an animal has occupied a zone for a required duration.
+///
+/// Used for trial types that require occupancy-based stimulus disarming (e.g., GasPuffTrial).
 ///
 /// Behavior:
 /// - When the animal enters the zone, a high-precision timer starts
 /// - If the animal stays for occupancy_duration_ms, emits OccupancyMet and disarms the boundary
 /// - If the animal leaves early, emits OccupancyFailed and the boundary remains armed
 /// - The parent StimulusTriggerZone reads the boundaryDisarmed state to determine collision behavior
+/// </summary>
+using System.Diagnostics;
+using Gimbl;
+using UnityEngine;
+
+/// <summary>
+/// Tracks animal occupancy duration within a zone and manages boundary arm/disarm state.
+/// Emits MQTT messages when occupancy requirements are met or failed.
 /// </summary>
 public class OccupancyZone : MonoBehaviour
 {
@@ -20,69 +25,77 @@ public class OccupancyZone : MonoBehaviour
     /// </summary>
     public float occupancyDurationMs = 1000f;
 
-    /// <summary>
-    /// Whether the animal is currently inside this zone.
-    /// </summary>
+    /// <summary>Determines whether the animal is currently inside this zone.</summary>
     [HideInInspector]
     public bool inZone = false;
 
     /// <summary>
-    /// Whether the boundary has been disarmed by meeting the occupancy requirement.
+    /// Determines whether the boundary has been disarmed by meeting the occupancy requirement.
     /// Reset to false by ResetZone at lap start.
     /// </summary>
     [HideInInspector]
     public bool boundaryDisarmed = false;
 
-    /// <summary>
-    /// Whether this zone is active (only check once per lap). Reset by ResetZone.
-    /// </summary>
+    /// <summary>Determines whether this zone is active (only checks once per lap). Reset by ResetZone.</summary>
     public bool isActive = true;
 
-    // High-precision stopwatch for accurate ms timing
-    private Stopwatch occupancyTimer;
+    /// <summary>The high-precision stopwatch for accurate millisecond timing.</summary>
+    private Stopwatch _occupancyTimer;
 
-    // MQTT Channels
-    private MQTTChannel occupancyMetChannel;
-    private MQTTChannel occupancyFailedChannel;
+    /// <summary>The MQTT channel for sending occupancy met messages.</summary>
+    private MQTTChannel _occupancyMetChannel;
 
+    /// <summary>The MQTT channel for sending occupancy failed messages.</summary>
+    private MQTTChannel _occupancyFailedChannel;
+
+    /// <summary>Initializes the timer and sets up MQTT channels.</summary>
     void Start()
     {
-        occupancyTimer = new Stopwatch();
-        occupancyMetChannel = new MQTTChannel("Gimbl/OccupancyMet/");
-        occupancyFailedChannel = new MQTTChannel("Gimbl/OccupancyFailed/");
+        _occupancyTimer = new Stopwatch();
+        _occupancyMetChannel = new MQTTChannel("Gimbl/OccupancyMet/");
+        _occupancyFailedChannel = new MQTTChannel("Gimbl/OccupancyFailed/");
     }
 
+    /// <summary>Checks if the occupancy duration has been met while the animal is in the zone.</summary>
     void Update()
     {
         if (!isActive || boundaryDisarmed)
-            return;
-
-        if (occupancyTimer.IsRunning && inZone)
         {
-            if (occupancyTimer.ElapsedMilliseconds >= occupancyDurationMs)
+            return;
+        }
+
+        if (_occupancyTimer.IsRunning && inZone)
+        {
+            if (_occupancyTimer.ElapsedMilliseconds >= occupancyDurationMs)
             {
                 OnOccupancyMet();
             }
         }
     }
 
+    /// <summary>Called when the animal enters the occupancy zone collider. Starts the timer.</summary>
     void OnTriggerEnter(Collider other)
     {
         if (!isActive || boundaryDisarmed)
+        {
             return;
+        }
 
         inZone = true;
-        occupancyTimer.Restart();
+        _occupancyTimer.Restart();
         UnityEngine.Debug.Log("OccupancyZone: Animal entered, timer started");
     }
 
+    /// <summary>Called when the animal exits the occupancy zone collider. Stops the timer and checks result.</summary>
     void OnTriggerExit(Collider other)
     {
         if (!isActive)
+        {
             return;
+        }
 
         inZone = false;
-        occupancyTimer.Stop();
+        _occupancyTimer.Stop();
 
         if (!boundaryDisarmed)
         {
@@ -90,18 +103,26 @@ public class OccupancyZone : MonoBehaviour
         }
     }
 
+    /// <summary>Called when the animal has occupied the zone for the required duration. Disarms the boundary.</summary>
     private void OnOccupancyMet()
     {
         UnityEngine.Debug.Log("OccupancyZone: Occupancy met - boundary disarmed");
         boundaryDisarmed = true;
-        occupancyTimer.Stop();
-        occupancyMetChannel.Send();
+        _occupancyTimer.Stop();
+        _occupancyMetChannel.Send();
     }
 
+    /// <summary>Called when the animal leaves the zone before meeting the occupancy requirement.</summary>
     private void OnOccupancyFailed()
     {
         UnityEngine.Debug.Log("OccupancyZone: Occupancy failed - animal left early");
-        occupancyFailedChannel.Send();
+        _occupancyFailedChannel.Send();
+    }
+
+    /// <summary>Returns the elapsed time in milliseconds since the occupancy timer started.</summary>
+    public float GetElapsedMs()
+    {
+        return _occupancyTimer.ElapsedMilliseconds;
     }
 
     /// <summary>
@@ -113,6 +134,6 @@ public class OccupancyZone : MonoBehaviour
         isActive = true;
         boundaryDisarmed = false;
         inZone = false;
-        occupancyTimer.Reset();
+        _occupancyTimer.Reset();
     }
 }

@@ -1,16 +1,16 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
-using Gimbl;
 using System.Linq;
+using Gimbl;
 using UnityEditor;
-using System;
+using UnityEngine;
+
 namespace Gimbl
 {
     public class LinearTreadmill : Gimbl.ControllerObject
     {
         public LinearTreadmillSettings settings;
-
 
         // Messaging classes.
         public class MSG
@@ -31,9 +31,9 @@ namespace Gimbl
 
                 MQTTChannel<MSG> channel = new MQTTChannel<MSG>(string.Format("{0}/Data", settings.deviceName));
                 channel.Event.AddListener(OnMessage);
-                
             }
         }
+
         public void Update()
         {
             ProcessMovement();
@@ -41,7 +41,6 @@ namespace Gimbl
 
         public void ProcessMovement()
         {
-
             if (Actor != null && settings.isActive)
             {
                 moved = movement.Sum().x; // Accumulate all input since the last frame
@@ -65,9 +64,11 @@ namespace Gimbl
 
         public void OnMessage(MSG msg)
         {
-            lock (movement) { movement.Add(msg.movement, 0, 0); }
+            lock (movement)
+            {
+                movement.Add(msg.movement, 0, 0);
+            }
         }
-
 
         public override void LinkSettings(string assetPath = "")
         {
@@ -75,14 +76,19 @@ namespace Gimbl
             if (assetPath == "")
             {
                 asset = ScriptableObject.CreateInstance<LinearTreadmillSettings>();
-                UnityEditor.AssetDatabase.CreateAsset(asset, string.Format("Assets/VRSettings/Controllers/{0}.asset", this.gameObject.name));
+                UnityEditor.AssetDatabase.CreateAsset(
+                    asset,
+                    string.Format("Assets/VRSettings/Controllers/{0}.asset", this.gameObject.name)
+                );
             }
             else
             {
-                asset = (LinearTreadmillSettings)UnityEditor.AssetDatabase.LoadAssetAtPath(assetPath, typeof(LinearTreadmillSettings));
+                asset = (LinearTreadmillSettings)
+                    UnityEditor.AssetDatabase.LoadAssetAtPath(assetPath, typeof(LinearTreadmillSettings));
             }
             settings = asset;
         }
+
         public override void EditMenu()
         {
             SerializedObject serializedObject = new SerializedObject(settings);
@@ -91,29 +97,50 @@ namespace Gimbl
                 ControllerMenuTitle(settings.isActive, "Simulated Linear Treadmill");
                 EditorGUILayout.LabelField("Device", EditorStyles.boldLabel);
                 EditorGUI.indentLevel++;
-                    // Select controller.
-                    EditorGUILayout.BeginHorizontal(LayoutSettings.editFieldOp);
-                    if (EditorApplication.isPlaying) GUI.enabled = false;
-                    if (settings.gamepadSettings.selectedGamepad >= deviceNames.Length) settings.gamepadSettings.selectedGamepad = 0;
-                    settings.gamepadSettings.selectedGamepad = EditorGUILayout.Popup(settings.gamepadSettings.selectedGamepad, deviceNames);
-                    if (GUILayout.Button("Rescan Devices")) { deviceNames = Gamepad.GetDeviceNames(); }
-                    EditorGUILayout.EndHorizontal();
-                    EditorGUILayout.PropertyField(serializedObject.FindProperty("buttonTopics"), true);
-                    EditorGUILayout.PropertyField(serializedObject.FindProperty("isActive"), new GUIContent("Active"), LayoutSettings.editFieldOp);
+                // Select controller.
+                EditorGUILayout.BeginHorizontal(LayoutSettings.editFieldOp);
+                if (EditorApplication.isPlaying)
+                    GUI.enabled = false;
+                if (settings.gamepadSettings.selectedGamepad >= deviceNames.Length)
+                    settings.gamepadSettings.selectedGamepad = 0;
+                settings.gamepadSettings.selectedGamepad = EditorGUILayout.Popup(
+                    settings.gamepadSettings.selectedGamepad,
+                    deviceNames
+                );
+                if (GUILayout.Button("Rescan Devices"))
+                {
+                    deviceNames = Gamepad.GetDeviceNames();
+                }
+                EditorGUILayout.EndHorizontal();
+                EditorGUILayout.PropertyField(serializedObject.FindProperty("buttonTopics"), true);
+                EditorGUILayout.PropertyField(
+                    serializedObject.FindProperty("isActive"),
+                    new GUIContent("Active"),
+                    LayoutSettings.editFieldOp
+                );
                 EditorGUI.indentLevel--;
                 GUI.enabled = true;
             }
-            else {
+            else
+            {
                 ControllerMenuTitle(settings.isActive, "Linear Treadmill");
                 EditorGUILayout.LabelField("Device", EditorStyles.boldLabel);
-                if (EditorApplication.isPlaying) GUI.enabled = false;
+                if (EditorApplication.isPlaying)
+                    GUI.enabled = false;
                 EditorGUI.indentLevel++;
-                    EditorGUILayout.PropertyField(serializedObject.FindProperty("isActive"), new GUIContent("Active"), LayoutSettings.editFieldOp);
-                    EditorGUILayout.PropertyField(serializedObject.FindProperty("deviceName"),new GUIContent("MQTT Name"), LayoutSettings.editFieldOp);
+                EditorGUILayout.PropertyField(
+                    serializedObject.FindProperty("isActive"),
+                    new GUIContent("Active"),
+                    LayoutSettings.editFieldOp
+                );
+                EditorGUILayout.PropertyField(
+                    serializedObject.FindProperty("deviceName"),
+                    new GUIContent("MQTT Name"),
+                    LayoutSettings.editFieldOp
+                );
                 EditorGUI.indentLevel--;
                 GUI.enabled = true;
             }
         }
     }
-
 }

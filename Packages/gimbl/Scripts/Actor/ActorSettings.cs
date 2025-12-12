@@ -5,9 +5,5 @@ using UnityEngine;
 namespace Gimbl
 {
     [System.Serializable]
-    public class ActorSettings : ScriptableObject
-    {
-
-    }
+    public class ActorSettings : ScriptableObject { }
 }
-

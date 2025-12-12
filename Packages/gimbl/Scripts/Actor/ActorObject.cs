@@ -1,8 +1,8 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
-using UnityEditor;
 using System.Linq;
+using UnityEditor;
+using UnityEngine;
 
 namespace Gimbl
 {
@@ -12,34 +12,47 @@ namespace Gimbl
         public bool isActive = true; // for disabling movement.
 
         // Linked Display Object.
-        [SerializeField] private DisplayObject _display;
+        [SerializeField]
+        private DisplayObject _display;
         public DisplayObject display
         {
             get { return _display; }
-            set {
-                if (value!=_display)
+            set
+            {
+                if (value != _display)
                 {
                     // parent if new displayObject
-                    if (value!=null) { value.ParentToActor(this); }
+                    if (value != null)
+                    {
+                        value.ParentToActor(this);
+                    }
                     // If previous display excisted -> unparent
-                    if (_display!=null) { _display.Unparent(); }
+                    if (_display != null)
+                    {
+                        _display.Unparent();
+                    }
                     _display = value;
-                }   
                 }
+            }
         }
 
-        [SerializeField] public ActorSettings settings;
-        [SerializeField] private ControllerOutput _controller;
+        [SerializeField]
+        public ActorSettings settings;
+
+        [SerializeField]
+        private ControllerOutput _controller;
+
         //Check that only one controller can be linked to one actor.
         public ControllerOutput controller
         {
             get { return _controller; }
             set
             {
-                if (_controller!=value)
+                if (_controller != value)
                 {
                     //change values.
-                    if (_controller != null) _controller.master.Actor = null; //abandon.
+                    if (_controller != null)
+                        _controller.master.Actor = null; //abandon.
                     _controller = value;
                     if (value != null)
                     {
@@ -49,24 +62,29 @@ namespace Gimbl
                         {
                             if (act.controller == value && act != this)
                             {
-                                Debug.LogWarning(string.Format("Switched Controller {0} from {1} to {2}", value.gameObject.name, act.gameObject.name, this.gameObject.name));
+                                Debug.LogWarning(
+                                    string.Format(
+                                        "Switched Controller {0} from {1} to {2}",
+                                        value.gameObject.name,
+                                        act.gameObject.name,
+                                        this.gameObject.name
+                                    )
+                                );
                                 act._controller = null; // stops looping.
                             }
                         }
                     }
-                    if (!EditorApplication.isPlaying) UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(UnityEngine.SceneManagement.SceneManager.GetActiveScene());
+                    if (!EditorApplication.isPlaying)
+                        UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(
+                            UnityEngine.SceneManagement.SceneManager.GetActiveScene()
+                        );
                 }
             }
         }
 
-        public void Start()
-        {
-        }
+        public void Start() { }
 
-        public void LateUpdate()
-        {
-
-        }
+        public void LateUpdate() { }
 
         public void InitiateActor(string modelStr, bool trackCam)
         {
@@ -107,7 +125,10 @@ namespace Gimbl
                 }
                 int[] displays = availableDisplays.Except(usedDisplays).ToArray();
                 int nextDisp = 7; // default
-                if (displays.Length > 0) { nextDisp = displays[0]; }
+                if (displays.Length > 0)
+                {
+                    nextDisp = displays[0];
+                }
                 // Create display.
                 GameObject cam = new GameObject(string.Format("Track Cam: {0}", settings.name));
                 Camera camComp = cam.AddComponent<Camera>();
@@ -119,22 +140,27 @@ namespace Gimbl
                 // Set target display.
                 cam.tag = "TrackCam";
                 camComp.targetDisplay = nextDisp;
-
             }
             // Update.
             Undo.RegisterCreatedObjectUndo(gameObject, "Create Actor");
         }
+
         public void DeleteActor()
         {
-            bool accept = EditorUtility.DisplayDialog(string.Format("Remove Actor {0}?", name),
-                string.Format("Are you sure you want to delete Actor {0}?", name), "Delete", "Cancel");
+            bool accept = EditorUtility.DisplayDialog(
+                string.Format("Remove Actor {0}?", name),
+                string.Format("Are you sure you want to delete Actor {0}?", name),
+                "Delete",
+                "Cancel"
+            );
             if (accept)
             {
                 // Not deleting scriptable object asset so delete it can be undone.
                 TagLayerEditor.TagsAndLayers.RemoveLayer(name);
                 // unparent attached displays.
                 PerspectiveProjection cam = GetComponentInChildren<PerspectiveProjection>();
-                if (cam != null) cam.transform.parent.transform.SetParent(null);
+                if (cam != null)
+                    cam.transform.parent.transform.SetParent(null);
                 Undo.DestroyObjectImmediate(gameObject);
             }
         }
@@ -145,23 +171,44 @@ namespace Gimbl
             // Controller.
             EditorGUILayout.BeginHorizontal();
             if (controller != null)
-                EditorGUILayout.LabelField("<color=#66CC00>Controller: </color>", LayoutSettings.linkFieldStyle, LayoutSettings.linkFieldLayout);
+                EditorGUILayout.LabelField(
+                    "<color=#66CC00>Controller: </color>",
+                    LayoutSettings.linkFieldStyle,
+                    LayoutSettings.linkFieldLayout
+                );
             else
-                EditorGUILayout.LabelField("<color=#EE0000>Controller: </color>", LayoutSettings.linkFieldStyle, LayoutSettings.linkFieldLayout);
-            controller = (ControllerOutput)EditorGUILayout.ObjectField(controller, typeof(ControllerOutput), true, LayoutSettings.linkObjectLayout);
+                EditorGUILayout.LabelField(
+                    "<color=#EE0000>Controller: </color>",
+                    LayoutSettings.linkFieldStyle,
+                    LayoutSettings.linkFieldLayout
+                );
+            controller = (ControllerOutput)
+                EditorGUILayout.ObjectField(
+                    controller,
+                    typeof(ControllerOutput),
+                    true,
+                    LayoutSettings.linkObjectLayout
+                );
             EditorGUILayout.EndHorizontal();
             // Display.
             EditorGUILayout.BeginHorizontal();
             if (display != null)
-                EditorGUILayout.LabelField("<color=#66CC00>Display: </color>", LayoutSettings.linkFieldStyle, LayoutSettings.linkFieldLayout);
+                EditorGUILayout.LabelField(
+                    "<color=#66CC00>Display: </color>",
+                    LayoutSettings.linkFieldStyle,
+                    LayoutSettings.linkFieldLayout
+                );
             else
-                EditorGUILayout.LabelField("<color=#EE0000>Display: </color>", LayoutSettings.linkFieldStyle, LayoutSettings.linkFieldLayout);
-            display = (DisplayObject)EditorGUILayout.ObjectField(display, typeof(DisplayObject), true, LayoutSettings.linkObjectLayout);
+                EditorGUILayout.LabelField(
+                    "<color=#EE0000>Display: </color>",
+                    LayoutSettings.linkFieldStyle,
+                    LayoutSettings.linkFieldLayout
+                );
+            display = (DisplayObject)
+                EditorGUILayout.ObjectField(display, typeof(DisplayObject), true, LayoutSettings.linkObjectLayout);
             EditorGUILayout.EndHorizontal();
 
             EditorGUILayout.EndVertical();
         }
     }
-
 }
-

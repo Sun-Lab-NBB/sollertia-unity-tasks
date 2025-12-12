@@ -1,10 +1,10 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
+using System.Runtime.InteropServices;
 using SharpDX;
 using SharpDX.DirectInput;
-using System;
-using System.Runtime.InteropServices;
+using UnityEngine;
 
 namespace Gimbl
 {
@@ -15,22 +15,28 @@ namespace Gimbl
         public MQTTChannel[] buttonChannels;
         private bool[] prevButtonState; // prevents button spamming.
         private bool[] testChange;
+
         public static string[] GetDeviceNames()
         {
             string[] deviceNames;
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 // Get Devices.
-                IList<DeviceInstance> deviceList = new DirectInput().GetDevices(SharpDX.DirectInput.DeviceType.Gamepad, DeviceEnumerationFlags.AllDevices);
-                deviceNames = new string[deviceList.Count+1];
+                IList<DeviceInstance> deviceList = new DirectInput().GetDevices(
+                    SharpDX.DirectInput.DeviceType.Gamepad,
+                    DeviceEnumerationFlags.AllDevices
+                );
+                deviceNames = new string[deviceList.Count + 1];
                 deviceNames[0] = "Mouse and Keyboard";
                 for (int i = 0; i < deviceList.Count; i++)
                 {
-                    deviceNames[i+1] = deviceList[i].ProductName;
+                    deviceNames[i + 1] = deviceList[i].ProductName;
                 }
-                
             }
-            else{ deviceNames = new string[]{"Mouse and Keyboard"};}
+            else
+            {
+                deviceNames = new string[] { "Mouse and Keyboard" };
+            }
             return deviceNames;
         }
 
@@ -40,8 +46,15 @@ namespace Gimbl
             directInput = new DirectInput();
 
             // Get Devices.
-            IList<DeviceInstance> deviceList = directInput.GetDevices(SharpDX.DirectInput.DeviceType.Gamepad, DeviceEnumerationFlags.AllDevices);
-            if (id + 1 > deviceList.Count) { Debug.LogError("Could not find Game Controller. Please Rescan Devices"); return; }
+            IList<DeviceInstance> deviceList = directInput.GetDevices(
+                SharpDX.DirectInput.DeviceType.Gamepad,
+                DeviceEnumerationFlags.AllDevices
+            );
+            if (id + 1 > deviceList.Count)
+            {
+                Debug.LogError("Could not find Game Controller. Please Rescan Devices");
+                return;
+            }
             Guid joystickGuid = deviceList[id].InstanceGuid;
 
             // Instantiate the joystick
@@ -52,7 +65,6 @@ namespace Gimbl
 
             // Acquire the joystick
             joystick.Acquire();
-
         }
 
         // Set MQTT Button Triggered channels.
@@ -61,8 +73,9 @@ namespace Gimbl
             buttonChannels = new MQTTChannel[topics.Length];
             for (int i = 0; i < buttonChannels.Length; i++)
                 if (topics[i] != "")
-                    buttonChannels[i] = new MQTTChannel(topics[i],false);
+                    buttonChannels[i] = new MQTTChannel(topics[i], false);
         }
+
         // Send MQTT Triggers.
         public void SendChannels(bool[] buttons)
         {
@@ -75,21 +88,25 @@ namespace Gimbl
             }
         }
 
-
         public float normRange(int x)
         {
-            return ((x / Mathf.Pow(2, 16)) * 2) - 1; 
+            return ((x / Mathf.Pow(2, 16)) * 2) - 1;
         }
 
         public bool[] checkButtonChange(JoystickState state)
         {
-            if (prevButtonState == null) { prevButtonState = new bool[state.Buttons.Length]; testChange = new bool[prevButtonState.Length]; }
+            if (prevButtonState == null)
+            {
+                prevButtonState = new bool[state.Buttons.Length];
+                testChange = new bool[prevButtonState.Length];
+            }
             for (int i = 0; i < testChange.Length; i++)
                 testChange[i] = state.Buttons[i] & !prevButtonState[i];
             prevButtonState = state.Buttons;
             return testChange;
         }
     }
+
     [System.Serializable]
     public class GamepadSettings
     {

@@ -10,6 +10,7 @@ namespace Gimbl
     public class FullScreenViewsSaved : ScriptableObject
     {
         public List<string> cameraNames;
+
         public void OnEnable()
         {
             if (cameraNames == null)

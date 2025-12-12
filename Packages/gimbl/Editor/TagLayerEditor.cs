@@ -1,15 +1,15 @@
-﻿using UnityEditor;
+﻿using System.Collections;
+using UnityEditor;
 using UnityEngine;
-using System.Collections;
+
 // Taken from https://answers.unity.com/questions/33597/is-it-possible-to-create-a-tag-programmatically.html
 namespace TagLayerEditor
 {
-
     public class TagsAndLayers
     {
-
         private static int maxTags = 10000;
         private static int maxLayers = 31;
+
         /// <summary>
         /// Adds the tag.
         /// </summary>
@@ -18,7 +18,9 @@ namespace TagLayerEditor
         public static bool AddTag(string tagName)
         {
             // Open tag manager
-            SerializedObject tagManager = new SerializedObject(AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/TagManager.asset")[0]);
+            SerializedObject tagManager = new SerializedObject(
+                AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/TagManager.asset")[0]
+            );
             // Tags Property
             SerializedProperty tagsProp = tagManager.FindProperty("tags");
             if (tagsProp.arraySize >= maxTags)
@@ -46,6 +48,7 @@ namespace TagLayerEditor
             }
             return false;
         }
+
         /// <summary>
         /// Removes the tag.
         /// </summary>
@@ -53,9 +56,10 @@ namespace TagLayerEditor
         /// <param name="tagName">Tag name.</param>
         public static bool RemoveTag(string tagName)
         {
-
             // Open tag manager
-            SerializedObject tagManager = new SerializedObject(AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/TagManager.asset")[0]);
+            SerializedObject tagManager = new SerializedObject(
+                AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/TagManager.asset")[0]
+            );
 
             // Tags Property
             SerializedProperty tagsProp = tagManager.FindProperty("tags");
@@ -66,7 +70,6 @@ namespace TagLayerEditor
 
                 for (int i = 0, j = tagsProp.arraySize; i < j; i++)
                 {
-
                     sp = tagsProp.GetArrayElementAtIndex(i);
                     if (sp.stringValue == tagName)
                     {
@@ -76,12 +79,10 @@ namespace TagLayerEditor
                         tagManager.ApplyModifiedProperties();
                         return true;
                     }
-
                 }
             }
 
             return false;
-
         }
 
         /// <summary>
@@ -92,12 +93,15 @@ namespace TagLayerEditor
         public static bool TagExists(string tagName)
         {
             // Open tag manager
-            SerializedObject tagManager = new SerializedObject(AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/TagManager.asset")[0]);
+            SerializedObject tagManager = new SerializedObject(
+                AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/TagManager.asset")[0]
+            );
 
             // Layers Property
             SerializedProperty tagsProp = tagManager.FindProperty("tags");
             return PropertyExists(tagsProp, 0, maxTags, tagName);
         }
+
         /// <summary>
         /// Adds the layer.
         /// </summary>
@@ -106,7 +110,9 @@ namespace TagLayerEditor
         public static bool AddLayer(string layerName)
         {
             // Open tag manager
-            SerializedObject tagManager = new SerializedObject(AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/TagManager.asset")[0]);
+            SerializedObject tagManager = new SerializedObject(
+                AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/TagManager.asset")[0]
+            );
             // Layers Property
             SerializedProperty layersProp = tagManager.FindProperty("layers");
             if (!PropertyExists(layersProp, 0, maxLayers, layerName))
@@ -143,9 +149,10 @@ namespace TagLayerEditor
         /// <param name="layerName">Layer name.</param>
         public static bool RemoveLayer(string layerName)
         {
-
             // Open tag manager
-            SerializedObject tagManager = new SerializedObject(AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/TagManager.asset")[0]);
+            SerializedObject tagManager = new SerializedObject(
+                AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/TagManager.asset")[0]
+            );
 
             // Tags Property
             SerializedProperty layersProp = tagManager.FindProperty("layers");
@@ -156,7 +163,6 @@ namespace TagLayerEditor
 
                 for (int i = 0, j = layersProp.arraySize; i < j; i++)
                 {
-
                     sp = layersProp.GetArrayElementAtIndex(i);
 
                     if (sp.stringValue == layerName)
@@ -167,13 +173,12 @@ namespace TagLayerEditor
                         tagManager.ApplyModifiedProperties();
                         return true;
                     }
-
                 }
             }
 
             return false;
-
         }
+
         /// <summary>
         /// Checks to see if layer exists.
         /// </summary>
@@ -182,12 +187,15 @@ namespace TagLayerEditor
         public static bool LayerExists(string layerName)
         {
             // Open tag manager
-            SerializedObject tagManager = new SerializedObject(AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/TagManager.asset")[0]);
+            SerializedObject tagManager = new SerializedObject(
+                AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/TagManager.asset")[0]
+            );
 
             // Layers Property
             SerializedProperty layersProp = tagManager.FindProperty("layers");
             return PropertyExists(layersProp, 0, maxLayers, layerName);
         }
+
         /// <summary>
         /// Checks if the value exists in the property.
         /// </summary>

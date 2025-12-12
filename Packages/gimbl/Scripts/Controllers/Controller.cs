@@ -1,7 +1,7 @@
-﻿    using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
 using UnityEditor;
+using UnityEngine;
 
 namespace Gimbl
 {
@@ -15,8 +15,8 @@ namespace Gimbl
     public abstract class ControllerObject : MonoBehaviour
     {
         public ActorObject Actor;
-        public abstract void EditMenu();                            // Custom edit menu.
-        public abstract void LinkSettings(string assetPath = "");   // Creates or links a settings file (ScriptableObject).
+        public abstract void EditMenu(); // Custom edit menu.
+        public abstract void LinkSettings(string assetPath = ""); // Creates or links a settings file (ScriptableObject).
 
         // Handling of gamepads
         public Gamepad gamepad = new Gamepad();
@@ -32,6 +32,7 @@ namespace Gimbl
             public int bufferSize;
             public int counter;
             private bool isCircular;
+
             public ValueBuffer(int reqBufferSize, bool reqIsCircular)
             {
                 bufferSize = reqBufferSize;
@@ -41,6 +42,7 @@ namespace Gimbl
                 counter = 0;
                 isCircular = reqIsCircular;
             }
+
             public void Add(float newX, float newY, float newZ)
             {
                 x[counter] = newX;
@@ -49,44 +51,82 @@ namespace Gimbl
                 counter++;
                 if (counter == bufferSize)
                 {
-                    if (isCircular) { counter = 0; }
-                    else { counter = bufferSize-1; } //overwrites.
+                    if (isCircular)
+                    {
+                        counter = 0;
+                    }
+                    else
+                    {
+                        counter = bufferSize - 1;
+                    } //overwrites.
                 }
             }
+
             public Vector3 Sum()
             {
-                res.x = 0; res.y = 0; res.z = 0;
+                res.x = 0;
+                res.y = 0;
+                res.z = 0;
                 for (int i = 0; i < GetBufferLimit(); i++)
-                { res.x += x[i]; res.y += y[i]; res.z += z[i]; }
+                {
+                    res.x += x[i];
+                    res.y += y[i];
+                    res.z += z[i];
+                }
                 return res;
             }
+
             public Vector3 Average()
             {
-                res.x = 0; res.y = 0; res.z = 0;
+                res.x = 0;
+                res.y = 0;
+                res.z = 0;
                 for (int i = 0; i < GetBufferLimit(); i++)
-                { res.x += x[i]; res.y += y[i]; res.z += z[i]; }
-                res.x /= bufferSize; res.y /= bufferSize; res.z /= bufferSize;
+                {
+                    res.x += x[i];
+                    res.y += y[i];
+                    res.z += z[i];
+                }
+                res.x /= bufferSize;
+                res.y /= bufferSize;
+                res.z /= bufferSize;
                 return res;
             }
+
             public void Clear()
             {
-                res.x = 0; res.y = 0; res.z = 0;
+                res.x = 0;
+                res.y = 0;
+                res.z = 0;
                 for (int i = 0; i < GetBufferLimit(); i++)
-                { x[i] = 0; y[i] = 0; z[i] = 0; }
+                {
+                    x[i] = 0;
+                    y[i] = 0;
+                    z[i] = 0;
+                }
                 counter = 0;
             }
 
             private int GetBufferLimit()
             {
-                if (isCircular) { return bufferSize; }
-                else { return counter; }
+                if (isCircular)
+                {
+                    return bufferSize;
+                }
+                else
+                {
+                    return counter;
+                }
             }
         }
+
         public ValueBuffer movement = new ValueBuffer(100, false); // Stores ball rotations.
+
         public int GetBufferSize(float setting)
         {
             int size = (int)(((float)setting / 1000) / (1f / Screen.currentResolution.refreshRateRatio.value));
-            if (size == 0) size = 1;
+            if (size == 0)
+                size = 1;
             return size;
         }
 
@@ -103,17 +143,27 @@ namespace Gimbl
         {
             GameObject controller = this.gameObject;
             // get controller type and file extension.
-            string sourceType = UnityEditor.AssetDatabase.GetMainAssetTypeAtPath(string.Format("Assets/VRSettings/Controllers/{0}.asset", this.name)).ToString();
+            string sourceType = UnityEditor
+                .AssetDatabase.GetMainAssetTypeAtPath(
+                    string.Format("Assets/VRSettings/Controllers/{0}.asset", this.name)
+                )
+                .ToString();
             string[] s = sourceType.Split('.');
             string extension = s[1];
             // File dialogue.
-            string outputFile = UnityEditor.EditorUtility.SaveFilePanel("Save Controller settings as..",
-             "",
-             "",
-             extension);
-            if (outputFile.Length == 0) return;
+            string outputFile = UnityEditor.EditorUtility.SaveFilePanel(
+                "Save Controller settings as..",
+                "",
+                "",
+                extension
+            );
+            if (outputFile.Length == 0)
+                return;
             UnityEditor.AssetDatabase.SaveAssets();
-            string sourcePath = System.IO.Path.Combine(Application.dataPath, string.Format("VRSettings/Controllers/{0}.asset", controller.name));
+            string sourcePath = System.IO.Path.Combine(
+                Application.dataPath,
+                string.Format("VRSettings/Controllers/{0}.asset", controller.name)
+            );
             UnityEditor.FileUtil.ReplaceFile(sourcePath, outputFile);
         }
 
@@ -127,12 +177,16 @@ namespace Gimbl
             string extension = s[1];
             // File Dialogue.
             string inputFile = UnityEditor.EditorUtility.OpenFilePanel("Import Setup", Application.dataPath, extension);
-            if (inputFile.Length == 0) return;
+            if (inputFile.Length == 0)
+                return;
             // Remove current settings file.
             string settingsFileAssetPath = string.Format("Assets/VRSettings/Controllers/{0}.asset", controller.name);
             UnityEditor.AssetDatabase.DeleteAsset(settingsFileAssetPath);
             // Copy new file to location.
-            string newLoc = System.IO.Path.Combine(Application.dataPath, string.Format("VRSettings/Controllers/{0}.asset", controller.name));
+            string newLoc = System.IO.Path.Combine(
+                Application.dataPath,
+                string.Format("VRSettings/Controllers/{0}.asset", controller.name)
+            );
             UnityEditor.FileUtil.CopyFileOrDirectory(inputFile, newLoc);
             UnityEditor.AssetDatabase.ImportAsset(settingsFileAssetPath);
             // Link to controller.
@@ -142,8 +196,12 @@ namespace Gimbl
         public void DeleteController()
         {
             GameObject controller = this.gameObject;
-            bool accept = UnityEditor.EditorUtility.DisplayDialog(string.Format("Remove Controller {0}?", controller.name),
-                string.Format("Are you sure you want to delete Controller {0}?", controller.name), "Delete", "Cancel");
+            bool accept = UnityEditor.EditorUtility.DisplayDialog(
+                string.Format("Remove Controller {0}?", controller.name),
+                string.Format("Are you sure you want to delete Controller {0}?", controller.name),
+                "Delete",
+                "Cancel"
+            );
             if (accept)
             {
                 // Not deleting scriptable object asset so delete it can be undone.
@@ -154,11 +212,21 @@ namespace Gimbl
         public void ControllerMenuTitle(bool isActive, string type)
         {
             EditorGUILayout.BeginHorizontal();
-            if (isActive && Actor != null) { EditorGUILayout.LabelField(string.Format("<color=#66CC00>{0}</color> - {1}", name,type), LayoutSettings.controllerLabel); }
-            else { EditorGUILayout.LabelField(string.Format("<color=#EE0000>{0}</color> - {1}", name,type), LayoutSettings.controllerLabel); }
+            if (isActive && Actor != null)
+            {
+                EditorGUILayout.LabelField(
+                    string.Format("<color=#66CC00>{0}</color> - {1}", name, type),
+                    LayoutSettings.controllerLabel
+                );
+            }
+            else
+            {
+                EditorGUILayout.LabelField(
+                    string.Format("<color=#EE0000>{0}</color> - {1}", name, type),
+                    LayoutSettings.controllerLabel
+                );
+            }
             EditorGUILayout.EndHorizontal();
         }
-
     }
-
 }

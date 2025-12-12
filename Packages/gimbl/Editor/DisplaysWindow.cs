@@ -1,28 +1,29 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
-using UnityEditor;
 using System.Linq;
-using System;
-using Gimbl;
-using UnityEditor.SceneManagement;
-using UnityEngine.SceneManagement;
 using System.Reflection;
+using Gimbl;
+using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class DisplaysWindow : EditorWindow
 {
     #region Menu Variables.
     Vector2 scrollPosition = Vector2.zero;
-    public delegate void CreateFunc<T>(MenuSettings<T> settings) where T : UnityEngine.Object;
+    public delegate void CreateFunc<T>(MenuSettings<T> settings)
+        where T : UnityEngine.Object;
 
     // Variable relevant for detecting scene changes. This is necessary to reload camera views when changing scenes.
     private bool exitPlayModeSceneChangeComing = false;
-
 
     public enum DisplayType
     {
         Monitor,
     }
+
     [System.Serializable]
     public class MenuSettings<T>
     {
@@ -34,6 +35,7 @@ public class DisplaysWindow : EditorWindow
 
     [System.Serializable]
     public class DisplayMenu : MenuSettings<DisplayObject> { }
+
     string[] displayModels;
     private int selectedModel = 0;
     Gimbl.DisplayType dispType = Gimbl.DisplayType.Monitor;
@@ -48,10 +50,13 @@ public class DisplaysWindow : EditorWindow
 
     #region Window Setup
     private static EditorWindow currentWindow;
+
     public static void ShowWindow()
     {
-        if (currentWindow == null) currentWindow = GetWindow<DisplaysWindow>("Displays", true, typeof(MainWindow));
+        if (currentWindow == null)
+            currentWindow = GetWindow<DisplaysWindow>("Displays", true, typeof(MainWindow));
     }
+
     private void OnEnable()
     {
         TagLayerEditor.TagsAndLayers.AddTag("VRDisplay");
@@ -62,10 +67,9 @@ public class DisplaysWindow : EditorWindow
         fullScreenManager = new FullScreenViewManager();
 
         // Relevant for detecting scene changes. This is necessary to reload camera views when changing scenes.
-        EditorSceneManager.activeSceneChangedInEditMode += OnActiveSceneChanged; 
+        EditorSceneManager.activeSceneChangedInEditMode += OnActiveSceneChanged;
         EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
     }
-
 
     private void OnDisable()
     {
@@ -105,10 +109,13 @@ public class DisplaysWindow : EditorWindow
         }
     }
 
-
     private void OnGUI()
     {
-        scrollPosition = EditorGUILayout.BeginScrollView(scrollPosition, GUILayout.Height(position.height), GUILayout.Width(position.width));
+        scrollPosition = EditorGUILayout.BeginScrollView(
+            scrollPosition,
+            GUILayout.Height(position.height),
+            GUILayout.Width(position.width)
+        );
         #region Display Menu
         EditorGUILayout.BeginVertical(LayoutSettings.mainBox.style);
         EditorGUILayout.LabelField("Displays", LayoutSettings.sectionLabel);
@@ -116,7 +123,8 @@ public class DisplaysWindow : EditorWindow
         // Select and delete.
         EditorGUILayout.BeginHorizontal();
         SelectMenu(dispSettings);
-        if (GUILayout.Button("Delete", LayoutSettings.buttonOp)) DeleteDisplay();
+        if (GUILayout.Button("Delete", LayoutSettings.buttonOp))
+            DeleteDisplay();
         EditorGUILayout.EndHorizontal();
 
         // Edit.
@@ -126,11 +134,17 @@ public class DisplaysWindow : EditorWindow
             EditorGUILayout.BeginHorizontal();
             if (dispSettings.selected.currentBrightness > 0)
             {
-                if (GUILayout.Button("Blank Display")) { dispSettings.selected.currentBrightness = 0; }
+                if (GUILayout.Button("Blank Display"))
+                {
+                    dispSettings.selected.currentBrightness = 0;
+                }
             }
             else
             {
-                if (GUILayout.Button("Show Display")) { dispSettings.selected.currentBrightness = dispSettings.selected.settings.brightness; }
+                if (GUILayout.Button("Show Display"))
+                {
+                    dispSettings.selected.currentBrightness = dispSettings.selected.settings.brightness;
+                }
             }
             EditorGUILayout.EndHorizontal();
         }
@@ -145,24 +159,51 @@ public class DisplaysWindow : EditorWindow
                 serializedObject = new SerializedObject(dispSettings.selected.settings);
                 float prevHeight = dispSettings.selected.settings.heightInVR;
                 float prevBrightness = dispSettings.selected.settings.brightness;
-                EditorGUILayout.PropertyField(serializedObject.FindProperty("isActive"), true, LayoutSettings.editFieldOp);
-                EditorGUILayout.PropertyField(serializedObject.FindProperty("brightness"), true, LayoutSettings.editFieldOp);
-                EditorGUILayout.PropertyField(serializedObject.FindProperty("heightInVR"), true, LayoutSettings.editFieldOp);
+                EditorGUILayout.PropertyField(
+                    serializedObject.FindProperty("isActive"),
+                    true,
+                    LayoutSettings.editFieldOp
+                );
+                EditorGUILayout.PropertyField(
+                    serializedObject.FindProperty("brightness"),
+                    true,
+                    LayoutSettings.editFieldOp
+                );
+                EditorGUILayout.PropertyField(
+                    serializedObject.FindProperty("heightInVR"),
+                    true,
+                    LayoutSettings.editFieldOp
+                );
                 serializedObject.ApplyModifiedProperties();
-                if (prevHeight != dispSettings.selected.settings.heightInVR) { dispSettings.selected.transform.localPosition = new Vector3(0, dispSettings.selected.settings.heightInVR, 0); }
-                if (prevBrightness != dispSettings.selected.settings.brightness) { dispSettings.selected.currentBrightness = dispSettings.selected.settings.brightness; }
+                if (prevHeight != dispSettings.selected.settings.heightInVR)
+                {
+                    dispSettings.selected.transform.localPosition = new Vector3(
+                        0,
+                        dispSettings.selected.settings.heightInVR,
+                        0
+                    );
+                }
+                if (prevBrightness != dispSettings.selected.settings.brightness)
+                {
+                    dispSettings.selected.currentBrightness = dispSettings.selected.settings.brightness;
+                }
                 EditorGUILayout.EndVertical();
             }
         }
 
         // Create.
-        if (EditorApplication.isPlaying) GUI.enabled = false;
+        if (EditorApplication.isPlaying)
+            GUI.enabled = false;
         dispSettings.show[1] = EditorGUILayout.Foldout(dispSettings.show[1], "Create");
         if (dispSettings.show[1])
         {
             EditorGUILayout.BeginVertical(LayoutSettings.subBox.style);
             EditorGUILayout.LabelField("Create Display", EditorStyles.boldLabel);
-            dispSettings.name = EditorGUILayout.TextField("Display Name: ", dispSettings.name, LayoutSettings.editFieldOp);
+            dispSettings.name = EditorGUILayout.TextField(
+                "Display Name: ",
+                dispSettings.name,
+                LayoutSettings.editFieldOp
+            );
             selectedModel = EditorGUILayout.Popup("Model: ", selectedModel, displayModels, LayoutSettings.editFieldOp);
             dispType = (Gimbl.DisplayType)EditorGUILayout.EnumPopup("Type: ", dispType, LayoutSettings.editFieldOp);
             CreateButton(dispSettings, new CreateFunc<DisplayObject>(CreateDisplay));
@@ -178,7 +219,8 @@ public class DisplaysWindow : EditorWindow
 
         fullScreenManager.OnGUIRefreshMonitorPositions();
         fullScreenManager.OnGUICameraObjectFields();
-        if (EditorApplication.isPlaying) GUI.enabled = false;
+        if (EditorApplication.isPlaying)
+            GUI.enabled = false;
         fullScreenManager.OnGUIShowFullScreenViews();
         GUI.enabled = true;
         EditorGUILayout.EndVertical();
@@ -188,22 +230,35 @@ public class DisplaysWindow : EditorWindow
 
     // MenuFunctions.
 
-    private void SelectMenu<T>(MenuSettings<T> settings) where T : UnityEngine.Object
+    private void SelectMenu<T>(MenuSettings<T> settings)
+        where T : UnityEngine.Object
     {
         T obj = FindAnyObjectByType<T>();
-        if (settings.selected == null && obj != null) settings.selected = obj;
+        if (settings.selected == null && obj != null)
+            settings.selected = obj;
         settings.selected = (T)EditorGUILayout.ObjectField(settings.selected, typeof(T), true);
     }
-    private void CreateButton<T>(MenuSettings<T> settings, CreateFunc<T> func) where T : UnityEngine.Object
+
+    private void CreateButton<T>(MenuSettings<T> settings, CreateFunc<T> func)
+        where T : UnityEngine.Object
     {
         EditorGUILayout.BeginHorizontal();
         T[] objs = FindObjectsByType<T>(FindObjectsSortMode.None);
         string[] names = objs.Select(x => x.name).ToArray();
-        string   msg   = "";
-        if (ArrayUtility.Contains(names, settings.name)) { msg = "Duplicate name"; GUI.enabled = false; }
-        if (settings.name == "") { msg = "Empty Name"; GUI.enabled = false; }
+        string msg = "";
+        if (ArrayUtility.Contains(names, settings.name))
+        {
+            msg = "Duplicate name";
+            GUI.enabled = false;
+        }
+        if (settings.name == "")
+        {
+            msg = "Empty Name";
+            GUI.enabled = false;
+        }
         EditorGUILayout.LabelField(msg, GUILayout.Width(197));
-        if (GUILayout.Button("Create", LayoutSettings.buttonOp)) func(settings);
+        if (GUILayout.Button("Create", LayoutSettings.buttonOp))
+            func(settings);
         EditorGUILayout.EndHorizontal();
     }
 
@@ -212,14 +267,20 @@ public class DisplaysWindow : EditorWindow
     private void DeleteDisplay()
     {
         GameObject obj = dispSettings.selected.gameObject;
-        bool accept = EditorUtility.DisplayDialog(string.Format("Remove Display {0}?", obj.name),
-            string.Format("Are you sure you want to delete Display {0}?", obj.name), "Delete", "Cancel");
+        bool accept = EditorUtility.DisplayDialog(
+            string.Format("Remove Display {0}?", obj.name),
+            string.Format("Are you sure you want to delete Display {0}?", obj.name),
+            "Delete",
+            "Cancel"
+        );
         if (accept)
         {
             Undo.DestroyObjectImmediate(obj);
         }
     }
-    private void CreateDisplay<T>(MenuSettings<T> settings) where T : UnityEngine.Component
+
+    private void CreateDisplay<T>(MenuSettings<T> settings)
+        where T : UnityEngine.Component
     {
         //Load 3d model.
         UnityEngine.Object modelObj = Resources.Load(String.Format("Displays/{0}", displayModels[selectedModel]));

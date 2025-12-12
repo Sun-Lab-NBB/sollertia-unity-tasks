@@ -17,15 +17,13 @@
 //#define PERSIST_AS_EDITOR_PREFS
 #define PERSIST_AS_RESOURCE
 
-using UnityEngine;
-using UnityEditor;
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
+using UnityEditor;
 using UnityEditor.SceneManagement;
-
-
+using UnityEngine;
 #if PERSIST_AS_RESOURCE
 using System.IO;
 #endif
@@ -38,12 +36,12 @@ namespace Gimbl
 
     public class FullScreenViewManager
     {
-
         public FullScreenViewManager()
         {
             _monitors = Monitor.EnumeratedMonitors();
             LoadCameras();
         }
+
         public void OnGUIRefreshMonitorPositions()
         {
             if (GUILayout.Button("Refresh Monitor Positions"))
@@ -65,7 +63,9 @@ namespace Gimbl
             for (int i = 0; i < _monitors.Count; i++)
             {
                 Monitor monitor = _monitors[i];
-                EditorGUILayout.LabelField("Monitor " + (i + 1).ToString() + " at (" + monitor.left + ", " + monitor.top + ")");
+                EditorGUILayout.LabelField(
+                    "Monitor " + (i + 1).ToString() + " at (" + monitor.left + ", " + monitor.top + ")"
+                );
                 Camera oldCamera = (Camera)EditorUtility.EntityIdToObject(monitor.cameraEntityId);
                 Camera newCamera = (Camera)EditorGUILayout.ObjectField("Camera", oldCamera, typeof(Camera), true);
                 if (newCamera != null)
@@ -91,7 +91,10 @@ namespace Gimbl
                 {
                     monitor.cameraEntityId = EntityId.None;
                 }
-                if (newCamera != oldCamera) { SaveCameras(); }
+                if (newCamera != oldCamera)
+                {
+                    SaveCameras();
+                }
             }
         }
 
@@ -117,31 +120,31 @@ namespace Gimbl
             }
 
             foreach (Monitor monitor in _monitors)
+            {
+                Camera camera = (Camera)EditorUtility.EntityIdToObject(monitor.cameraEntityId);
+                if (camera != null)
                 {
-                    Camera camera = (Camera)EditorUtility.EntityIdToObject(monitor.cameraEntityId);
-                    if (camera != null)
-                    {
-                        FullScreenView window = EditorWindow.CreateInstance<FullScreenView>();
+                    FullScreenView window = EditorWindow.CreateInstance<FullScreenView>();
 
-                        // Negative coordinates must be scaled by the pixelsPerPoint for the target monitor, but
-                        // positive coordinates must be scaled by the pixelsPerPoint of the main monitor.
+                    // Negative coordinates must be scaled by the pixelsPerPoint for the target monitor, but
+                    // positive coordinates must be scaled by the pixelsPerPoint of the main monitor.
 
-                        float pixelsPerPointX = (monitor.left < 0) ? monitor.pixelsPerPoint : _monitors[0].pixelsPerPoint;
-                        int x = (int)(monitor.left / pixelsPerPointX);
-                        float pixelsPerPointY = (monitor.top < 0) ? monitor.pixelsPerPoint : _monitors[0].pixelsPerPoint;
-                        int y = (int)(monitor.top / pixelsPerPointY);
+                    float pixelsPerPointX = (monitor.left < 0) ? monitor.pixelsPerPoint : _monitors[0].pixelsPerPoint;
+                    int x = (int)(monitor.left / pixelsPerPointX);
+                    float pixelsPerPointY = (monitor.top < 0) ? monitor.pixelsPerPoint : _monitors[0].pixelsPerPoint;
+                    int y = (int)(monitor.top / pixelsPerPointY);
 
-                        int width = (int)(monitor.width / monitor.pixelsPerPoint);
-                        int height = (int)(monitor.height / monitor.pixelsPerPoint);
+                    int width = (int)(monitor.width / monitor.pixelsPerPoint);
+                    int height = (int)(monitor.height / monitor.pixelsPerPoint);
 
-                        window.position = new Rect(x, y, width, height);
-                        window.cameraEntityId = camera.GetEntityId();
+                    window.position = new Rect(x, y, width, height);
+                    window.cameraEntityId = camera.GetEntityId();
 
-                        // Using ShowPopup() eliminates all borders and window decorations.
+                    // Using ShowPopup() eliminates all borders and window decorations.
 
-                        window.ShowPopup();
-                    }
-                }            
+                    window.ShowPopup();
+                }
+            }
         }
 
 #if PERSIST_AS_EDITOR_PREFS
@@ -191,7 +194,6 @@ namespace Gimbl
         {
             return PersistenceKeyPrefix() + ".numMonitors";
         }
-
 #elif PERSIST_AS_RESOURCE
         private FullScreenViewsSaved _savedFullScreenViews;
 
@@ -211,8 +213,12 @@ namespace Gimbl
 
         public void LoadCameras()
         {
-            string fsv_path = "Assets/VRSettings/Displays/" + EditorSceneManager.GetActiveScene().name + "-savedFullScreenViews.asset";           
-            _savedFullScreenViews = (FullScreenViewsSaved)AssetDatabase.LoadAssetAtPath(fsv_path, typeof(FullScreenViewsSaved));
+            string fsv_path =
+                "Assets/VRSettings/Displays/"
+                + EditorSceneManager.GetActiveScene().name
+                + "-savedFullScreenViews.asset";
+            _savedFullScreenViews = (FullScreenViewsSaved)
+                AssetDatabase.LoadAssetAtPath(fsv_path, typeof(FullScreenViewsSaved));
 
             if (_savedFullScreenViews != null)
             {
@@ -304,6 +310,7 @@ namespace Gimbl
         {
             views.Add(this);
         }
+
         // Onenable because reference gets lost on play.
         private void OnEnable()
         {
@@ -321,7 +328,6 @@ namespace Gimbl
             }
             else if (e.type == EventType.Repaint)
             {
-
                 if (_camera == null)
                 {
                     _camera = (Camera)EditorUtility.EntityIdToObject(cameraEntityId);
@@ -336,14 +342,17 @@ namespace Gimbl
                 }
                 if (_rendering)
                 {
-
                     if (_camera != null)
                     {
                         _camera.Render();
                         // Disable alpha blending when drawing the texture, so black really is black.
                         bool alphaBlend = false;
-                        GUI.DrawTexture(new Rect(0, 0, position.width, position.height), _camera.targetTexture,
-                                        ScaleMode.ScaleToFit, alphaBlend);
+                        GUI.DrawTexture(
+                            new Rect(0, 0, position.width, position.height),
+                            _camera.targetTexture,
+                            ScaleMode.ScaleToFit,
+                            alphaBlend
+                        );
                     }
                 }
             }
@@ -397,19 +406,22 @@ namespace Gimbl
         public float pixelsPerPoint;
         public EntityId cameraEntityId;
 
-        static public List<Monitor> EnumeratedMonitors()
+        public static List<Monitor> EnumeratedMonitors()
         {
             List<Monitor> result = new List<Monitor>();
             // Get Screens information per OS.
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                EnumDisplayMonitors(IntPtr.Zero, IntPtr.Zero,
-                delegate (IntPtr hMonitor, IntPtr hdc, ref RectApi prect, IntPtr dwData)
-                {
-                    result.Add(new Monitor(prect.left, prect.top, prect.width, prect.height));
-                    return true;
-                },
-                0);
+                EnumDisplayMonitors(
+                    IntPtr.Zero,
+                    IntPtr.Zero,
+                    delegate(IntPtr hMonitor, IntPtr hdc, ref RectApi prect, IntPtr dwData)
+                    {
+                        result.Add(new Monitor(prect.left, prect.top, prect.width, prect.height));
+                        return true;
+                    },
+                    0
+                );
             }
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
@@ -421,12 +433,16 @@ namespace Gimbl
                 p.Start();
                 string output = p.StandardOutput.ReadToEnd();
                 p.WaitForExit();
-                foreach( Match match in Regex.Matches(output, @"(\d+)x(\d+)\+(\d+)\+(\d+)"))
+                foreach (Match match in Regex.Matches(output, @"(\d+)x(\d+)\+(\d+)\+(\d+)"))
                 {
-                    result.Add(new Monitor(int.Parse(match.Groups[3].Value),
-                                            int.Parse(match.Groups[4].Value), 
-                                            int.Parse(match.Groups[1].Value), 
-                                            int.Parse(match.Groups[2].Value)));
+                    result.Add(
+                        new Monitor(
+                            int.Parse(match.Groups[3].Value),
+                            int.Parse(match.Groups[4].Value),
+                            int.Parse(match.Groups[1].Value),
+                            int.Parse(match.Groups[2].Value)
+                        )
+                    );
                 }
             }
             if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
@@ -440,12 +456,18 @@ namespace Gimbl
                 p.Start();
                 string output = p.StandardOutput.ReadToEnd();
                 p.WaitForExit();
-                foreach( Match match in Regex.Matches(output, @"Resolution: (\d+)x(\d+)(.|\n)*?Origin: [(](\d+),(\d+)[)]"))
+                foreach (
+                    Match match in Regex.Matches(output, @"Resolution: (\d+)x(\d+)(.|\n)*?Origin: [(](\d+),(\d+)[)]")
+                )
                 {
-                    result.Add(new Monitor(int.Parse(match.Groups[4].Value),
-                        int.Parse(match.Groups[5].Value), 
-                        int.Parse(match.Groups[1].Value), 
-                        int.Parse(match.Groups[2].Value)));       
+                    result.Add(
+                        new Monitor(
+                            int.Parse(match.Groups[4].Value),
+                            int.Parse(match.Groups[5].Value),
+                            int.Parse(match.Groups[1].Value),
+                            int.Parse(match.Groups[2].Value)
+                        )
+                    );
                 }
             }
 
@@ -478,6 +500,7 @@ namespace Gimbl
         }
 
         private delegate bool MonitorEnumProc(IntPtr hMonitor, IntPtr hdc, ref RectApi pRect, IntPtr dwData);
+
         [DllImport("user32")]
         private static extern bool EnumDisplayMonitors(IntPtr hdc, IntPtr lpRect, MonitorEnumProc callback, int dwData);
 
@@ -488,8 +511,14 @@ namespace Gimbl
             public int top;
             public int right;
             public int bottom;
-            public int width { get { return right - left; } }
-            public int height { get { return bottom - top; } }
+            public int width
+            {
+                get { return right - left; }
+            }
+            public int height
+            {
+                get { return bottom - top; }
+            }
         }
 
         private class MonitorTester : EditorWindow

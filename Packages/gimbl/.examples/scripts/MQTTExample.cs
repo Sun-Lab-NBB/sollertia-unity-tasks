@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using Gimbl;
 using UnityEngine;
 
-public class MQTTExample: MonoBehaviour
+public class MQTTExample : MonoBehaviour
 {
     // class describing the message format.
     public class MSG
@@ -12,6 +12,7 @@ public class MQTTExample: MonoBehaviour
         public string a;
         public int b;
     }
+
     // Start is called before the first frame update
     void Start()
     {
@@ -27,8 +28,8 @@ public class MQTTExample: MonoBehaviour
         MQTTChannel trigger = new MQTTChannel("Unity2/");
         trigger.Event.AddListener(OnTrigger);
         trigger.Send();
-
     }
+
     void OnMessage(MSG msg)
     {
         Debug.Log(msg.a);
@@ -38,5 +39,4 @@ public class MQTTExample: MonoBehaviour
     {
         Debug.Log("Got Triggered!");
     }
-
 }

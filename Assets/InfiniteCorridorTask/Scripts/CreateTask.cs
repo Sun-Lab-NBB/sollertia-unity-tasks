@@ -1,20 +1,29 @@
-using System;
-using UnityEngine;
-using UnityEditor;
+/// <summary>
+/// Provides the CreateTask class that generates Task prefabs from YAML configuration files via Unity Editor menu.
+/// </summary>
 using System.IO;
 using SL.Config;
+using UnityEditor;
+using UnityEngine;
 
+/// <summary>
+/// Unity Editor script that creates Task prefabs from experiment configuration files.
+/// Generates all corridor combinations by instantiating segment prefabs and configuring zones.
+/// </summary>
 public class CreateTask : MonoBehaviour
 {
+    /// <summary>Creates a new Task prefab from a selected YAML configuration file.</summary>
     [MenuItem("CreateTask/New Task")]
-    public static void createTask()
+    public static void CreateNewTask()
     {
-        // Open file dialog for YAML configuration file
-        string configPath = EditorUtility.OpenFilePanel(
-            "Select Experiment Configuration YAML",
-            Application.dataPath + "/InfiniteCorridorTask/Tasks/",
-            "yaml,yml"
-        ).Replace(Application.dataPath, "");
+        // Opens file dialog for YAML configuration file
+        string configPath = EditorUtility
+            .OpenFilePanel(
+                "Select Experiment Configuration YAML",
+                Application.dataPath + "/InfiniteCorridorTask/Tasks/",
+                "yaml,yml"
+            )
+            .Replace(Application.dataPath, "");
 
         if (string.IsNullOrEmpty(configPath))
         {
@@ -22,7 +31,7 @@ public class CreateTask : MonoBehaviour
             return;
         }
 
-        // Load the configuration
+        // Loads and validates configuration
         MesoscopeExperimentConfiguration config = ConfigLoader.Load(Application.dataPath + configPath);
         if (config == null)
         {
@@ -32,7 +41,7 @@ public class CreateTask : MonoBehaviour
 
         string prefabsPath = "Assets/InfiniteCorridorTask/Prefabs/";
 
-        // Load padding prefab
+        // Loads padding prefab
         string paddingPath = prefabsPath + config.vr_environment.padding_prefab_name + ".prefab";
         GameObject padding = AssetDatabase.LoadAssetAtPath<GameObject>(paddingPath);
 
@@ -42,113 +51,118 @@ public class CreateTask : MonoBehaviour
             return;
         }
 
-        int n_segments = config.segments.Count;
+        int nSegments = config.segments.Count;
 
-        // Load segment prefabs
-        GameObject[] segment_prefabs = new GameObject[n_segments];
-        for (int i = 0; i < n_segments; i++)
+        // Loads segment prefabs
+        GameObject[] segmentPrefabs = new GameObject[nSegments];
+        for (int i = 0; i < nSegments; i++)
         {
             string segmentPath = prefabsPath + config.segments[i].name + ".prefab";
-            segment_prefabs[i] = AssetDatabase.LoadAssetAtPath<GameObject>(segmentPath);
+            segmentPrefabs[i] = AssetDatabase.LoadAssetAtPath<GameObject>(segmentPath);
 
-            if (segment_prefabs[i] == null)
+            if (segmentPrefabs[i] == null)
             {
                 Debug.LogError("No segment found at " + segmentPath);
                 return;
             }
         }
 
-        // Measure actual prefab lengths and compare with config
-        float[] measured_segment_lengths = Utility.get_segment_lengths(segment_prefabs);
-        float[] segment_lengths = config.GetSegmentLengthsUnity();
+        // Measures actual prefab lengths and compares with configuration
+        float[] measuredSegmentLengths = Utility.GetSegmentLengths(segmentPrefabs);
+        float[] segmentLengths = config.GetSegmentLengthsUnity();
 
         float epsilon = 0.01f;
-        for (int i = 0; i < n_segments; i++)
+        for (int i = 0; i < nSegments; i++)
         {
-            if (Mathf.Abs(measured_segment_lengths[i] - segment_lengths[i]) > epsilon)
+            if (Mathf.Abs(measuredSegmentLengths[i] - segmentLengths[i]) > epsilon)
             {
-                Debug.Log($"Warning: For {config.segments[i].name}, there is a mismatch between the prefab length ({measured_segment_lengths[i]}) and the sum of all the cue lengths ({segment_lengths[i]}). Using {segment_lengths[i]} for the length of the segment.");
+                Debug.Log(
+                    $"Warning: For {config.segments[i].name}, there is a mismatch between the prefab length "
+                        + $"({measuredSegmentLengths[i]}) and the sum of all the cue lengths ({segmentLengths[i]}). "
+                        + $"Using {segmentLengths[i]} for the length of the segment."
+                );
             }
         }
 
         int depth = config.vr_environment.segments_per_corridor;
-        float padding_z_shift = depth * Mathf.Min(segment_lengths) - 1;
+        float paddingZShift = depth * Mathf.Min(segmentLengths) - 1;
 
-        // Create task GameObject hierarchy
-        string new_task_name = "newTask";
-        GameObject task = new GameObject(new_task_name);
-        Task task_script = task.AddComponent<Task>();
-        task_script.requireLick = true;
-        task_script.configPath = configPath;
+        // Creates task GameObject hierarchy
+        string newTaskName = "newTask";
+        GameObject task = new GameObject(newTaskName);
+        Task taskScript = task.AddComponent<Task>();
+        taskScript.requireLick = true;
+        taskScript.configPath = configPath;
 
-        int[] corridor_segments = new int[depth];
+        int[] corridorSegments = new int[depth];
         int segment;
-        float cur_corridor_x = 0;
-        float corridor_x_shift = config.vr_environment.CorridorSpacingUnity;
-        float z_shift;
+        float curCorridorX = 0;
+        float corridorXShift = config.vr_environment.CorridorSpacingUnity;
+        float zShift;
 
-        // Iterate through all possible corridor combinations
-        for (int i = 0; i < Mathf.Pow(n_segments, depth); i++)
+        // Iterates through all possible corridor combinations
+        for (int i = 0; i < Mathf.Pow(nSegments, depth); i++)
         {
-            // Generate the combination for the current index
+            // Generates the combination for the current index
             for (int j = 0; j < depth; j++)
             {
-                corridor_segments[j] = i / (int)Mathf.Pow(n_segments, depth - j - 1) % n_segments;
+                corridorSegments[j] = i / (int)Mathf.Pow(nSegments, depth - j - 1) % nSegments;
             }
 
-            GameObject corridor = new GameObject($"Corridor{string.Join("", corridor_segments)}");
+            GameObject corridor = new GameObject($"Corridor{string.Join("", corridorSegments)}");
             corridor.transform.SetParent(task.transform);
-            corridor.transform.localPosition = new Vector3(cur_corridor_x, 0, 0);
+            corridor.transform.localPosition = new Vector3(curCorridorX, 0, 0);
 
-            z_shift = 0;
+            zShift = 0;
             for (int j = 0; j < depth; j++)
             {
-                segment = corridor_segments[j];
-                GameObject instance = PrefabUtility.InstantiatePrefab(segment_prefabs[segment]) as GameObject;
+                segment = corridorSegments[j];
+                GameObject instance = PrefabUtility.InstantiatePrefab(segmentPrefabs[segment]) as GameObject;
 
                 // Only the first segment in each corridor should have a stimulus trigger zone and reset zone
                 // since the later segments are just for visual illusion
                 if (j > 0)
                 {
-                    StimulusTriggerZone stimulus_trigger_zone = instance.GetComponentInChildren<StimulusTriggerZone>();
-                    if (stimulus_trigger_zone != null)
+                    StimulusTriggerZone stimulusTriggerZone = instance.GetComponentInChildren<StimulusTriggerZone>();
+                    if (stimulusTriggerZone != null)
                     {
-                        GameObject.DestroyImmediate(stimulus_trigger_zone.gameObject);
+                        DestroyImmediate(stimulusTriggerZone.gameObject);
                     }
-                    ResetZone reset_zone = instance.GetComponentInChildren<ResetZone>();
-                    if (reset_zone != null)
+
+                    ResetZone resetZone = instance.GetComponentInChildren<ResetZone>();
+                    if (resetZone != null)
                     {
-                        GameObject.DestroyImmediate(reset_zone.gameObject);
+                        DestroyImmediate(resetZone.gameObject);
                     }
                 }
                 else
                 {
-                    // For the first segment, set the showBoundary from config's trial visibility setting
-                    StimulusTriggerZone stimulus_trigger_zone = instance.GetComponentInChildren<StimulusTriggerZone>();
-                    if (stimulus_trigger_zone != null)
+                    // For the first segment, sets showBoundary from config's trial visibility setting
+                    StimulusTriggerZone stimulusTriggerZone = instance.GetComponentInChildren<StimulusTriggerZone>();
+                    if (stimulusTriggerZone != null)
                     {
                         string segmentName = config.segments[segment].name;
-                        stimulus_trigger_zone.showBoundary = config.GetSegmentMarkerVisibility(segmentName);
+                        stimulusTriggerZone.showBoundary = config.GetSegmentMarkerVisibility(segmentName);
                     }
                 }
 
                 instance.transform.SetParent(corridor.transform, false);
-                instance.transform.localPosition += new Vector3(0, 0, z_shift);
-                z_shift += segment_lengths[segment];
+                instance.transform.localPosition += new Vector3(0, 0, zShift);
+                zShift += segmentLengths[segment];
             }
 
-            GameObject padding_instance = PrefabUtility.InstantiatePrefab(padding) as GameObject;
-            padding_instance.transform.SetParent(corridor.transform, false);
-            padding_instance.transform.localPosition += new Vector3(0, 0, padding_z_shift);
+            GameObject paddingInstance = PrefabUtility.InstantiatePrefab(padding) as GameObject;
+            paddingInstance.transform.SetParent(corridor.transform, false);
+            paddingInstance.transform.localPosition += new Vector3(0, 0, paddingZShift);
 
-            cur_corridor_x += corridor_x_shift;
+            curCorridorX += corridorXShift;
         }
 
-        // Open Save File Panel for user to specify location and name of prefab
+        // Opens save file panel for user to specify location and name of prefab
         string savePath = EditorUtility.SaveFilePanel(
             "Save Task Prefab",
             Application.dataPath + "/InfiniteCorridorTask/Tasks/",
-            new_task_name + ".prefab",
+            newTaskName + ".prefab",
             "prefab"
         );
 

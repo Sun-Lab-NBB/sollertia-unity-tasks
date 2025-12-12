@@ -1,7 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
 using UnityEditor;
+using UnityEngine;
 
 [ExecuteInEditMode]
 public class PerspectiveProjection : MonoBehaviour
@@ -24,7 +24,10 @@ public class PerspectiveProjection : MonoBehaviour
     // Start is called before the first frame update
     void Awake()
     {
-        if (material == null) { material = new Material(Shader.Find("Hidden/BrightnessShader")); }
+        if (material == null)
+        {
+            material = new Material(Shader.Find("Hidden/BrightnessShader"));
+        }
         dispObj = GetComponentInParent<Gimbl.DisplayObject>();
     }
 
@@ -37,13 +40,21 @@ public class PerspectiveProjection : MonoBehaviour
     public void UpdateView()
     {
         // Get components.
-        if (meshType == null) { meshType = projectionScreen.GetComponent<MeshFilter>().sharedMesh.name; }
-        if (cameraComponent == null) { cameraComponent = gameObject.GetComponent<Camera>(); }
+        if (meshType == null)
+        {
+            meshType = projectionScreen.GetComponent<MeshFilter>().sharedMesh.name;
+        }
+        if (cameraComponent == null)
+        {
+            cameraComponent = gameObject.GetComponent<Camera>();
+        }
 
         // Get view.
         if (projectionScreen != null && cameraComponent != null)
         {
-            Vector3 pa = new Vector3(); Vector3 pb = new Vector3(); Vector3 pc = new Vector3();
+            Vector3 pa = new Vector3();
+            Vector3 pb = new Vector3();
+            Vector3 pc = new Vector3();
             switch (meshType)
             {
                 case "Plane":
@@ -184,9 +195,9 @@ public class PerspectiveProjection : MonoBehaviour
             // set matrices
             cameraComponent.projectionMatrix = p;
             cameraComponent.worldToCameraMatrix = rm * tm;
-            // The original paper puts everything into the projection 
-            // matrix (i.e. sets it to p * rm * tm and the other 
-            // matrix to the identity), but this doesn't appear to 
+            // The original paper puts everything into the projection
+            // matrix (i.e. sets it to p * rm * tm and the other
+            // matrix to the identity), but this doesn't appear to
             // work with Unity's shadow maps.
 
             if (estimateViewFrustrum)
@@ -196,22 +207,21 @@ public class PerspectiveProjection : MonoBehaviour
                 // look at center of screen
                 cameraComponent.transform.rotation = q;
 
-                // set fieldOfView to a conservative estimate 
+                // set fieldOfView to a conservative estimate
                 // to make frustum tall enough
                 if (cameraComponent.aspect >= 1.0)
                 {
-                    cameraComponent.fieldOfView = Mathf.Rad2Deg *
-                       Mathf.Atan(((pb - pa).magnitude + (pc - pa).magnitude)
-                       / va.magnitude);
+                    cameraComponent.fieldOfView =
+                        Mathf.Rad2Deg * Mathf.Atan(((pb - pa).magnitude + (pc - pa).magnitude) / va.magnitude);
                 }
                 else
                 {
-                    // take the camera aspect into account to 
-                    // make the frustum wide enough 
+                    // take the camera aspect into account to
+                    // make the frustum wide enough
                     cameraComponent.fieldOfView =
-                       Mathf.Rad2Deg / cameraComponent.aspect *
-                       Mathf.Atan(((pb - pa).magnitude + (pc - pa).magnitude)
-                       / va.magnitude);
+                        Mathf.Rad2Deg
+                        / cameraComponent.aspect
+                        * Mathf.Atan(((pb - pa).magnitude + (pc - pa).magnitude) / va.magnitude);
                 }
             }
         }
@@ -219,9 +229,14 @@ public class PerspectiveProjection : MonoBehaviour
 
     public void OnRenderImage(RenderTexture source, RenderTexture destination)
     {
-        if (dispObj.settings.isActive) { material.SetFloat("_brightness", dispObj.currentBrightness); }
-        else { material.SetFloat("_brightness", 0); }
+        if (dispObj.settings.isActive)
+        {
+            material.SetFloat("_brightness", dispObj.currentBrightness);
+        }
+        else
+        {
+            material.SetFloat("_brightness", 0);
+        }
         Graphics.Blit(source, destination, material);
     }
-
 }

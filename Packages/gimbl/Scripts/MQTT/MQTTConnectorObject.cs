@@ -1,9 +1,9 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
 using System.IO;
 using System.Text;
 using UnityEditor;
+using UnityEngine;
 
 namespace Gimbl
 {
@@ -14,7 +14,5 @@ namespace Gimbl
             // Start mqtt client when scene starts
             GameObject.FindAnyObjectByType<Gimbl.MQTTClient>().Connect(false);
         }
-
     }
-
 }
