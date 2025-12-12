@@ -9,6 +9,12 @@ public class RewardLocation : MonoBehaviour
     private bool correctLick = false; // tracks if animal reported reward location correctly.
     public bool isActive = true; //track if reward location is active (only give reward once per lap). Reset by resetlocation
 
+    /// <summary>
+    /// Whether the reward marker should be visible when this location is active.
+    /// Set at task creation time from the experiment config's show_stimulus_collision_boundary per trial type.
+    /// </summary>
+    public bool showMarker = false;
+
     private GuidanceRegion GuidanceRegionScript;
 
     // MQTT Channels.

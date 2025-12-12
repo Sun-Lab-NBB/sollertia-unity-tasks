@@ -1,108 +1,137 @@
 using System;
 using UnityEngine;
 using UnityEditor;
-using Unity.VisualScripting;
 using System.IO;
+using SL.Config;
 
 public class CreateTask : MonoBehaviour
 {
-
     [MenuItem("CreateTask/New Task")]
-    public static void createTask(){
+    public static void createTask()
+    {
+        // Open file dialog for YAML configuration file
+        string configPath = EditorUtility.OpenFilePanel(
+            "Select Experiment Configuration YAML",
+            Application.dataPath + "/InfiniteCorridorTask/Tasks/",
+            "yaml,yml"
+        ).Replace(Application.dataPath, "");
 
-        string meta_data_path = EditorUtility.OpenFilePanel("Select Maze Spec JSON", Application.dataPath + "/InfiniteCorridorTask/Tasks/", "json").Replace(Application.dataPath, "");
-
-        if (string.IsNullOrEmpty(meta_data_path))
+        if (string.IsNullOrEmpty(configPath))
         {
-            Debug.LogError("No maze specification json file selected.");
+            Debug.LogError("No configuration YAML file selected.");
             return;
         }
 
-        string jsonString = File.ReadAllText(Application.dataPath + meta_data_path);
-        MazeSpec maze_spec = JsonUtility.FromJson<MazeSpec>(jsonString);
-
-        string prefabs_path = "Assets/InfiniteCorridorTask/Prefabs/";
-
-        string padding_path = prefabs_path + maze_spec.padding.name + ".prefab";
-        GameObject padding = AssetDatabase.LoadAssetAtPath<GameObject>(padding_path);
-
-        if(padding == null){
-            Debug.LogError("No padding found at " + padding_path);
+        // Load the configuration
+        MesoscopeExperimentConfiguration config = ConfigLoader.Load(Application.dataPath + configPath);
+        if (config == null)
+        {
+            Debug.LogError("Failed to load configuration from YAML file.");
             return;
         }
-        int n_segments = maze_spec.segments.Length;
 
+        string prefabsPath = "Assets/InfiniteCorridorTask/Prefabs/";
+
+        // Load padding prefab
+        string paddingPath = prefabsPath + config.vr_environment.padding_prefab_name + ".prefab";
+        GameObject padding = AssetDatabase.LoadAssetAtPath<GameObject>(paddingPath);
+
+        if (padding == null)
+        {
+            Debug.LogError("No padding found at " + paddingPath);
+            return;
+        }
+
+        int n_segments = config.segments.Count;
+
+        // Load segment prefabs
         GameObject[] segment_prefabs = new GameObject[n_segments];
+        for (int i = 0; i < n_segments; i++)
+        {
+            string segmentPath = prefabsPath + config.segments[i].name + ".prefab";
+            segment_prefabs[i] = AssetDatabase.LoadAssetAtPath<GameObject>(segmentPath);
 
-        for(int i = 0; i < n_segments; i++){
-            string segment_path = prefabs_path + maze_spec.segments[i].name + ".prefab";
-            segment_prefabs[i] = AssetDatabase.LoadAssetAtPath<GameObject>(segment_path);
-
-            if(segment_prefabs[i] == null){
-                Debug.LogError("No segment found at " + segment_path);
+            if (segment_prefabs[i] == null)
+            {
+                Debug.LogError("No segment found at " + segmentPath);
                 return;
             }
         }
 
+        // Measure actual prefab lengths and compare with config
         float[] measured_segment_lengths = Utility.get_segment_lengths(segment_prefabs);
+        float[] segment_lengths = config.GetSegmentLengthsUnity();
 
-        float[] segment_lengths = maze_spec.get_segment_lengths();
-
-        float epsilon = .01f;
-        for(int i = 0; i < n_segments; i++){
-            if(Mathf.Abs(measured_segment_lengths[i] - segment_lengths[i]) > epsilon){
-                Debug.Log($"Warning: For {maze_spec.segments[i]}, there is a mismatch between the prefab length ({measured_segment_lengths[i]}) and the sum of all the cue lengths ({segment_lengths[i]}). Using {segment_lengths[i]} for the length of the segment.");
+        float epsilon = 0.01f;
+        for (int i = 0; i < n_segments; i++)
+        {
+            if (Mathf.Abs(measured_segment_lengths[i] - segment_lengths[i]) > epsilon)
+            {
+                Debug.Log($"Warning: For {config.segments[i].name}, there is a mismatch between the prefab length ({measured_segment_lengths[i]}) and the sum of all the cue lengths ({segment_lengths[i]}). Using {segment_lengths[i]} for the length of the segment.");
             }
         }
 
-        int depth = maze_spec.segments_per_corridor;
-
+        int depth = config.vr_environment.segments_per_corridor;
         float padding_z_shift = depth * Mathf.Min(segment_lengths) - 1;
 
+        // Create task GameObject hierarchy
         string new_task_name = "newTask";
         GameObject task = new GameObject(new_task_name);
         Task task_script = task.AddComponent<Task>();
         task_script.mustLick = true;
-        task_script.visibleMarker = false;
-        task_script.meta_data_path = meta_data_path;
+        task_script.configPath = configPath;
 
         int[] corridor_segments = new int[depth];
-        // int[] corridor_segments_reversed = new int[depth];
         int segment;
         float cur_corridor_x = 0;
-        float corridor_x_shift = maze_spec.corridor_spacing;
+        float corridor_x_shift = config.vr_environment.CorridorSpacingUnity;
         float z_shift;
-        // Iterate through all possible combinations
+
+        // Iterate through all possible corridor combinations
         for (int i = 0; i < Mathf.Pow(n_segments, depth); i++)
         {
-            
             // Generate the combination for the current index
-            for (int j = 0; j < depth; j++) 
+            for (int j = 0; j < depth; j++)
             {
                 corridor_segments[j] = i / (int)Mathf.Pow(n_segments, depth - j - 1) % n_segments;
-                // corridor_segments_reversed[depth - j - 1] = corridor_segments[j];
             }
-
 
             GameObject corridor = new GameObject($"Corridor{string.Join("", corridor_segments)}");
             corridor.transform.SetParent(task.transform);
             corridor.transform.localPosition = new Vector3(cur_corridor_x, 0, 0);
 
             z_shift = 0;
-            for (int j = 0; j < depth; j++){
+            for (int j = 0; j < depth; j++)
+            {
                 segment = corridor_segments[j];
                 GameObject instance = PrefabUtility.InstantiatePrefab(segment_prefabs[segment]) as GameObject;
-                // Only the first segment in each corridor should have a reward location and reset location since the later segments are just for visual illusion
-                if(j > 0){
+
+                // Only the first segment in each corridor should have a reward location and reset location
+                // since the later segments are just for visual illusion
+                if (j > 0)
+                {
                     RewardLocation reward_location = instance.GetComponentInChildren<RewardLocation>();
-                    if (reward_location != null){
+                    if (reward_location != null)
+                    {
                         GameObject.DestroyImmediate(reward_location.gameObject);
                     }
                     ResetLocation reset_location = instance.GetComponentInChildren<ResetLocation>();
-                    if (reset_location != null){
+                    if (reset_location != null)
+                    {
                         GameObject.DestroyImmediate(reset_location.gameObject);
                     }
                 }
+                else
+                {
+                    // For the first segment, set the showMarker from config's trial visibility setting
+                    RewardLocation reward_location = instance.GetComponentInChildren<RewardLocation>();
+                    if (reward_location != null)
+                    {
+                        string segmentName = config.segments[segment].name;
+                        reward_location.showMarker = config.GetSegmentMarkerVisibility(segmentName);
+                    }
+                }
+
                 instance.transform.SetParent(corridor.transform, false);
                 instance.transform.localPosition += new Vector3(0, 0, z_shift);
                 z_shift += segment_lengths[segment];
@@ -116,38 +145,24 @@ public class CreateTask : MonoBehaviour
         }
 
         // Open Save File Panel for user to specify location and name of prefab
-        string savePath = EditorUtility.SaveFilePanel("Save Task Prefab", Application.dataPath + "/InfiniteCorridorTask/Tasks/", new_task_name + ".prefab", "prefab");
+        string savePath = EditorUtility.SaveFilePanel(
+            "Save Task Prefab",
+            Application.dataPath + "/InfiniteCorridorTask/Tasks/",
+            new_task_name + ".prefab",
+            "prefab"
+        );
 
         if (string.IsNullOrEmpty(savePath))
         {
             Debug.LogError("User did not select a save location.");
+            DestroyImmediate(task);
             return;
         }
 
         savePath = FileUtil.GetProjectRelativePath(savePath);
         PrefabUtility.SaveAsPrefabAsset(task, savePath);
         DestroyImmediate(task);
-    } 
 
-    private static void count(){
-        int depth = 3; // Number of digits
-        int n_segments = 2; // Number of options (0, 1)
-
-        // Iterate through all possible combinations
-        for (int i = 0; i < Mathf.Pow(n_segments, depth); i++)
-        {
-            // Create an array to store the current combination
-            int[] combination = new int[depth];
-            
-            // Generate the combination for the current index
-            for (int j = 0; j < depth; j++) // Leftmost number increments first
-            {
-                combination[j] = i / (int)Mathf.Pow(n_segments, depth - j - 1) % n_segments;
-            }
-            
-            // Print the current combination in reverse order
-            Array.Reverse(combination); // Reverse the array before printing
-            Debug.Log(string.Join(", ", combination));
-        }
+        Debug.Log($"Task prefab saved to {savePath}");
     }
 }

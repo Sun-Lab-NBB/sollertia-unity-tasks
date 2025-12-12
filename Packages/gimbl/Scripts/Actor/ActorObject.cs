@@ -32,7 +32,6 @@ namespace Gimbl
         [SerializeField] private ControllerOutput _controller;
         [SerializeField] private AudioListener listener;
         //Check that only one controller can be linked to one actor.
-        [SerializeField]
         public ControllerOutput controller
         {
             get { return _controller; }

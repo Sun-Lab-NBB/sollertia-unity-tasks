@@ -1,47 +1,39 @@
-﻿using System;
-using System.Collections;
+using System;
 using System.Collections.Generic;
-using System.Text.RegularExpressions;
 using System.Linq;
 using System.IO;
-using Unity.VisualScripting;
 using UnityEngine;
 using Gimbl;
-using UnityEditor.Search;
-using UnityEngine.Rendering;
-using UnityEngine.AI;
 using UnityEngine.SceneManagement;
+using SL.Config;
 
 public class Task : MonoBehaviour
 {
-
     // Some words for parts of the maze:
     //  Cue: A certain pattern on a wall
-    //       This task has cues A, B, C, D which are named 1, 2, 3, 4
     //  Segment: A portion of the maze that cycles back to the start cue
-    //       This task has segments 1, 2
-    //          Segment 1 has the following cues: A B C
-    //          Segment 2 has the following cues: A B D C       
-    //  Corridor: A grouping segments
-    //       This task has all 8 corridors, which includes all of the possible length three orderings of segment 1 and 2
-    //          ex. Corridor 121 has the following segments: 1 2 1
+    //  Corridor: A grouping of segments
 
     public Gimbl.ActorObject actor = null;
     public bool mustLick = false;
-    public bool visibleMarker = false;
 
-    // The track is infinite but need to specify how many random segments keep track of. The 
-    // track length should always be an overestimate to how far the mouse is actually going to run.
+    // The track is infinite but need to specify how many random segments keep track of.
+    // The track length should always be an overestimate to how far the mouse is actually going to run.
     public float trackLength = 15000;
 
     // A seed for creation of random segments, a specific seed will always create the same pattern of cues.
     // If trackSeed is -1, then no seed will be used.
     public int trackSeed = -1;
 
+    // Path to the YAML configuration file (relative to Application.dataPath)
+    [System.NonSerialized]
+    public string configPath;
+
     // For keeping track of where in the random sequence the mouse is.
     private int current_segment_index;
 
-    // Each time the mouse completes a segment, it will go into a new random segment. (either 1 or 2) The segment sequence array holds the order of segments
+    // Each time the mouse completes a segment, it will go into a new random segment.
+    // The segment sequence array holds the order of segments.
     private int[] segment_sequence_array;
 
     // Holds the order of cues
@@ -61,13 +53,10 @@ public class Task : MonoBehaviour
         public string name;
     }
     private MQTTChannel sceneNameTrigger;
-    private MQTTChannel<SceneNameMsg> sceneNameChannel; 
+    private MQTTChannel<SceneNameMsg> sceneNameChannel;
 
     private MQTTChannel mustLickTrue;
     private MQTTChannel mustLickFalse;
-
-    private MQTTChannel visibleMarkerTrue;
-    private MQTTChannel visibleMarkerFalse;
 
     private MQTTChannel showDisplay;
     private MQTTChannel blankDisplay;
@@ -75,13 +64,8 @@ public class Task : MonoBehaviour
     private DisplayObject[] displayObjects;
 
     private int depth;
-
     private int n_segments;
-
-    private MazeSpec maze_spec;
-
-    // [System.NonSerialized]
-    public string meta_data_path;
+    private MesoscopeExperimentConfiguration config;
 
     private Dictionary<string, byte> cue_ids;
     private float[] segment_lengths;
@@ -107,45 +91,51 @@ public class Task : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-
         if (transform.position != Vector3.zero)
         {
             Debug.LogWarning($"Task is positioned at {transform.position}. Automatically Setting Task position to (0,0,0) for this runtime but it is recommended to permanently set the task position to (0,0,0) in Editor Mode.");
             transform.position = Vector3.zero;
         }
 
-        string global_meta_data_path = Application.dataPath + meta_data_path;
+        string globalConfigPath = Application.dataPath + configPath;
 
-        if (string.IsNullOrEmpty(meta_data_path) || !File.Exists(global_meta_data_path))
+        if (string.IsNullOrEmpty(configPath) || !File.Exists(globalConfigPath))
         {
-            Debug.LogError("No maze specification JSON file found at the specified path.");
+            Debug.LogError("No configuration YAML file found at the specified path.");
             return;
         }
 
-        string jsonString = File.ReadAllText(global_meta_data_path);
-        maze_spec = JsonUtility.FromJson<MazeSpec>(jsonString);
+        // Load configuration from YAML
+        config = ConfigLoader.Load(globalConfigPath);
+        if (config == null)
+        {
+            Debug.LogError("Failed to load configuration from YAML file.");
+            return;
+        }
 
-        n_segments = maze_spec.segments.Length;
-        cue_ids = maze_spec.get_cue_ids();
-        segment_lengths = maze_spec.get_segment_lengths();
-        depth = maze_spec.segments_per_corridor;
+        n_segments = config.segments.Count;
+        cue_ids = config.GetCueNameToCode();
+        segment_lengths = config.GetSegmentLengthsUnity();
+        cue_lengths = config.GetCueLengthsUnity();
+        depth = config.vr_environment.segments_per_corridor;
 
-        // To teleport the mouse correctly between corridors, you need to know when to teleport (ie when the first 
-        // segment of the current corridor ends) and where to teleport (ie where the first segment of the next corridor
-        // starts). Corridor map holds this info, the first float is the position of the corridor and the second float 
-        // is the length of the first segment in the corridor
+        // To teleport the mouse correctly between corridors, you need to know when to teleport
+        // (ie when the first segment of the current corridor ends) and where to teleport
+        // (ie where the first segment of the next corridor starts).
+        // Corridor map holds this info, the first float is the position of the corridor
+        // and the second float is the length of the first segment in the corridor.
         corridorMap = new Dictionary<string, (float, float)>();
 
         int[] corridor_segments = new int[depth];
         float cur_corridor_x = 0;
-        float corridor_x_shift = maze_spec.corridor_spacing;
+        float corridor_x_shift = config.vr_environment.CorridorSpacingUnity;
+
         for (int i = 0; i < Mathf.Pow(n_segments, depth); i++)
         {
             // Generate the combination for the current index
             for (int j = 0; j < depth; j++)
             {
                 corridor_segments[j] = i / (int)Mathf.Pow(n_segments, depth - j - 1) % n_segments;
-                // corridor_segments_reversed[depth - j - 1] = corridor_segments[j];
             }
 
             corridorMap[string.Join("-", corridor_segments)] = (cur_corridor_x, segment_lengths[corridor_segments[0]]);
@@ -153,13 +143,11 @@ public class Task : MonoBehaviour
         }
 
         // Create random sequence of segments
-        (segment_sequence_array, cue_sequence_array) = generateRandomMaze(trackLength, trackSeed);
+        (segment_sequence_array, cue_sequence_array) = GenerateRandomMaze(trackLength, trackSeed);
 
-
-        // Figure out what the first corridor is from the first three segments
+        // Figure out what the first corridor is from the first segments
         current_segment_index = 0;
         cur_segment = new List<int>(segment_sequence_array.Take(depth));
-
 
         if (actor != null)
         {
@@ -181,28 +169,18 @@ public class Task : MonoBehaviour
 
         // Create MQTT channel for toggling mustLick
         mustLickTrue = new MQTTChannel("MustLick/True/", true);
-        mustLickTrue.Event.AddListener(setMustLickTrue);
+        mustLickTrue.Event.AddListener(SetMustLickTrue);
 
         mustLickFalse = new MQTTChannel("MustLick/False/", true);
-        mustLickFalse.Event.AddListener(setMustLickFalse);
-
-        // Create MQTT channel for toggling visibleMarker
-        visibleMarkerTrue = new MQTTChannel("VisibleMarker/True/");
-        visibleMarkerTrue.Event.AddListener(setVisibleMarkerTrue);
-
-        visibleMarkerFalse = new MQTTChannel("VisibleMarker/False/");
-        visibleMarkerFalse.Event.AddListener(setVisibleMarkerFalse);
-
+        mustLickFalse.Event.AddListener(SetMustLickFalse);
 
         // Create MQTT channels for blacking out and displaying the screen
         displayObjects = FindObjectsByType<DisplayObject>(FindObjectsSortMode.None);
         showDisplay = new MQTTChannel("Display/Show/", true);
-        showDisplay.Event.AddListener(show);
+        showDisplay.Event.AddListener(Show);
         blankDisplay = new MQTTChannel("Display/Blank/", true);
-        blankDisplay.Event.AddListener(blank);
-
+        blankDisplay.Event.AddListener(Blank);
     }
-
 
     // Update is called once per frame
     void Update()
@@ -213,7 +191,6 @@ public class Task : MonoBehaviour
             // Check if the mouse has traveled through the entire segment
             if (pos.z > corridorMap[string.Join("-", cur_segment)].Item2)
             {
-
                 // Teleport the mouse back to the start of the corridors
                 pos.z -= corridorMap[string.Join("-", cur_segment)].Item2;
 
@@ -238,7 +215,6 @@ public class Task : MonoBehaviour
         {
             Debug.LogError("Actor is null.");
         }
-
     }
 
     private int SampleFromDistribution(float[] probabilities, System.Random random)
@@ -260,13 +236,13 @@ public class Task : MonoBehaviour
     /// Generates a random sequence of maze segments based on the specified length and optional seed.
     /// </summary>
     /// <param name="length">The total desired length of the maze sequence.</param>
-    /// <param name="seed">An optional seed value for the random number generator. If null or -1, a new random generator is used.</param>
+    /// <param name="seed">An optional seed value for the random number generator. If -1, a new random generator is used.</param>
     /// <returns>
     /// A tuple containing two arrays:
     /// - An integer array representing the sequence of segments in the maze.
     /// - A byte array representing the cues associated with the maze sequence.
     /// </returns>
-    private (int[], byte[]) generateRandomMaze(float length, int? seed = null)
+    private (int[], byte[]) GenerateRandomMaze(float length, int? seed = null)
     {
         float sequence_length = 0;
 
@@ -275,23 +251,23 @@ public class Task : MonoBehaviour
         List<int> segment_sequence = new List<int>();
         List<byte> cue_sequence = new List<byte>();
 
-
         int choice = random.Next(n_segments);
 
         while (sequence_length < length)
         {
             segment_sequence.Add(choice);
 
-            foreach (string cue in maze_spec.segments[choice].cue_sequence)
+            var segment = config.segments[choice];
+            foreach (string cue in segment.cue_sequence)
             {
                 cue_sequence.Add(cue_ids[cue]);
             }
 
             sequence_length += segment_lengths[choice];
 
-            if (maze_spec.segments[choice].transition_probabilities != null)
+            if (segment.HasTransitionProbabilities)
             {
-                choice = SampleFromDistribution(maze_spec.segments[choice].transition_probabilities, random);
+                choice = SampleFromDistribution(segment.transition_probabilities.ToArray(), random);
             }
             else
             {
@@ -299,11 +275,7 @@ public class Task : MonoBehaviour
             }
         }
 
-        int[] segment_sequence_array = segment_sequence.ToArray();
-        byte[] cue_sequence_array = cue_sequence.ToArray();
-
-        return (segment_sequence_array, cue_sequence_array);
-
+        return (segment_sequence.ToArray(), cue_sequence.ToArray());
     }
 
     private void OnCueSequenceTrigger()
@@ -317,7 +289,7 @@ public class Task : MonoBehaviour
         sceneNameChannel.Send(new SceneNameMsg() { name = sceneName });
     }
 
-    private void blank()
+    private void Blank()
     {
         foreach (DisplayObject display in displayObjects)
         {
@@ -325,7 +297,7 @@ public class Task : MonoBehaviour
         }
     }
 
-    private void show()
+    private void Show()
     {
         foreach (DisplayObject display in displayObjects)
         {
@@ -333,37 +305,13 @@ public class Task : MonoBehaviour
         }
     }
 
-    private void setMustLickTrue()
+    private void SetMustLickTrue()
     {
         mustLick = true;
     }
-    private void setMustLickFalse()
+
+    private void SetMustLickFalse()
     {
         mustLick = false;
     }
-
-    private void setVisibleMarkerTrue()
-    {
-        visibleMarker = true;
-    }
-
-    private void setVisibleMarkerFalse()
-    {
-        visibleMarker = false;
-    }
-
-    private float calculateAbsoluteDistance()
-    {
-
-        float sum = 0;
-        for (int i = 0; i < current_segment_index; i++)
-        {
-            sum += current_segment_index;
-            maze_spec.get_segment_lengths();
-
-        }
-        return 0.0F;
-    }
-
 }
-
