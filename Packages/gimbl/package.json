@@ -1,9 +1,9 @@
 {
   "name": "gimbl",
   "displayName": "Gimbl",
-  "version": "0.1.0",
-  "unity": "2018.3",
-  "description": "A package for performing VR animal experiments in unity",
+  "version": "1.0.0",
+  "unity": "6000.3",
+  "description": "A package for performing Virtual Reality animal experiments in the Sun Lab",
   "keywords": [
     "VR"
   ],

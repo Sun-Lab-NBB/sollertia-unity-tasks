@@ -143,9 +143,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 2134257704264166354}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ffb1e85a8875678429f35a605d61d511, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
+  m_Script: {fileID: 11500000, guid: 989c84931d1085a29be7ed7c1799f97f, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
   lickPrefab: {fileID: 6117496887552303279, guid: db4a1662739ae444ba6271fe4a2103a3, type: 3}
-  rewardPrefab: {fileID: 6458362314562198754, guid: b5f4cde33c9a7504095b8dcb21d36164, type: 3}
+  stimulusPrefab: {fileID: 6458362314562198754, guid: b5f4cde33c9a7504095b8dcb21d36164, type: 3}
   canvas: {fileID: 5308233647771371568}

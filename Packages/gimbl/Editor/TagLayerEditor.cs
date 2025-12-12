@@ -50,59 +50,6 @@ namespace TagLayerEditor
         }
 
         /// <summary>
-        /// Removes the tag.
-        /// </summary>
-        /// <returns><c>true</c>, if tag was removed, <c>false</c> otherwise.</returns>
-        /// <param name="tagName">Tag name.</param>
-        public static bool RemoveTag(string tagName)
-        {
-            // Open tag manager
-            SerializedObject tagManager = new SerializedObject(
-                AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/TagManager.asset")[0]
-            );
-
-            // Tags Property
-            SerializedProperty tagsProp = tagManager.FindProperty("tags");
-
-            if (PropertyExists(tagsProp, 0, tagsProp.arraySize, tagName))
-            {
-                SerializedProperty sp;
-
-                for (int i = 0, j = tagsProp.arraySize; i < j; i++)
-                {
-                    sp = tagsProp.GetArrayElementAtIndex(i);
-                    if (sp.stringValue == tagName)
-                    {
-                        tagsProp.DeleteArrayElementAtIndex(i);
-                        //Debug.Log("Tag: " + tagName + " has been removed");
-                        // Save settings
-                        tagManager.ApplyModifiedProperties();
-                        return true;
-                    }
-                }
-            }
-
-            return false;
-        }
-
-        /// <summary>
-        /// Checks to see if tag exists.
-        /// </summary>
-        /// <returns><c>true</c>, if tag exists, <c>false</c> otherwise.</returns>
-        /// <param name="tagName">Tag name.</param>
-        public static bool TagExists(string tagName)
-        {
-            // Open tag manager
-            SerializedObject tagManager = new SerializedObject(
-                AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/TagManager.asset")[0]
-            );
-
-            // Layers Property
-            SerializedProperty tagsProp = tagManager.FindProperty("tags");
-            return PropertyExists(tagsProp, 0, maxTags, tagName);
-        }
-
-        /// <summary>
         /// Adds the layer.
         /// </summary>
         /// <returns><c>true</c>, if layer was added, <c>false</c> otherwise.</returns>
@@ -177,23 +124,6 @@ namespace TagLayerEditor
             }
 
             return false;
-        }
-
-        /// <summary>
-        /// Checks to see if layer exists.
-        /// </summary>
-        /// <returns><c>true</c>, if layer exists, <c>false</c> otherwise.</returns>
-        /// <param name="layerName">Layer name.</param>
-        public static bool LayerExists(string layerName)
-        {
-            // Open tag manager
-            SerializedObject tagManager = new SerializedObject(
-                AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/TagManager.asset")[0]
-            );
-
-            // Layers Property
-            SerializedProperty layersProp = tagManager.FindProperty("layers");
-            return PropertyExists(layersProp, 0, maxLayers, layerName);
         }
 
         /// <summary>

@@ -30,15 +30,5 @@ namespace Gimbl
                 cam.cullingMask = -1; // show everything
             }
         }
-
-        public void Blank()
-        {
-            currentBrightness = 0;
-        }
-
-        public void Show()
-        {
-            currentBrightness = settings.brightness;
-        }
     }
 }

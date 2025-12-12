@@ -49,8 +49,14 @@ public class OccupancyGuidanceZone : MonoBehaviour
     {
         inZone = true;
 
-        // Only triggers in guidance mode (!requireWait) and if not already triggered this lap
-        if (!_task.requireWait && !_hasTriggered && _parentOccupancyZone != null)
+        // Only triggers in guidance mode (!requireWait), if not already triggered this lap,
+        // and if the boundary is still armed (occupancy requirement not yet met)
+        if (
+            !_task.requireWait
+            && !_hasTriggered
+            && _parentOccupancyZone != null
+            && !_parentOccupancyZone.boundaryDisarmed
+        )
         {
             TriggerBrakeActivation();
         }

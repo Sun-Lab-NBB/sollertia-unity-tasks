@@ -43,7 +43,7 @@ namespace Gimbl
         {
             if (Actor != null && settings.isActive)
             {
-                moved = movement.Sum().x; // Accumulate all input since the last frame
+                moved = movement.Sum(); // Accumulate all input since the last frame
 
                 // Current position.
                 pos = Actor.transform.position;
@@ -66,7 +66,7 @@ namespace Gimbl
         {
             lock (movement)
             {
-                movement.Add(msg.movement, 0, 0);
+                movement.Add(msg.movement);
             }
         }
 
@@ -96,23 +96,9 @@ namespace Gimbl
             {
                 ControllerMenuTitle(settings.isActive, "Simulated Linear Treadmill");
                 EditorGUILayout.LabelField("Device", EditorStyles.boldLabel);
-                EditorGUI.indentLevel++;
-                // Select controller.
-                EditorGUILayout.BeginHorizontal(LayoutSettings.editFieldOp);
                 if (EditorApplication.isPlaying)
                     GUI.enabled = false;
-                if (settings.gamepadSettings.selectedGamepad >= deviceNames.Length)
-                    settings.gamepadSettings.selectedGamepad = 0;
-                settings.gamepadSettings.selectedGamepad = EditorGUILayout.Popup(
-                    settings.gamepadSettings.selectedGamepad,
-                    deviceNames
-                );
-                if (GUILayout.Button("Rescan Devices"))
-                {
-                    deviceNames = Gamepad.GetDeviceNames();
-                }
-                EditorGUILayout.EndHorizontal();
-                EditorGUILayout.PropertyField(serializedObject.FindProperty("buttonTopics"), true);
+                EditorGUI.indentLevel++;
                 EditorGUILayout.PropertyField(
                     serializedObject.FindProperty("isActive"),
                     new GUIContent("Active"),

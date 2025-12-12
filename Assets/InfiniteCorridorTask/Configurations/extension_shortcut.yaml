@@ -1,0 +1,96 @@
+# Extension-Shortcut Experiment Configuration
+# Unified YAML configuration for the Mesoscope VR behavioral task.
+# This file serves both the Unity VR environment and the Python data acquisition/analysis systems.
+
+# Unity scene metadata
+unity_scene_name: "ChelseaSceneExt"
+cue_offset_cm: 10.0
+
+# Cue definitions - single source of truth
+# Each cue has a unique name (used in segment cue sequences), a unique uint8 code (for MQTT/analysis),
+# and a length in centimeters.
+cues:
+  - name: "Gray"
+    code: 0
+    length_cm: 30.0
+  - name: "A"
+    code: 1
+    length_cm: 30.0
+  - name: "B"
+    code: 2
+    length_cm: 30.0
+  - name: "C"
+    code: 3
+    length_cm: 30.0
+  - name: "D"
+    code: 4
+    length_cm: 30.0
+
+# Visual segment definitions for Unity corridor system
+# Each segment is a sequence of cues with optional transition probabilities.
+segments:
+  - name: "Segment_abc"
+    cue_sequence: ["A", "Gray", "B", "Gray", "C", "Gray"]
+    transition_probabilities: [0.5, 0.5]
+
+  - name: "Segment_abdc"
+    cue_sequence: ["A", "Gray", "B", "Gray", "D", "Gray", "C", "Gray"]
+    transition_probabilities: [0.5, 0.5]
+
+# VR environment configuration
+vr_environment:
+  corridor_spacing_cm: 20.0
+  segments_per_corridor: 3
+  padding_prefab_name: "Padding"
+  cm_per_unity_unit: 10.0
+
+# Trial structures - behavioral overlays on segments
+# These are WaterRewardTrial types with lick-triggered rewards
+trial_structures:
+  ABC:
+    segment_name: "Segment_abc"
+    stimulus_trigger_zone_start_cm: 128.0
+    stimulus_trigger_zone_end_cm: 142.0
+    stimulus_location_cm: 135.0
+    show_stimulus_collision_boundary: false
+    reward_size_ul: 5.0
+    reward_tone_duration_ms: 300
+
+  ABDC:
+    segment_name: "Segment_abdc"
+    stimulus_trigger_zone_start_cm: 188.0
+    stimulus_trigger_zone_end_cm: 202.0
+    stimulus_location_cm: 195.0
+    show_stimulus_collision_boundary: false
+    reward_size_ul: 5.0
+    reward_tone_duration_ms: 300
+
+# Experiment state machine
+# Defines the phases/states of the experiment and which trials are used in each.
+experiment_states:
+  baseline:
+    experiment_state_code: 1
+    system_state_code: 1
+    state_duration_s: 300.0
+    supported_trial_structures: ["ABC", "ABDC"]
+    reinforcing_initial_guided_trials: 0
+    reinforcing_recovery_failed_threshold: 0
+    reinforcing_recovery_guided_trials: 0
+
+  run:
+    experiment_state_code: 2
+    system_state_code: 2
+    state_duration_s: 3600.0
+    supported_trial_structures: ["ABC", "ABDC"]
+    reinforcing_initial_guided_trials: 3
+    reinforcing_recovery_failed_threshold: 8
+    reinforcing_recovery_guided_trials: 2
+
+  cooldown:
+    experiment_state_code: 3
+    system_state_code: 1
+    state_duration_s: 300.0
+    supported_trial_structures: ["ABC", "ABDC"]
+    reinforcing_initial_guided_trials: 0
+    reinforcing_recovery_failed_threshold: 0
+    reinforcing_recovery_guided_trials: 0

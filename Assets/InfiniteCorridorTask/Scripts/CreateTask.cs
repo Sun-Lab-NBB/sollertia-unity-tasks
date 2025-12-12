@@ -20,7 +20,7 @@ public class CreateTask : MonoBehaviour
         string configPath = EditorUtility
             .OpenFilePanel(
                 "Select Experiment Configuration YAML",
-                Application.dataPath + "/InfiniteCorridorTask/Tasks/",
+                Application.dataPath + "/InfiniteCorridorTask/Configurations/",
                 "yaml,yml"
             )
             .Replace(Application.dataPath, "");

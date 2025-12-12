@@ -46,7 +46,6 @@ public class Task : MonoBehaviour
     public int trackSeed = -1;
 
     /// <summary>The path to the YAML configuration file, relative to Application.dataPath.</summary>
-    [NonSerialized]
     public string configPath;
 
     /// <summary>The current index in the segment sequence array.</summary>

@@ -41,12 +41,6 @@ namespace Gimbl
         {
             client.client.Publish(topic, null);
         }
-
-        //Status
-        public bool isConnected()
-        {
-            return client.client.IsConnected;
-        }
     }
 
     // Derived class that parses messages of known contents.

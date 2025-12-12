@@ -18,117 +18,55 @@ namespace Gimbl
         public abstract void EditMenu(); // Custom edit menu.
         public abstract void LinkSettings(string assetPath = ""); // Creates or links a settings file (ScriptableObject).
 
-        // Handling of gamepads
-        public Gamepad gamepad = new Gamepad();
-        public string[] deviceNames = Gamepad.GetDeviceNames();
-
-        // General buffer for inputs
+        // Buffer for accumulating linear treadmill input between frames.
         public class ValueBuffer
         {
-            public float[] x;
-            public float[] y;
-            public float[] z;
-            public Vector3 res = new Vector3();
-            public int bufferSize;
-            public int counter;
+            private float[] values;
+            private int bufferSize;
+            private int counter;
             private bool isCircular;
 
-            public ValueBuffer(int reqBufferSize, bool reqIsCircular)
+            public ValueBuffer(int size, bool circular)
             {
-                bufferSize = reqBufferSize;
-                x = new float[bufferSize];
-                y = new float[bufferSize];
-                z = new float[bufferSize];
+                bufferSize = size;
+                values = new float[bufferSize];
                 counter = 0;
-                isCircular = reqIsCircular;
+                isCircular = circular;
             }
 
-            public void Add(float newX, float newY, float newZ)
+            public void Add(float value)
             {
-                x[counter] = newX;
-                y[counter] = newY;
-                z[counter] = newZ;
+                values[counter] = value;
                 counter++;
                 if (counter == bufferSize)
                 {
-                    if (isCircular)
-                    {
-                        counter = 0;
-                    }
-                    else
-                    {
-                        counter = bufferSize - 1;
-                    } //overwrites.
+                    counter = isCircular ? 0 : bufferSize - 1;
                 }
             }
 
-            public Vector3 Sum()
+            public float Sum()
             {
-                res.x = 0;
-                res.y = 0;
-                res.z = 0;
-                for (int i = 0; i < GetBufferLimit(); i++)
+                float result = 0;
+                int limit = isCircular ? bufferSize : counter;
+                for (int i = 0; i < limit; i++)
                 {
-                    res.x += x[i];
-                    res.y += y[i];
-                    res.z += z[i];
+                    result += values[i];
                 }
-                return res;
-            }
-
-            public Vector3 Average()
-            {
-                res.x = 0;
-                res.y = 0;
-                res.z = 0;
-                for (int i = 0; i < GetBufferLimit(); i++)
-                {
-                    res.x += x[i];
-                    res.y += y[i];
-                    res.z += z[i];
-                }
-                res.x /= bufferSize;
-                res.y /= bufferSize;
-                res.z /= bufferSize;
-                return res;
+                return result;
             }
 
             public void Clear()
             {
-                res.x = 0;
-                res.y = 0;
-                res.z = 0;
-                for (int i = 0; i < GetBufferLimit(); i++)
+                int limit = isCircular ? bufferSize : counter;
+                for (int i = 0; i < limit; i++)
                 {
-                    x[i] = 0;
-                    y[i] = 0;
-                    z[i] = 0;
+                    values[i] = 0;
                 }
                 counter = 0;
             }
-
-            private int GetBufferLimit()
-            {
-                if (isCircular)
-                {
-                    return bufferSize;
-                }
-                else
-                {
-                    return counter;
-                }
-            }
         }
 
-        public ValueBuffer movement = new ValueBuffer(100, false); // Stores ball rotations.
-
-        public int GetBufferSize(float setting)
-        {
-            int size = (int)(((float)setting / 1000) / (1f / Screen.currentResolution.refreshRateRatio.value));
-            if (size == 0)
-                size = 1;
-            return size;
-        }
+        public ValueBuffer movement = new ValueBuffer(100, false);
 
         public void InitiateController()
         {

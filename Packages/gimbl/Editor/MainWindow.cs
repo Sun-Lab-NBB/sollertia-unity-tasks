@@ -13,9 +13,6 @@ public class MainWindow : EditorWindow
 
     private MQTTClient _client;
     private static MainWindow window;
-    private bool foldBlink = false;
-    private int duration;
-    private int fadeTime;
 
     [System.Serializable]
     private class SessionMenuSettings
@@ -103,41 +100,6 @@ public class MainWindow : EditorWindow
         GUI.enabled = true;
         EditorGUILayout.EndVertical();
         #endregion
-
-
-        EditorGUILayout.BeginVertical(LayoutSettings.mainBox.style);
-        EditorGUILayout.LabelField("General", LayoutSettings.sectionLabel);
-
-        #region Teleport.
-        foldBlink = EditorGUILayout.Foldout(foldBlink, "Teleport");
-        if (foldBlink)
-        {
-            EditorGUILayout.BeginVertical(LayoutSettings.subBox.style);
-            EditorGUILayout.BeginHorizontal(LayoutSettings.editFieldOp);
-            int newDuration = EditorGUILayout.IntField(
-                "Dark Duration: ",
-                PlayerPrefs.GetInt("Gimbl_BlinkDuration", 2000)
-            );
-            EditorGUILayout.LabelField("(ms)", GUILayout.Width(50));
-            if (newDuration != duration)
-            {
-                PlayerPrefs.SetInt("Gimbl_BlinkDuration", newDuration);
-                duration = newDuration;
-            }
-            EditorGUILayout.EndHorizontal();
-            EditorGUILayout.BeginHorizontal(LayoutSettings.editFieldOp);
-            int newFadeTime = EditorGUILayout.IntField("Fade Time: ", PlayerPrefs.GetInt("Gimbl_BlinkFadeTime", 3000));
-            EditorGUILayout.LabelField("(ms)", GUILayout.Width(50));
-            if (newFadeTime != fadeTime)
-            {
-                PlayerPrefs.SetInt("Gimbl_BlinkFadeTime", newFadeTime);
-                fadeTime = newFadeTime;
-            }
-            EditorGUILayout.EndHorizontal();
-            EditorGUILayout.EndVertical();
-        }
-        #endregion
-        EditorGUILayout.EndVertical();
 
         #region Export/Import.
         EditorGUILayout.BeginVertical(LayoutSettings.mainBox.style);
