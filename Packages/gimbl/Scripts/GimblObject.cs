@@ -9,7 +9,6 @@ namespace Gimbl
     public class FloatMsg { public float value; }
     public class BoolMsg { public bool flag; }
     public class StringMessage { public string strMsg; }
-    public class BlinkMsg { public int darkTime; public int fadeTime; public bool disable; }
     public class GimblObjectChan<T>
     {
         public bool flag = false;
@@ -48,9 +47,6 @@ namespace Gimbl
         GimblObjectChan<StringMessage> SetTexChan;
         GimblObjectChan<FloatMsg> SetOpacChan;
         GimblObjectChan<BoolMsg> SetVisChan;
-        GimblObjectChan<BoolMsg> PlaySoundChan;
-        GimblObjectChan<FloatMsg> SetBrightChan;
-        GimblObjectChan<BlinkMsg> BlinkChan;
         // Start is called before the first frame update
 
         void Start()
@@ -69,9 +65,6 @@ namespace Gimbl
             SetTexChan = new GimblObjectChan<StringMessage>(name, SetTexture);
             SetOpacChan = new GimblObjectChan<FloatMsg>(name, SetOpacity);
             SetVisChan = new GimblObjectChan<BoolMsg>(name, SetVisibility);
-            PlaySoundChan = new GimblObjectChan<BoolMsg>(name, PlaySound);
-            SetBrightChan = new GimblObjectChan<FloatMsg>(name, SetBrightness);
-            BlinkChan = new GimblObjectChan<BlinkMsg>(name, Blink);
         }
 
         void Update()
@@ -86,9 +79,6 @@ namespace Gimbl
             RotateToChan.Test();
             SetOpacChan.Test();
             SetVisChan.Test();
-            PlaySoundChan.Test();
-            SetBrightChan.Test();
-            BlinkChan.Test();
         }
 
         void Move(FloatArray msg)
@@ -163,45 +153,5 @@ namespace Gimbl
         }
 
         void SetVisibility(BoolMsg msg) { GetComponent<MeshRenderer>().enabled = msg.flag; }
-
-        void PlaySound(BoolMsg msg)
-        {
-            if (msg.flag)
-                GetComponent<AudioSource>().Play();
-            else
-                GetComponent<AudioSource>().Stop();
-        }
-
-        void SetBrightness(FloatMsg msg)
-        {
-            ActorObject act = GetComponent<ActorObject>();
-            if (act != null)
-            {
-                DisplayObject disp = act.display;
-                if (disp != null)
-                {
-                    disp.currentBrightness = msg.value;
-                }
-                else { Debug.LogError(string.Format("{0}: Tried to set screen brightness but object has no display attached.", name)); }
-            }
-            else
-            {
-                Debug.LogError(string.Format("{0}: Tried to set screen brightness but object is not an actor.", name));
-            }
-
-        }
-
-        void Blink(BlinkMsg msg)
-        {
-            ActorObject act = GetComponent<ActorObject>();
-            if (act != null)
-            {
-                act.Blink(msg.darkTime, msg.fadeTime, msg.disable);
-            }
-            else
-            {
-                Debug.LogError(string.Format("{0}: Tried to blink but object is not an actor.", name));
-            }
-        }
     }
 }

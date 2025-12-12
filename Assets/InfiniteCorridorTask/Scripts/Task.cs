@@ -15,10 +15,10 @@ public class Task : MonoBehaviour
     //  Corridor: A grouping of segments
 
     public Gimbl.ActorObject actor = null;
-    public bool mustLick = false;
+    public bool requireLick = false;
 
     // The track is infinite but need to specify how many random segments keep track of.
-    // The track length should always be an overestimate to how far the mouse is actually going to run.
+    // The track length should always be an overestimate to how far the animal is actually going to run.
     public float trackLength = 15000;
 
     // A seed for creation of random segments, a specific seed will always create the same pattern of cues.
@@ -29,10 +29,10 @@ public class Task : MonoBehaviour
     [System.NonSerialized]
     public string configPath;
 
-    // For keeping track of where in the random sequence the mouse is.
+    // For keeping track of where in the random sequence the animal is.
     private int current_segment_index;
 
-    // Each time the mouse completes a segment, it will go into a new random segment.
+    // Each time the animal completes a segment, it will go into a new random segment.
     // The segment sequence array holds the order of segments.
     private int[] segment_sequence_array;
 
@@ -55,13 +55,8 @@ public class Task : MonoBehaviour
     private MQTTChannel sceneNameTrigger;
     private MQTTChannel<SceneNameMsg> sceneNameChannel;
 
-    private MQTTChannel mustLickTrue;
-    private MQTTChannel mustLickFalse;
-
-    private MQTTChannel showDisplay;
-    private MQTTChannel blankDisplay;
-
-    private DisplayObject[] displayObjects;
+    private MQTTChannel requireLickTrue;
+    private MQTTChannel requireLickFalse;
 
     private int depth;
     private int n_segments;
@@ -119,7 +114,7 @@ public class Task : MonoBehaviour
         cue_lengths = config.GetCueLengthsUnity();
         depth = config.vr_environment.segments_per_corridor;
 
-        // To teleport the mouse correctly between corridors, you need to know when to teleport
+        // To teleport the animal correctly between corridors, you need to know when to teleport
         // (ie when the first segment of the current corridor ends) and where to teleport
         // (ie where the first segment of the next corridor starts).
         // Corridor map holds this info, the first float is the position of the corridor
@@ -167,19 +162,12 @@ public class Task : MonoBehaviour
         sceneNameTrigger.Event.AddListener(OnSceneNameTrigger);
         sceneNameChannel = new MQTTChannel<SceneNameMsg>("SceneName/", false);
 
-        // Create MQTT channel for toggling mustLick
-        mustLickTrue = new MQTTChannel("MustLick/True/", true);
-        mustLickTrue.Event.AddListener(SetMustLickTrue);
+        // Create MQTT channel for toggling requireLick
+        requireLickTrue = new MQTTChannel("RequireLick/True/", true);
+        requireLickTrue.Event.AddListener(SetRequireLickTrue);
 
-        mustLickFalse = new MQTTChannel("MustLick/False/", true);
-        mustLickFalse.Event.AddListener(SetMustLickFalse);
-
-        // Create MQTT channels for blacking out and displaying the screen
-        displayObjects = FindObjectsByType<DisplayObject>(FindObjectsSortMode.None);
-        showDisplay = new MQTTChannel("Display/Show/", true);
-        showDisplay.Event.AddListener(Show);
-        blankDisplay = new MQTTChannel("Display/Blank/", true);
-        blankDisplay.Event.AddListener(Blank);
+        requireLickFalse = new MQTTChannel("RequireLick/False/", true);
+        requireLickFalse.Event.AddListener(SetRequireLickFalse);
     }
 
     // Update is called once per frame
@@ -188,10 +176,10 @@ public class Task : MonoBehaviour
         if (actor != null)
         {
             pos = actor.transform.position;
-            // Check if the mouse has traveled through the entire segment
+            // Check if the animal has traveled through the entire segment
             if (pos.z > corridorMap[string.Join("-", cur_segment)].Item2)
             {
-                // Teleport the mouse back to the start of the corridors
+                // Teleport the animal back to the start of the corridors
                 pos.z -= corridorMap[string.Join("-", cur_segment)].Item2;
 
                 // Switch to a different corridor according to the future segments
@@ -203,10 +191,10 @@ public class Task : MonoBehaviour
                 }
                 else
                 {
-                    throw new System.Exception("Mouse ran through all generated segments.");
+                    throw new System.Exception("Animal ran through all generated segments.");
                 }
 
-                // Teleport the mouse to the new corridor
+                // Teleport the animal to the new corridor
                 pos.x = corridorMap[string.Join("-", cur_segment)].Item1;
                 actor.transform.position = pos;
             }
@@ -289,29 +277,13 @@ public class Task : MonoBehaviour
         sceneNameChannel.Send(new SceneNameMsg() { name = sceneName });
     }
 
-    private void Blank()
+    private void SetRequireLickTrue()
     {
-        foreach (DisplayObject display in displayObjects)
-        {
-            display.Blank();
-        }
+        requireLick = true;
     }
 
-    private void Show()
+    private void SetRequireLickFalse()
     {
-        foreach (DisplayObject display in displayObjects)
-        {
-            display.Show();
-        }
-    }
-
-    private void SetMustLickTrue()
-    {
-        mustLick = true;
-    }
-
-    private void SetMustLickFalse()
-    {
-        mustLick = false;
+        requireLick = false;
     }
 }

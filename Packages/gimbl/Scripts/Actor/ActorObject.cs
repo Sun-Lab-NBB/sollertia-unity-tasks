@@ -30,7 +30,6 @@ namespace Gimbl
 
         [SerializeField] public ActorSettings settings;
         [SerializeField] private ControllerOutput _controller;
-        [SerializeField] private AudioListener listener;
         //Check that only one controller can be linked to one actor.
         public ControllerOutput controller
         {
@@ -75,9 +74,6 @@ namespace Gimbl
             ActorSettings asset = ScriptableObject.CreateInstance<ActorSettings>();
             AssetDatabase.CreateAsset(asset, string.Format("Assets/VRSettings/Actors/{0}.asset", gameObject.name));
             settings = asset;
-            // Add Audio Listener.
-            listener = gameObject.AddComponent<AudioListener>();
-            listener.enabled = false;
             // Add Character Controller.
             CharacterController charObj = gameObject.AddComponent<CharacterController>();
             charObj.slopeLimit = 45;
@@ -162,17 +158,6 @@ namespace Gimbl
                 EditorGUILayout.LabelField("<color=#EE0000>Display: </color>", LayoutSettings.linkFieldStyle, LayoutSettings.linkFieldLayout);
             display = (DisplayObject)EditorGUILayout.ObjectField(display, typeof(DisplayObject), true, LayoutSettings.linkObjectLayout);
             EditorGUILayout.EndHorizontal();
-            // Is Audio Listener.
-            bool newActiveListener = EditorGUILayout.Toggle("Audio Listener: ", listener.enabled);
-            // If turned on disable other listener.
-            if (newActiveListener)
-            {
-                foreach(AudioListener list in FindObjectsByType<AudioListener>(FindObjectsSortMode.None))
-                {
-                    list.enabled = false;
-                }
-            }
-            listener.enabled = newActiveListener;
 
             EditorGUILayout.EndVertical();
         }

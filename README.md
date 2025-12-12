@@ -98,7 +98,7 @@ without probabilistic transitions between corridor segments (trial motifs).
 
 Each **task** can be conceptualized as a set of infinite corridor **segments** and the **transition probabilities** 
 between then. Each segment is split into **cues*, which are portions of the corridor walls that have different 
-colors/textures. Since each task segment typically contains a reward zone that conditionally delivers water to the 
+colors/textures. Since each task segment typically contains a stimulus trigger zone that conditionally delivers water to the
 animal, traversing each segment typically constitutes a single **experiment trial**. Therefore, the sequence of wall 
 cues that makes each segment is frequently referred to as the **trial motifs** in this project and the sl-experiment 
 documentation.
@@ -121,7 +121,7 @@ In addition to the general task structure, there are additional parameters to be
 - The graphical texture (pattern) of each wall cue.
 - The graphical texture of non-cue wall regions (usually gray color, hence the name **gray regions**).
 - The graphical texture of the corridor floor.
-- The reward zone locations and the conditions for the animal to receive the rewards.
+- The stimulus trigger zone locations and the conditions for the animal to receive the stimulus.
 
 #### Implementation
 
@@ -137,9 +137,9 @@ that the scene has a **blue** background.
 
 <img src="imgs/segment_prefab.png" width="600">
 
-Each prefab includes two key elements: the **reward location** and the **reset location**. For most tasks, the animal 
-has to lick in the reward location to receive the reward. After successfully triggering a reward delivery, the mouse 
-must pass through the reset location to get another reward.
+Each prefab includes two key elements: the **stimulus trigger zone** and the **reset zone**. For most tasks, the animal
+has to lick in the stimulus trigger zone to receive the stimulus. After successfully triggering a stimulus delivery, the animal
+must pass through the reset zone to get another stimulus.
 
 Once each prefab segment is created, an additional prefab must be made for padding. This padding prefab should be a long
 empty corridor, and it is used during task runtime to give the animal an illusion that the corridor is infinite.
@@ -207,12 +207,12 @@ Each distribution of the project contains all tasks currently used in the Sun la
     2. That the **Actor** parameter is set. If it is None, use the dropdown menu to set it to the **Actor Object** in 
        the scene. 
 4. The *Task* script contains additional parameters which should not need to be modified:
-    - **Must Lick**: Determines whether the animal has to lick within the reward zone to get the reward. If disabled, 
-      the animal gets the reward by entering the reward region and colliding with the invisible reward boundary wall.
+    - **Require Lick**: Determines whether the animal has to lick within the stimulus trigger zone to get the stimulus. If disabled,
+      the animal gets the stimulus by entering the stimulus zone and colliding with the invisible stimulus boundary wall.
       **Note!** During sl-experiment runtimes, this parameter is automatically overridden by the sl-experiment GUI and
       runtime logic, so setting the parameter in Unity will likely be ignored at runtime.
-    - **Visible Marker**: Determines whether to reveal the typically hidden reward zone collision boundary to the 
-      animal. **Note!** During sl-experiment runtimes, this parameter is automatically overridden by the sl-experiment 
+    - **Visible Boundary**: Determines whether to reveal the typically hidden stimulus trigger zone collision boundary to the
+      animal. **Note!** During sl-experiment runtimes, this parameter is automatically overridden by the sl-experiment
       GUI and runtime logic, so setting the parameter in Unity will likely be ignored at runtime.
     - **Track Length**: The length of the track's wall cue sequence, in Unity units, to pre-create before runtime. 
       This is most relevant for tasks with multiple wall cue motifs and random transitions between these motifs.
@@ -233,7 +233,7 @@ Each distribution of the project contains all tasks currently used in the Sun la
 6. Click on the **DisplaysWindow** tab located to the right of the Inspector tab. If the tab is not present, reopen it 
    by clicking on Window > Gimbl. Press `Refresh Monitor Positions`. Doing this reveals a list of the monitors connected
    to the computer. Assign **Camera: LeftMonitor**, **Camera: RightMonitor**, and **Camera: CenterMonitor** to the 
-   corresponding monitors used for display to the mouse. To check that the monitors were assigned correctly, press 
+   corresponding monitors used for display to the animal. To check that the monitors were assigned correctly, press 
    `Show Full-Screen Views`. For more information about configuring displays, check the 
    [original GIMBL repository](https://github.com/winnubstj/Gimbl?tab=readme-ov-file#setting-up-the-actor).
    **Warning!** Since rebooting the system frequently changes the Monitor output ports, it is strongly advised to 

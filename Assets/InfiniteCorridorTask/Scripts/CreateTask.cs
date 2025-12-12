@@ -78,7 +78,7 @@ public class CreateTask : MonoBehaviour
         string new_task_name = "newTask";
         GameObject task = new GameObject(new_task_name);
         Task task_script = task.AddComponent<Task>();
-        task_script.mustLick = true;
+        task_script.requireLick = true;
         task_script.configPath = configPath;
 
         int[] corridor_segments = new int[depth];
@@ -106,29 +106,29 @@ public class CreateTask : MonoBehaviour
                 segment = corridor_segments[j];
                 GameObject instance = PrefabUtility.InstantiatePrefab(segment_prefabs[segment]) as GameObject;
 
-                // Only the first segment in each corridor should have a reward location and reset location
+                // Only the first segment in each corridor should have a stimulus trigger zone and reset zone
                 // since the later segments are just for visual illusion
                 if (j > 0)
                 {
-                    RewardLocation reward_location = instance.GetComponentInChildren<RewardLocation>();
-                    if (reward_location != null)
+                    StimulusTriggerZone stimulus_trigger_zone = instance.GetComponentInChildren<StimulusTriggerZone>();
+                    if (stimulus_trigger_zone != null)
                     {
-                        GameObject.DestroyImmediate(reward_location.gameObject);
+                        GameObject.DestroyImmediate(stimulus_trigger_zone.gameObject);
                     }
-                    ResetLocation reset_location = instance.GetComponentInChildren<ResetLocation>();
-                    if (reset_location != null)
+                    ResetZone reset_zone = instance.GetComponentInChildren<ResetZone>();
+                    if (reset_zone != null)
                     {
-                        GameObject.DestroyImmediate(reset_location.gameObject);
+                        GameObject.DestroyImmediate(reset_zone.gameObject);
                     }
                 }
                 else
                 {
-                    // For the first segment, set the showMarker from config's trial visibility setting
-                    RewardLocation reward_location = instance.GetComponentInChildren<RewardLocation>();
-                    if (reward_location != null)
+                    // For the first segment, set the showBoundary from config's trial visibility setting
+                    StimulusTriggerZone stimulus_trigger_zone = instance.GetComponentInChildren<StimulusTriggerZone>();
+                    if (stimulus_trigger_zone != null)
                     {
                         string segmentName = config.segments[segment].name;
-                        reward_location.showMarker = config.GetSegmentMarkerVisibility(segmentName);
+                        stimulus_trigger_zone.showBoundary = config.GetSegmentMarkerVisibility(segmentName);
                     }
                 }
 

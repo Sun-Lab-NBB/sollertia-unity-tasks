@@ -2,11 +2,11 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class GuidanceRegion : MonoBehaviour
+public class GuidanceZone : MonoBehaviour
 {
 
     [HideInInspector]
-    public bool inArea = false;
+    public bool inZone = false;
 
     void Start()
     {
@@ -14,11 +14,11 @@ public class GuidanceRegion : MonoBehaviour
     }
     void OnTriggerEnter(Collider other)
     {
-        inArea = true;
+        inZone = true;
     }
 
     void OnTriggerExit(Collider other)
     {
-        inArea = false;
+        inZone = false;
     }
 }
