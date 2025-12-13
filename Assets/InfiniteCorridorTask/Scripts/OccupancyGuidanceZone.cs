@@ -40,6 +40,12 @@ public class OccupancyGuidanceZone : MonoBehaviour
     void Start()
     {
         _task = FindAnyObjectByType<Task>();
+        if (_task == null)
+        {
+            Debug.LogError($"OccupancyGuidanceZone ({gameObject.name}): No Task found in scene");
+            enabled = false;
+            return;
+        }
         _parentOccupancyZone = GetComponentInParent<OccupancyZone>();
         _triggerDelayChannel = new MQTTChannel<TriggerDelayMsg>("Gimbl/TriggerDelay/", false);
     }

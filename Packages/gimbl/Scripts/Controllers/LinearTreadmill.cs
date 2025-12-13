@@ -51,23 +51,26 @@ namespace Gimbl
         /// <summary>Applies accumulated movement to the actor's position.</summary>
         public void ProcessMovement()
         {
-            if (Actor != null && settings.isActive)
+            lock (movement)
             {
-                _moved = movement.Sum();
-
-                _pos = Actor.transform.position;
-                _newRot = Actor.transform.rotation;
-
-                _pos[2] = _pos[2] + _moved;
-
-                if (Actor.isActive)
+                if (Actor != null && settings.isActive)
                 {
-                    Actor.transform.position = _pos;
-                    Actor.transform.rotation = _newRot;
-                }
-            }
+                    _moved = movement.Sum();
 
-            movement.Clear();
+                    _pos = Actor.transform.position;
+                    _newRot = Actor.transform.rotation;
+
+                    _pos.z = _pos.z + _moved;
+
+                    if (Actor.isActive)
+                    {
+                        Actor.transform.position = _pos;
+                        Actor.transform.rotation = _newRot;
+                    }
+                }
+
+                movement.Clear();
+            }
         }
 
         /// <summary>MQTT callback that receives movement data from the treadmill.</summary>

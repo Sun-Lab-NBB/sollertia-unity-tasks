@@ -103,12 +103,6 @@ namespace Gimbl
             }
         }
 
-        /// <summary>Called when the actor starts. Currently empty.</summary>
-        public void Start() { }
-
-        /// <summary>Called after all Update methods. Currently empty.</summary>
-        public void LateUpdate() { }
-
         /// <summary>Initializes a new actor with the specified model and optional tracking camera.</summary>
         /// <param name="modelStr">The name of the model prefab to load, or "None" for no model.</param>
         /// <param name="trackCam">If true, creates a tracking camera for this actor.</param>

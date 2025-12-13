@@ -61,6 +61,12 @@ public class StimulusTriggerZone : MonoBehaviour
     void Start()
     {
         _task = FindAnyObjectByType<Task>();
+        if (_task == null)
+        {
+            Debug.LogError($"StimulusTriggerZone ({gameObject.name}): No Task found in scene");
+            enabled = false;
+            return;
+        }
 
         // Finds child zones that determine behavior mode
         _guidanceZone = GetComponentInChildren<GuidanceZone>();
@@ -163,7 +169,10 @@ public class StimulusTriggerZone : MonoBehaviour
     private void TriggerStimulus()
     {
         Debug.Log("Stimulus");
-        GetComponent<MeshRenderer>().enabled = false; // Hides boundary
+        if (TryGetComponent<MeshRenderer>(out var meshRenderer))
+        {
+            meshRenderer.enabled = false; // Hides boundary
+        }
         _stimulusTrigger.Send(); // Sends stimulus message over MQTT
         // Prevents multiple triggers
         isActive = false;
@@ -192,6 +201,9 @@ public class StimulusTriggerZone : MonoBehaviour
         isActive = true;
         _lickDetectedInZone = false;
         _inZone = false;
-        GetComponent<MeshRenderer>().enabled = showBoundary;
+        if (TryGetComponent<MeshRenderer>(out var meshRenderer))
+        {
+            meshRenderer.enabled = showBoundary;
+        }
     }
 }

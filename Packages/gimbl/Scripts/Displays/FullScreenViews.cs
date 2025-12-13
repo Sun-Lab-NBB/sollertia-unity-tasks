@@ -300,8 +300,15 @@ namespace Gimbl
         private void OnDestroy()
         {
             _rendering = false;
-            _camera.targetTexture = null;
-            _camera.enabled = true;
+            if (_camera != null)
+            {
+                if (_camera.targetTexture != null)
+                {
+                    _camera.targetTexture.Release();
+                    _camera.targetTexture = null;
+                }
+                _camera.enabled = true;
+            }
             views.Remove(this);
         }
 
@@ -362,51 +369,65 @@ namespace Gimbl
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
-                System.Diagnostics.Process xrandrProcess = new System.Diagnostics.Process();
-                xrandrProcess.StartInfo.UseShellExecute = false;
-                xrandrProcess.StartInfo.RedirectStandardOutput = true;
-                xrandrProcess.StartInfo.FileName = "xrandr";
-                xrandrProcess.Start();
-                string xrandrOutput = xrandrProcess.StandardOutput.ReadToEnd();
-                xrandrProcess.WaitForExit();
-                foreach (Match match in Regex.Matches(xrandrOutput, @"(\d+)x(\d+)\+(\d+)\+(\d+)"))
+                using (System.Diagnostics.Process xrandrProcess = new System.Diagnostics.Process())
                 {
-                    result.Add(
-                        new Monitor(
-                            int.Parse(match.Groups[3].Value),
-                            int.Parse(match.Groups[4].Value),
-                            int.Parse(match.Groups[1].Value),
-                            int.Parse(match.Groups[2].Value)
+                    xrandrProcess.StartInfo.UseShellExecute = false;
+                    xrandrProcess.StartInfo.RedirectStandardOutput = true;
+                    xrandrProcess.StartInfo.FileName = "xrandr";
+                    xrandrProcess.Start();
+                    string xrandrOutput = xrandrProcess.StandardOutput.ReadToEnd();
+                    if (!xrandrProcess.WaitForExit(5000))
+                    {
+                        xrandrProcess.Kill();
+                    }
+                    foreach (Match match in Regex.Matches(xrandrOutput, @"(\d+)x(\d+)\+(\d+)\+(\d+)"))
+                    {
+                        if (
+                            match.Groups.Count >= 5
+                            && int.TryParse(match.Groups[1].Value, out int width)
+                            && int.TryParse(match.Groups[2].Value, out int height)
+                            && int.TryParse(match.Groups[3].Value, out int left)
+                            && int.TryParse(match.Groups[4].Value, out int top)
                         )
-                    );
+                        {
+                            result.Add(new Monitor(left, top, width, height));
+                        }
+                    }
                 }
             }
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             {
-                System.Diagnostics.Process displayplacerProcess = new System.Diagnostics.Process();
-                displayplacerProcess.StartInfo.UseShellExecute = false;
-                displayplacerProcess.StartInfo.RedirectStandardOutput = true;
-                displayplacerProcess.StartInfo.FileName = "/usr/local/bin/displayplacer";
-                displayplacerProcess.StartInfo.Arguments = "list";
-                displayplacerProcess.Start();
-                string displayplacerOutput = displayplacerProcess.StandardOutput.ReadToEnd();
-                displayplacerProcess.WaitForExit();
-                foreach (
-                    Match match in Regex.Matches(
-                        displayplacerOutput,
-                        @"Resolution: (\d+)x(\d+)(.|\n)*?Origin: [(](\d+),(\d+)[)]"
-                    )
-                )
+                using (System.Diagnostics.Process displayplacerProcess = new System.Diagnostics.Process())
                 {
-                    result.Add(
-                        new Monitor(
-                            int.Parse(match.Groups[4].Value),
-                            int.Parse(match.Groups[5].Value),
-                            int.Parse(match.Groups[1].Value),
-                            int.Parse(match.Groups[2].Value)
+                    displayplacerProcess.StartInfo.UseShellExecute = false;
+                    displayplacerProcess.StartInfo.RedirectStandardOutput = true;
+                    displayplacerProcess.StartInfo.FileName = "/usr/local/bin/displayplacer";
+                    displayplacerProcess.StartInfo.Arguments = "list";
+                    displayplacerProcess.Start();
+                    string displayplacerOutput = displayplacerProcess.StandardOutput.ReadToEnd();
+                    if (!displayplacerProcess.WaitForExit(5000))
+                    {
+                        displayplacerProcess.Kill();
+                    }
+                    foreach (
+                        Match match in Regex.Matches(
+                            displayplacerOutput,
+                            @"Resolution: (\d+)x(\d+)(.|\n)*?Origin: [(](\d+),(\d+)[)]"
                         )
-                    );
+                    )
+                    {
+                        if (
+                            match.Groups.Count >= 6
+                            && int.TryParse(match.Groups[1].Value, out int width)
+                            && int.TryParse(match.Groups[2].Value, out int height)
+                            && int.TryParse(match.Groups[4].Value, out int left)
+                            && int.TryParse(match.Groups[5].Value, out int top)
+                        )
+                        {
+                            result.Add(new Monitor(left, top, width, height));
+                        }
+                    }
                 }
             }
 

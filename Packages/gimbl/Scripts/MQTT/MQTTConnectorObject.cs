@@ -17,7 +17,12 @@ namespace Gimbl
         /// <summary>Connects to the MQTT broker when the object is enabled.</summary>
         public void OnEnable()
         {
-            GameObject.FindAnyObjectByType<MQTTClient>().Connect(false);
+            if (MQTTClient.Instance == null)
+            {
+                Debug.LogError("MQTTConnectorObject: MQTTClient.Instance not available");
+                return;
+            }
+            MQTTClient.Instance.Connect(false);
         }
     }
 }

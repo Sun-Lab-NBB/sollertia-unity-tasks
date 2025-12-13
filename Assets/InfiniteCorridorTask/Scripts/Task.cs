@@ -206,9 +206,17 @@ public class Task : MonoBehaviour
         // Positions actor at the first corridor
         if (actor != null)
         {
-            _pos = actor.transform.position;
-            _pos.x = _corridorMap[string.Join("-", _curSegment)].Item1;
-            actor.transform.position = _pos;
+            string corridorKey = string.Join("-", _curSegment);
+            if (_corridorMap.TryGetValue(corridorKey, out var corridorData))
+            {
+                _pos = actor.transform.position;
+                _pos.x = corridorData.Item1;
+                actor.transform.position = _pos;
+            }
+            else
+            {
+                Debug.LogError($"Task: Corridor key '{corridorKey}' not found in corridor map");
+            }
         }
 
         // Sets up MQTT channels for cue sequence requests
@@ -240,36 +248,49 @@ public class Task : MonoBehaviour
     /// <summary>Checks animal position and handles corridor transitions each frame.</summary>
     void Update()
     {
-        if (actor != null)
+        if (actor == null)
         {
-            _pos = actor.transform.position;
+            return;
+        }
 
-            // Checks if animal has traveled through the current segment
-            if (_pos.z > _corridorMap[string.Join("-", _curSegment)].Item2)
+        string corridorKey = string.Join("-", _curSegment);
+        if (!_corridorMap.TryGetValue(corridorKey, out var corridorData))
+        {
+            Debug.LogError($"Task: Corridor key '{corridorKey}' not found in corridor map");
+            return;
+        }
+
+        _pos = actor.transform.position;
+
+        // Checks if animal has traveled through the current segment
+        if (_pos.z > corridorData.Item2)
+        {
+            // Teleports animal back to start of corridor
+            _pos.z -= corridorData.Item2;
+
+            // Advances to next corridor based on future segments
+            _currentSegmentIndex++;
+            if (_currentSegmentIndex <= _segmentSequenceArray.Length - _depth)
             {
-                // Teleports animal back to start of corridor
-                _pos.z -= _corridorMap[string.Join("-", _curSegment)].Item2;
+                _curSegment.RemoveAt(0);
+                _curSegment.Add(_segmentSequenceArray[_currentSegmentIndex + _depth - 1]);
+            }
+            else
+            {
+                throw new Exception("Animal ran through all generated segments.");
+            }
 
-                // Advances to next corridor based on future segments
-                _currentSegmentIndex++;
-                if (_currentSegmentIndex <= _segmentSequenceArray.Length - _depth)
-                {
-                    _curSegment.RemoveAt(0);
-                    _curSegment.Add(_segmentSequenceArray[_currentSegmentIndex + _depth - 1]);
-                }
-                else
-                {
-                    throw new Exception("Animal ran through all generated segments.");
-                }
-
-                // Teleports to new corridor
-                _pos.x = _corridorMap[string.Join("-", _curSegment)].Item1;
+            // Teleports to new corridor
+            string newCorridorKey = string.Join("-", _curSegment);
+            if (_corridorMap.TryGetValue(newCorridorKey, out var newCorridorData))
+            {
+                _pos.x = newCorridorData.Item1;
                 actor.transform.position = _pos;
             }
-        }
-        else
-        {
-            Debug.LogError("Actor is null.");
+            else
+            {
+                Debug.LogError($"Task: New corridor key '{newCorridorKey}' not found in corridor map");
+            }
         }
     }
 

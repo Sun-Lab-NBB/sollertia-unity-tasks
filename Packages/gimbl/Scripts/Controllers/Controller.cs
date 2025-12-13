@@ -124,6 +124,11 @@ namespace Gimbl
                 .GetMainAssetTypeAtPath($"Assets/VRSettings/Controllers/{this.name}.asset")
                 .ToString();
             string[] s = sourceType.Split('.');
+            if (s.Length < 2)
+            {
+                Debug.LogError($"Controller.SaveController: Invalid asset type format '{sourceType}'");
+                return;
+            }
             string extension = s[1];
 
             string outputFile = EditorUtility.SaveFilePanel("Save Controller settings as..", "", "", extension);
@@ -149,6 +154,11 @@ namespace Gimbl
             string sourceFile = $"Assets/VRSettings/Controllers/{this.gameObject.name}.asset";
             string sourceType = AssetDatabase.GetMainAssetTypeAtPath(sourceFile).ToString();
             string[] s = sourceType.Split('.');
+            if (s.Length < 2)
+            {
+                Debug.LogError($"Controller.LoadController: Invalid asset type format '{sourceType}'");
+                return;
+            }
             string extension = s[1];
 
             string inputFile = EditorUtility.OpenFilePanel("Import Setup", Application.dataPath, extension);

@@ -26,22 +26,27 @@ public class Utility : MonoBehaviour
 
     /// <summary>Calculates the z-axis length of a prefab by combining all child renderer bounds.</summary>
     /// <param name="prefab">The prefab GameObject to measure.</param>
-    /// <returns>The z-axis size of the combined bounds.</returns>
+    /// <returns>The z-axis size of the combined bounds, or 0 if no renderers found.</returns>
     public static float GetPrefabLength(GameObject prefab)
     {
         // Gets all Renderers in the prefab
         Renderer[] renderers = prefab.GetComponentsInChildren<Renderer>();
 
+        if (renderers.Length == 0)
+        {
+            Debug.LogWarning($"Utility.GetPrefabLength: No renderers found on prefab '{prefab.name}'");
+            return 0f;
+        }
+
         // Calculates the combined bounds
         Bounds combinedBounds = renderers[0].bounds;
 
-        foreach (Renderer renderer in renderers)
+        for (int i = 1; i < renderers.Length; i++)
         {
-            combinedBounds.Encapsulate(renderer.bounds);
+            combinedBounds.Encapsulate(renderers[i].bounds);
         }
 
         // Returns the z-axis size of the prefab
-        Vector3 size = combinedBounds.size;
-        return size.z;
+        return combinedBounds.size.z;
     }
 }

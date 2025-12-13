@@ -41,7 +41,12 @@ namespace Gimbl
         public void Init(string topicStr, bool isListener, byte qosLevel)
         {
             topic = topicStr;
-            client = GameObject.Find("MQTT Client").GetComponent<MQTTClient>();
+            client = MQTTClient.Instance;
+            if (client == null)
+            {
+                Debug.LogError("MQTTChannel: MQTTClient.Instance not available");
+                return;
+            }
 
             if (isListener)
             {
@@ -86,7 +91,15 @@ namespace Gimbl
         /// <param name="msgStr">The received JSON message string.</param>
         public override void ReceivedMessage(string msgStr)
         {
-            Event.Invoke(JsonUtility.FromJson<T>(msgStr));
+            try
+            {
+                T message = JsonUtility.FromJson<T>(msgStr);
+                Event.Invoke(message);
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"MQTTChannel<{typeof(T).Name}>: Failed to deserialize message: {ex.Message}");
+            }
         }
 
         /// <summary>Publishes a typed message as JSON to this channel's topic.</summary>

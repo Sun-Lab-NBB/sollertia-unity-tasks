@@ -4,9 +4,6 @@
 /// Extends the LinearTreadmill controller to accept keyboard input instead of MQTT
 /// messages, enabling testing without physical hardware.
 /// </summary>
-using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -17,14 +14,8 @@ namespace Gimbl
     /// </summary>
     public class SimulatedLinearTreadmill : LinearTreadmill
     {
-        /// <summary>The stopwatch for measuring time between frames.</summary>
-        private System.Diagnostics.Stopwatch stopwatch = new System.Diagnostics.Stopwatch();
-
-        /// <summary>The current movement control value from input.</summary>
-        private float moveControl;
-
-        /// <summary>The elapsed time since last frame in milliseconds.</summary>
-        private float passedTime;
+        /// <summary>The movement speed multiplier for input scaling.</summary>
+        private const float MovementSpeedMultiplier = 8.0f;
 
         /// <summary>The Unity Input System action map for keyboard/mouse simulation.</summary>
         private SimulatedInput _input;
@@ -56,9 +47,8 @@ namespace Gimbl
         /// <summary>Reads keyboard input and converts it to treadmill movement values.</summary>
         public void GetSimulatedInput()
         {
-            passedTime = (float)stopwatch.Elapsed.TotalMilliseconds;
-            moveControl = _input.Player.Movement.ReadValue<Vector2>().y * passedTime * 0.008f;
-            stopwatch.Restart();
+            float moveControl =
+                _input.Player.Movement.ReadValue<Vector2>().y * Time.deltaTime * MovementSpeedMultiplier;
             movement.Add(moveControl);
         }
     }

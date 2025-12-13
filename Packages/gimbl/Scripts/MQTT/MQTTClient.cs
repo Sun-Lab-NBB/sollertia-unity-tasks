@@ -22,9 +22,13 @@ namespace Gimbl
     /// <remarks>
     /// This MonoBehaviour should be attached to a GameObject named "MQTT Client" in the scene.
     /// Connection settings (IP and port) are loaded from Unity EditorPrefs.
+    /// Access via the static Instance property instead of GameObject.Find().
     /// </remarks>
     public class MQTTClient : MonoBehaviour
     {
+        /// <summary>The singleton instance of the MQTTClient.</summary>
+        public static MQTTClient Instance { get; private set; }
+
         /// <summary>The IP address of the MQTT broker.</summary>
         [HideInInspector]
         public string ip;
@@ -52,6 +56,17 @@ namespace Gimbl
         /// <summary>The channel for broadcasting session stop events.</summary>
         private MQTTChannel _stopChannel;
 
+        /// <summary>Registers this instance as the singleton on awake.</summary>
+        void Awake()
+        {
+            if (Instance != null && Instance != this)
+            {
+                Debug.LogWarning("MQTTClient: Multiple instances found, using existing instance");
+                return;
+            }
+            Instance = this;
+        }
+
         /// <summary>Initializes connection settings and sets up session channels on start.</summary>
         void Start()
         {
@@ -68,8 +83,15 @@ namespace Gimbl
         /// <summary>Sends the session start message after a brief delay.</summary>
         private async void StartSession()
         {
-            await Task.Delay(1000);
-            _startChannel.Send();
+            try
+            {
+                await Task.Delay(1000);
+                _startChannel.Send();
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"MQTTClient.StartSession failed: {ex.Message}");
+            }
         }
 
         /// <summary>Sends session stop message and cleans up subscriptions on application quit.</summary>
@@ -83,6 +105,11 @@ namespace Gimbl
             }
 
             _channelList = new List<Channel>();
+
+            if (Instance == this)
+            {
+                Instance = null;
+            }
         }
 
         /// <summary>Establishes a connection to the MQTT broker.</summary>
@@ -135,9 +162,9 @@ namespace Gimbl
             {
                 isConnected = client.IsConnected;
             }
-            catch
+            catch (Exception ex)
             {
-                // Handles connection check failure
+                Debug.LogWarning($"MQTTClient.IsConnected check failed: {ex.Message}");
             }
             return isConnected;
         }
