@@ -5,17 +5,15 @@
 ///
 /// Behavior:
 /// - When the animal enters the zone, a high-precision timer starts
-/// - If the animal stays for occupancy_duration_ms, emits OccupancyMet and disarms the boundary
-/// - If the animal leaves early, emits OccupancyFailed and the boundary remains armed
+/// - If the animal stays for occupancy_duration_ms, the boundary is disarmed
+/// - If the animal leaves early, the boundary remains armed
 /// - The parent StimulusTriggerZone reads the boundaryDisarmed state to determine collision behavior
 /// </summary>
 using System.Diagnostics;
-using Gimbl;
 using UnityEngine;
 
 /// <summary>
 /// Tracks animal occupancy duration within a zone and manages boundary arm/disarm state.
-/// Emits MQTT messages when occupancy requirements are met or failed.
 /// </summary>
 public class OccupancyZone : MonoBehaviour
 {
@@ -42,18 +40,10 @@ public class OccupancyZone : MonoBehaviour
     /// <summary>The high-precision stopwatch for accurate millisecond timing.</summary>
     private Stopwatch _occupancyTimer;
 
-    /// <summary>The MQTT channel for sending occupancy met messages.</summary>
-    private MQTTChannel _occupancyMetChannel;
-
-    /// <summary>The MQTT channel for sending occupancy failed messages.</summary>
-    private MQTTChannel _occupancyFailedChannel;
-
-    /// <summary>Initializes the timer and sets up MQTT channels.</summary>
+    /// <summary>Initializes the occupancy timer.</summary>
     void Start()
     {
         _occupancyTimer = new Stopwatch();
-        _occupancyMetChannel = new MQTTChannel("Gimbl/OccupancyMet/");
-        _occupancyFailedChannel = new MQTTChannel("Gimbl/OccupancyFailed/");
     }
 
     /// <summary>Checks if the occupancy duration has been met while the animal is in the zone.</summary>
@@ -109,14 +99,12 @@ public class OccupancyZone : MonoBehaviour
         UnityEngine.Debug.Log("OccupancyZone: Occupancy met - boundary disarmed");
         boundaryDisarmed = true;
         _occupancyTimer.Stop();
-        _occupancyMetChannel.Send();
     }
 
     /// <summary>Called when the animal leaves the zone before meeting the occupancy requirement.</summary>
     private void OnOccupancyFailed()
     {
         UnityEngine.Debug.Log("OccupancyZone: Occupancy failed - animal left early");
-        _occupancyFailedChannel.Send();
     }
 
     /// <summary>Returns the elapsed time in milliseconds since the occupancy timer started.</summary>
