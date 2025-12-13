@@ -1,16 +1,22 @@
-﻿using System;
+/// <summary>
+/// Provides the FullScreenViewsSaved class for persisting camera assignments.
+/// </summary>
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
 namespace Gimbl
 {
-    // Needed only when PERSIST_AS_RESOURCE is defined in FullScreenViews.cs
-
+    /// <summary>
+    /// Stores camera-to-monitor assignments for persistence across sessions.
+    /// </summary>
     [Serializable]
     public class FullScreenViewsSaved : ScriptableObject
     {
+        /// <summary>The list of camera GameObject paths assigned to each monitor.</summary>
         public List<string> cameraNames;
 
+        /// <summary>Initializes the camera names list when enabled.</summary>
         public void OnEnable()
         {
             if (cameraNames == null)

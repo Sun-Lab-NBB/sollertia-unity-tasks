@@ -1,47 +1,41 @@
-﻿// Full-screen, no-border game views that run with the Unity editor active,
-// and an editor window for managing what cameras are displayed in what views.
-// Useful for VR studies that use sets of adjacent monitors to display the world
-// to the animal (as opposed to using a projector), as all the editor functionality
-// is available for fine-tuning the world while the animal is in it.
-
-// Note that the current code works on Windows platforms only (specifically, the code
-// that detects the details of all the monitors).
-
-// The assignment of cameras to displays is persisted across sessions.  This persistence
-// can be implemented in either of two ways suggested by Edward Rowe
-// (https://blog.redbluegames.com/how-to-handle-data-for-custom-editor-tools-in-unity-6b85e9e17715)
-// 1. project specific editor preferences
-// 2. shared data stored in resources
-// Uncomment one of the following definitions to choose the persistence method.
-
-//#define PERSIST_AS_EDITOR_PREFS
-#define PERSIST_AS_RESOURCE
-
+/// <summary>
+/// Provides full-screen view management for multi-monitor VR displays.
+///
+/// Manages borderless full-screen game views that run with the Unity editor active,
+/// enabling VR studies that use sets of adjacent monitors to display the world.
+/// Camera-to-monitor assignments are persisted in per-scene asset files.
+/// </summary>
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
-#if PERSIST_AS_RESOURCE
-using System.IO;
-#endif
 
 namespace Gimbl
 {
-    //
-    // The editor window that manages what cameras are displayed in what views.
-    //
-
+    /// <summary>
+    /// Manages camera-to-monitor assignments and full-screen view creation.
+    /// </summary>
     public class FullScreenViewManager
     {
+        /// <summary>The list of detected monitors in the system.</summary>
+        [SerializeField]
+        public List<Monitor> _monitors;
+
+        /// <summary>The saved camera assignments for the current scene.</summary>
+        private FullScreenViewsSaved _savedFullScreenViews;
+
+        /// <summary>Initializes the manager by detecting monitors and loading camera assignments.</summary>
         public FullScreenViewManager()
         {
             _monitors = Monitor.EnumeratedMonitors();
             LoadCameras();
         }
 
+        /// <summary>Renders a button to refresh monitor positions.</summary>
         public void OnGUIRefreshMonitorPositions()
         {
             if (GUILayout.Button("Refresh Monitor Positions"))
@@ -58,25 +52,24 @@ namespace Gimbl
             }
         }
 
+        /// <summary>Renders camera assignment fields for each monitor.</summary>
         public void OnGUICameraObjectFields()
         {
-            for (int i = 0; i < _monitors.Count; i++)
+            for (int monitorIndex = 0; monitorIndex < _monitors.Count; monitorIndex++)
             {
-                Monitor monitor = _monitors[i];
+                Monitor monitor = _monitors[monitorIndex];
                 EditorGUILayout.LabelField(
-                    "Monitor " + (i + 1).ToString() + " at (" + monitor.left + ", " + monitor.top + ")"
+                    "Monitor " + (monitorIndex + 1).ToString() + " at (" + monitor.left + ", " + monitor.top + ")"
                 );
                 Camera oldCamera = (Camera)EditorUtility.EntityIdToObject(monitor.cameraEntityId);
                 Camera newCamera = (Camera)EditorGUILayout.ObjectField("Camera", oldCamera, typeof(Camera), true);
                 if (newCamera != null)
                 {
-                    // Make sure the camera is viewed only once.
-
                     EntityId entityId = newCamera.GetEntityId();
                     bool alreadyUsed = false;
-                    foreach (Monitor other in _monitors)
+                    foreach (Monitor otherMonitor in _monitors)
                     {
-                        if (other.cameraEntityId == entityId)
+                        if (otherMonitor.cameraEntityId == entityId)
                         {
                             alreadyUsed = true;
                             break;
@@ -98,6 +91,7 @@ namespace Gimbl
             }
         }
 
+        /// <summary>Renders a button to show full-screen views.</summary>
         public void OnGUIShowFullScreenViews()
         {
             if (GUILayout.Button("Show Full-Screen Views"))
@@ -106,12 +100,12 @@ namespace Gimbl
             }
         }
 
+        /// <summary>Creates full-screen views for all monitors with assigned cameras.</summary>
+        /// <param name="closeOldViews">If true, closes existing full-screen views before creating new ones.</param>
         public void ShowFullScreenViews(bool closeOldViews)
         {
-            // Avoid showing redundant FullScreenViews by closing all of them before (re)showing all of them.
-
-            List<FullScreenView> views = new List<FullScreenView>(FullScreenView.views);
-            foreach (FullScreenView view in views)
+            List<FullScreenView> existingViews = new List<FullScreenView>(FullScreenView.views);
+            foreach (FullScreenView view in existingViews)
             {
                 if (closeOldViews)
                 {
@@ -126,83 +120,29 @@ namespace Gimbl
                 {
                     FullScreenView window = EditorWindow.CreateInstance<FullScreenView>();
 
-                    // Negative coordinates must be scaled by the pixelsPerPoint for the target monitor, but
-                    // positive coordinates must be scaled by the pixelsPerPoint of the main monitor.
-
                     float pixelsPerPointX = (monitor.left < 0) ? monitor.pixelsPerPoint : _monitors[0].pixelsPerPoint;
-                    int x = (int)(monitor.left / pixelsPerPointX);
+                    int windowX = (int)(monitor.left / pixelsPerPointX);
                     float pixelsPerPointY = (monitor.top < 0) ? monitor.pixelsPerPoint : _monitors[0].pixelsPerPoint;
-                    int y = (int)(monitor.top / pixelsPerPointY);
+                    int windowY = (int)(monitor.top / pixelsPerPointY);
 
-                    int width = (int)(monitor.width / monitor.pixelsPerPoint);
-                    int height = (int)(monitor.height / monitor.pixelsPerPoint);
+                    int windowWidth = (int)(monitor.width / monitor.pixelsPerPoint);
+                    int windowHeight = (int)(monitor.height / monitor.pixelsPerPoint);
 
-                    window.position = new Rect(x, y, width, height);
+                    window.position = new Rect(windowX, windowY, windowWidth, windowHeight);
                     window.cameraEntityId = camera.GetEntityId();
-
-                    // Using ShowPopup() eliminates all borders and window decorations.
 
                     window.ShowPopup();
                 }
             }
         }
 
-#if PERSIST_AS_EDITOR_PREFS
-        private void SaveCameras()
-        {
-            EditorPrefs.SetInt(NumMonitorsPersistenceKey(), _monitors.Count);
-            for (int i = 0; i < _monitors.Count; i++)
-            {
-                Camera camera = (Camera)EditorUtility.EntityIdToObject(_monitors[i].cameraEntityId);
-                string path = (camera != null) ? PathName(camera.gameObject) : "";
-                EditorPrefs.SetString(CameraNamePersistenceKey(i), path);
-            }
-        }
-
-        public void LoadCameras()
-        {
-            int count = EditorPrefs.GetInt(NumMonitorsPersistenceKey());
-            for (int i = 0; i < count; i++)
-            {
-                if (i < _monitors.Count)
-                {
-                    string path = EditorPrefs.GetString(CameraNamePersistenceKey(i));
-                    GameObject obj = GameObject.Find(path);
-                    if (obj != null)
-                    {
-                        Camera camera = obj.GetComponent<Camera>();
-                        if (camera != null)
-                        {
-                            _monitors[i].cameraEntityId = camera.GetEntityId();
-                        }
-                    }
-                }
-            }
-        }
-
-        private string PersistenceKeyPrefix()
-        {
-            return PlayerSettings.companyName + "." + PlayerSettings.productName + ".FullScreenViewManager";
-        }
-
-        private string CameraNamePersistenceKey(int i)
-        {
-            return PersistenceKeyPrefix() + ".monitor." + i.ToString() + ".cameraName";
-        }
-
-        private string NumMonitorsPersistenceKey()
-        {
-            return PersistenceKeyPrefix() + ".numMonitors";
-        }
-#elif PERSIST_AS_RESOURCE
-        private FullScreenViewsSaved _savedFullScreenViews;
-
+        /// <summary>Saves camera assignments to the scene's asset file.</summary>
         public void SaveCameras()
         {
             _savedFullScreenViews.cameraNames.Clear();
-            for (int i = 0; i < _monitors.Count; i++)
+            for (int monitorIndex = 0; monitorIndex < _monitors.Count; monitorIndex++)
             {
-                Camera camera = (Camera)EditorUtility.EntityIdToObject(_monitors[i].cameraEntityId);
+                Camera camera = (Camera)EditorUtility.EntityIdToObject(_monitors[monitorIndex].cameraEntityId);
                 string path = (camera != null) ? PathName(camera.gameObject) : "";
                 _savedFullScreenViews.cameraNames.Add(path);
             }
@@ -211,29 +151,30 @@ namespace Gimbl
             AssetDatabase.SaveAssets();
         }
 
+        /// <summary>Loads camera assignments from the scene's asset file.</summary>
         public void LoadCameras()
         {
-            string fsv_path =
+            string savedViewsPath =
                 "Assets/VRSettings/Displays/"
                 + EditorSceneManager.GetActiveScene().name
                 + "-savedFullScreenViews.asset";
             _savedFullScreenViews = (FullScreenViewsSaved)
-                AssetDatabase.LoadAssetAtPath(fsv_path, typeof(FullScreenViewsSaved));
+                AssetDatabase.LoadAssetAtPath(savedViewsPath, typeof(FullScreenViewsSaved));
 
             if (_savedFullScreenViews != null)
             {
-                for (int i = 0; i < _savedFullScreenViews.cameraNames.Count; i++)
+                for (int savedIndex = 0; savedIndex < _savedFullScreenViews.cameraNames.Count; savedIndex++)
                 {
-                    if (i < _monitors.Count)
+                    if (savedIndex < _monitors.Count)
                     {
-                        string path = _savedFullScreenViews.cameraNames[i];
-                        GameObject obj = GameObject.Find(path);
-                        if (obj != null)
+                        string cameraPath = _savedFullScreenViews.cameraNames[savedIndex];
+                        GameObject cameraObject = GameObject.Find(cameraPath);
+                        if (cameraObject != null)
                         {
-                            Camera camera = obj.GetComponent<Camera>();
+                            Camera camera = cameraObject.GetComponent<Camera>();
                             if (camera != null)
                             {
-                                _monitors[i].cameraEntityId = camera.GetEntityId();
+                                _monitors[savedIndex].cameraEntityId = camera.GetEntityId();
                             }
                         }
                     }
@@ -242,62 +183,45 @@ namespace Gimbl
             else
             {
                 _savedFullScreenViews = ScriptableObject.CreateInstance<FullScreenViewsSaved>();
-
-                string root = Application.dataPath;
-                //EnsureDirectory(root + "/Resources");
-                //EnsureDirectory(root + "/Resources/Editor");
-
-                // Saving and loading work only if the filename has the extension ".asset".
-
-                AssetDatabase.CreateAsset(_savedFullScreenViews, fsv_path);
+                AssetDatabase.CreateAsset(_savedFullScreenViews, savedViewsPath);
                 AssetDatabase.SaveAssets();
                 AssetDatabase.Refresh();
             }
         }
 
-        private void EnsureDirectory(string path)
+        /// <summary>Returns the full hierarchy path name for a GameObject.</summary>
+        /// <param name="gameObject">The GameObject to get the path for.</param>
+        /// <returns>The full hierarchy path from root to the GameObject.</returns>
+        private string PathName(GameObject gameObject)
         {
-            if (!Directory.Exists(path))
+            string path = gameObject.name;
+            while (gameObject.transform.parent != null)
             {
-                try
-                {
-                    Directory.CreateDirectory(path);
-                }
-                catch (Exception e)
-                {
-                    Debug.Log("Cannot create " + path + ": " + e.ToString());
-                }
-            }
-        }
-#endif
-
-        private string PathName(GameObject o)
-        {
-            string path = o.name;
-            while (o.transform.parent != null)
-            {
-                o = o.transform.parent.gameObject;
-                path = o.name + "/" + path;
+                gameObject = gameObject.transform.parent.gameObject;
+                path = gameObject.name + "/" + path;
             }
             return path;
         }
-
-        [SerializeField]
-        public List<Monitor> _monitors;
     }
 
-    //
-    // The full-screen, no-border game view.
-    //
-
+    /// <summary>
+    /// Renders a borderless full-screen game view in an editor window.
+    /// </summary>
     public class FullScreenView : EditorWindow
     {
+        /// <summary>The list of all active full-screen views.</summary>
         public static List<FullScreenView> views;
 
+        /// <summary>The entity ID of the camera to render.</summary>
         public EntityId cameraEntityId;
+
+        /// <summary>The camera component for rendering.</summary>
         private Camera _camera;
+
+        /// <summary>Determines whether the view is currently rendering.</summary>
         private bool _rendering = false;
 
+        /// <summary>Initializes the static views list.</summary>
         static FullScreenView()
         {
             if (views == null)
@@ -306,27 +230,28 @@ namespace Gimbl
             }
         }
 
+        /// <summary>Adds this view to the views list when created.</summary>
         private void Awake()
         {
             views.Add(this);
         }
 
-        // Onenable because reference gets lost on play.
+        /// <summary>Registers the quit handler when enabled.</summary>
         private void OnEnable()
         {
             EditorApplication.wantsToQuit -= OnEditorWantsToQuit;
             EditorApplication.wantsToQuit += OnEditorWantsToQuit;
         }
 
+        /// <summary>Handles GUI events and renders the camera view.</summary>
         void OnGUI()
         {
-            Event e = Event.current;
-            // Close window on click.
-            if (e.isMouse && e.button == 0 && !EditorApplication.isPlaying)
+            Event currentEvent = Event.current;
+            if (currentEvent.isMouse && currentEvent.button == 0 && !EditorApplication.isPlaying)
             {
                 Close();
             }
-            else if (e.type == EventType.Repaint)
+            else if (currentEvent.type == EventType.Repaint)
             {
                 if (_camera == null)
                 {
@@ -334,9 +259,14 @@ namespace Gimbl
                     if (_camera)
                     {
                         _camera.enabled = false;
-                        int width = (int)position.width;
-                        int height = (int)position.height;
-                        _camera.targetTexture = new RenderTexture(width, height, 24, RenderTextureFormat.ARGB32);
+                        int renderWidth = (int)position.width;
+                        int renderHeight = (int)position.height;
+                        _camera.targetTexture = new RenderTexture(
+                            renderWidth,
+                            renderHeight,
+                            24,
+                            RenderTextureFormat.ARGB32
+                        );
                         _rendering = true;
                     }
                 }
@@ -345,7 +275,6 @@ namespace Gimbl
                     if (_camera != null)
                     {
                         _camera.Render();
-                        // Disable alpha blending when drawing the texture, so black really is black.
                         bool alphaBlend = false;
                         GUI.DrawTexture(
                             new Rect(0, 0, position.width, position.height),
@@ -358,18 +287,16 @@ namespace Gimbl
             }
         }
 
+        /// <summary>Triggers repaint each frame when rendering.</summary>
         private void Update()
         {
             if ((_camera != null) && _rendering)
             {
                 Repaint();
             }
-
-#if false
-            Debug.Log("View [y " + position.yMin + "]: Update delta time " + Time.deltaTime + " ms (" + 1.0 / Time.deltaTime + " FPS) playing " + Application.isPlaying);
-#endif
         }
 
+        /// <summary>Cleans up camera resources when destroyed.</summary>
         private void OnDestroy()
         {
             _rendering = false;
@@ -378,10 +305,8 @@ namespace Gimbl
             views.Remove(this);
         }
 
-        // Any FullScreenView that is displayed when the editor is quit will appear as a blank, un-closeable window
-        // the next time the editor is started.  It seems difficult to programmatically close all FullScreenViews
-        // when the editor is quitting, so instead, prompt the user to do so.
-
+        /// <summary>Closes this view when the editor is quitting.</summary>
+        /// <returns>Always returns true to allow the editor to quit.</returns>
         bool OnEditorWantsToQuit()
         {
             this.Close();
@@ -389,51 +314,62 @@ namespace Gimbl
         }
     }
 
-    //
-    // The details of a particular display monitor, incuding the scaling factor that Unity uses
-    // for the position and dimensions of editor windows on that display.
-    // Includes Windows-specific functionality for enumerating all the available displays and
-    // the location in an extended desktop.
-    //
-
+    /// <summary>
+    /// Stores monitor display information and camera assignment.
+    /// </summary>
     [Serializable]
     public class Monitor
     {
+        /// <summary>The left position of the monitor in pixels.</summary>
         public int left;
+
+        /// <summary>The top position of the monitor in pixels.</summary>
         public int top;
+
+        /// <summary>The width of the monitor in pixels.</summary>
         public int width;
+
+        /// <summary>The height of the monitor in pixels.</summary>
         public int height;
+
+        /// <summary>The pixels per point scaling factor for this monitor.</summary>
         public float pixelsPerPoint;
+
+        /// <summary>The entity ID of the camera assigned to this monitor.</summary>
         public EntityId cameraEntityId;
 
+        /// <summary>Detects and returns a list of all system monitors.</summary>
+        /// <returns>The list of detected monitors with their positions and dimensions.</returns>
         public static List<Monitor> EnumeratedMonitors()
         {
             List<Monitor> result = new List<Monitor>();
-            // Get Screens information per OS.
+
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 EnumDisplayMonitors(
                     IntPtr.Zero,
                     IntPtr.Zero,
-                    delegate(IntPtr hMonitor, IntPtr hdc, ref RectApi prect, IntPtr dwData)
+                    delegate(IntPtr hMonitor, IntPtr hdc, ref RectApi monitorRect, IntPtr dwData)
                     {
-                        result.Add(new Monitor(prect.left, prect.top, prect.width, prect.height));
+                        result.Add(
+                            new Monitor(monitorRect.left, monitorRect.top, monitorRect.width, monitorRect.height)
+                        );
                         return true;
                     },
                     0
                 );
             }
+
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
-                // Use xrandr to get size of screen and offset.
-                System.Diagnostics.Process p = new System.Diagnostics.Process();
-                p.StartInfo.UseShellExecute = false;
-                p.StartInfo.RedirectStandardOutput = true;
-                p.StartInfo.FileName = "xrandr";
-                p.Start();
-                string output = p.StandardOutput.ReadToEnd();
-                p.WaitForExit();
-                foreach (Match match in Regex.Matches(output, @"(\d+)x(\d+)\+(\d+)\+(\d+)"))
+                System.Diagnostics.Process xrandrProcess = new System.Diagnostics.Process();
+                xrandrProcess.StartInfo.UseShellExecute = false;
+                xrandrProcess.StartInfo.RedirectStandardOutput = true;
+                xrandrProcess.StartInfo.FileName = "xrandr";
+                xrandrProcess.Start();
+                string xrandrOutput = xrandrProcess.StandardOutput.ReadToEnd();
+                xrandrProcess.WaitForExit();
+                foreach (Match match in Regex.Matches(xrandrOutput, @"(\d+)x(\d+)\+(\d+)\+(\d+)"))
                 {
                     result.Add(
                         new Monitor(
@@ -445,19 +381,22 @@ namespace Gimbl
                     );
                 }
             }
+
             if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             {
-                // Use displayplacer to get size of screen and offset.
-                System.Diagnostics.Process p = new System.Diagnostics.Process();
-                p.StartInfo.UseShellExecute = false;
-                p.StartInfo.RedirectStandardOutput = true;
-                p.StartInfo.FileName = "/usr/local/bin/displayplacer";
-                p.StartInfo.Arguments = "list";
-                p.Start();
-                string output = p.StandardOutput.ReadToEnd();
-                p.WaitForExit();
+                System.Diagnostics.Process displayplacerProcess = new System.Diagnostics.Process();
+                displayplacerProcess.StartInfo.UseShellExecute = false;
+                displayplacerProcess.StartInfo.RedirectStandardOutput = true;
+                displayplacerProcess.StartInfo.FileName = "/usr/local/bin/displayplacer";
+                displayplacerProcess.StartInfo.Arguments = "list";
+                displayplacerProcess.Start();
+                string displayplacerOutput = displayplacerProcess.StandardOutput.ReadToEnd();
+                displayplacerProcess.WaitForExit();
                 foreach (
-                    Match match in Regex.Matches(output, @"Resolution: (\d+)x(\d+)(.|\n)*?Origin: [(](\d+),(\d+)[)]")
+                    Match match in Regex.Matches(
+                        displayplacerOutput,
+                        @"Resolution: (\d+)x(\d+)(.|\n)*?Origin: [(](\d+),(\d+)[)]"
+                    )
                 )
                 {
                     result.Add(
@@ -474,36 +413,39 @@ namespace Gimbl
             foreach (Monitor monitor in result)
             {
                 MonitorTester tester = EditorWindow.CreateInstance<MonitorTester>();
-
-                // These coordinates seem to work, even though they don't have the tricky scaling done when
-                // showing a FullScreenView, above.
-
                 tester.position = new Rect(monitor.left, monitor.top, 20, 20);
                 tester.monitor = monitor;
-
-                // Using ShowPopup() displays the EditorWindow without decorations.
-
                 tester.ShowPopup();
             }
 
             return result;
         }
 
-        private Monitor(int l, int t, int w, int h)
+        /// <summary>Creates a new monitor with the specified position and dimensions.</summary>
+        /// <param name="leftPosition">The left position in pixels.</param>
+        /// <param name="topPosition">The top position in pixels.</param>
+        /// <param name="widthPixels">The width in pixels.</param>
+        /// <param name="heightPixels">The height in pixels.</param>
+        private Monitor(int leftPosition, int topPosition, int widthPixels, int heightPixels)
         {
-            left = l;
-            top = t;
-            width = w;
-            height = h;
+            left = leftPosition;
+            top = topPosition;
+            width = widthPixels;
+            height = heightPixels;
             pixelsPerPoint = 1.0f;
             cameraEntityId = EntityId.None;
         }
 
+        /// <summary>The delegate for Windows monitor enumeration callback.</summary>
         private delegate bool MonitorEnumProc(IntPtr hMonitor, IntPtr hdc, ref RectApi pRect, IntPtr dwData);
 
+        /// <summary>Windows API function to enumerate display monitors.</summary>
         [DllImport("user32")]
         private static extern bool EnumDisplayMonitors(IntPtr hdc, IntPtr lpRect, MonitorEnumProc callback, int dwData);
 
+        /// <summary>
+        /// Windows API rectangle structure for monitor bounds.
+        /// </summary>
         [StructLayout(LayoutKind.Sequential)]
         private struct RectApi
         {
@@ -521,10 +463,15 @@ namespace Gimbl
             }
         }
 
+        /// <summary>
+        /// Temporary editor window for detecting pixels per point on each monitor.
+        /// </summary>
         private class MonitorTester : EditorWindow
         {
+            /// <summary>The monitor to test.</summary>
             internal Monitor monitor;
 
+            /// <summary>Records pixels per point and closes immediately.</summary>
             private void OnGUI()
             {
                 monitor.pixelsPerPoint = EditorGUIUtility.pixelsPerPoint;

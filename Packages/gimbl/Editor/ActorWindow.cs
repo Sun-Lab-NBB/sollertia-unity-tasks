@@ -1,26 +1,55 @@
+/// <summary>
+/// Provides the ActorWindow class for actor and controller management in the editor.
+///
+/// Renders the editor window for creating, selecting, editing, and deleting actors
+/// and controllers in the VR environment.
+/// </summary>
 using System.Collections.Generic;
 using System.Linq;
 using Gimbl;
 using UnityEditor;
 using UnityEngine;
 
+/// <summary>
+/// Manages the editor window for actor and controller operations.
+/// </summary>
 public class ActorWindow : EditorWindow
 {
-    #region Menu Variables.
+    /// <summary>The scroll position for the window content.</summary>
     Vector2 scrollPosition = Vector2.zero;
+
+    /// <summary>The delegate type for object creation functions.</summary>
+    /// <typeparam name="T">The type of Unity Object to create.</typeparam>
+    /// <param name="settings">The menu settings for the creation.</param>
     public delegate void CreateFunc<T>(MenuSettings<T> settings)
         where T : UnityEngine.Object;
 
-    // Stores menu settings.
+    /// <summary>
+    /// Stores menu state and selection for a generic Unity Object type.
+    /// </summary>
+    /// <typeparam name="T">The type of Unity Object this menu manages.</typeparam>
     public class MenuSettings<T>
         where T : UnityEngine.Object
     {
+        /// <summary>The display name of the object type.</summary>
         public string typeName;
+
+        /// <summary>The array of foldout visibility states.</summary>
         public bool[] show = { false, false, false, false, false };
+
+        /// <summary>The name for creating new objects.</summary>
         public string name = "";
+
+        /// <summary>The entity ID of the selected object for serialization.</summary>
         public EntityId selectedEntityId;
-        public Rect editRect = new Rect(); // stores location editing window.
+
+        /// <summary>The rectangle position for the editing window.</summary>
+        public Rect editRect = new Rect();
+
+        /// <summary>The backing field for the selected object.</summary>
         private T _selectedObj;
+
+        /// <summary>The currently selected object.</summary>
         public T selectedObj
         {
             get { return _selectedObj; }
@@ -42,47 +71,58 @@ public class ActorWindow : EditorWindow
         }
     }
 
-    // Need to make non-generic inherited class for having serializble variables (otherwise menu changes on run)
+    /// <summary>
+    /// Serializable menu settings for ActorObject selection.
+    /// </summary>
     [System.Serializable]
     public class ActorMenuSettings : MenuSettings<ActorObject> { }
 
+    /// <summary>
+    /// Serializable menu settings for ControllerOutput selection.
+    /// </summary>
     [System.Serializable]
     public class ControllerMenuSettings : MenuSettings<ControllerOutput> { }
 
+    /// <summary>The menu settings for actor management.</summary>
     [SerializeField]
     private ActorMenuSettings actSettings = new ActorMenuSettings() { typeName = "Actor" };
 
+    /// <summary>The menu settings for controller management.</summary>
     [SerializeField]
     private ControllerMenuSettings contSettings = new ControllerMenuSettings() { typeName = "Controller" };
 
-    // Actor specific variables.
+    /// <summary>The available actor model names from Resources.</summary>
     private string[] actorModels;
+
+    /// <summary>The index of the selected model in the dropdown.</summary>
     private int selectedModel = 0;
+
+    /// <summary>Determines whether to add a tracking camera when creating actors.</summary>
     private bool trackCam = true;
 
-    // Controller specific Variables.
+    /// <summary>The selected controller type for creation.</summary>
     private ControllerTypes contType = ControllerTypes.LinearTreadmill;
 
-    #endregion
-
-    #region Window Setup.
+    /// <summary>The current editor window instance.</summary>
     private static EditorWindow currentWindow;
 
+    /// <summary>Shows the ActorWindow editor window.</summary>
     public static void ShowWindow()
     {
         currentWindow = GetWindow<ActorWindow>("Actors", true, typeof(MainWindow));
         currentWindow.Show();
     }
 
+    /// <summary>Loads actor models from Resources when the window is enabled.</summary>
     private void OnEnable()
     {
-        // Get actor models.
         Resources.LoadAll<GameObject>("Actors/Mouse");
         UnityEngine.Object[] data = Resources.LoadAll<GameObject>("Actors/Prefabs");
         actorModels = data.Select(x => x.name).ToArray();
         actorModels = actorModels.Union(new string[] { "None" }).ToArray();
     }
-    #endregion
+
+    /// <summary>Renders the actor and controller management GUI.</summary>
     private void OnGUI()
     {
         scrollPosition = EditorGUILayout.BeginScrollView(
@@ -90,24 +130,21 @@ public class ActorWindow : EditorWindow
             GUILayout.Height(position.height),
             GUILayout.Width(position.width)
         );
-        #region ActorMenu
+
         EditorGUILayout.BeginVertical(LayoutSettings.mainBox.style);
         EditorGUILayout.LabelField("Actors", LayoutSettings.sectionLabel);
 
-        // Select and delete actor.
         EditorGUILayout.BeginHorizontal(LayoutSettings.editWidth);
         SelectMenu(actSettings);
         if (GUILayout.Button("Delete", LayoutSettings.buttonOp))
             actSettings.selectedObj.DeleteActor();
         EditorGUILayout.EndHorizontal();
 
-        // Edit Actor.
         if (actSettings.selectedObj != null)
         {
             actSettings.selectedObj.EditMenu();
         }
 
-        // Create Actor.
         if (EditorApplication.isPlaying)
             GUI.enabled = false;
         actSettings.show[0] = EditorGUILayout.Foldout(actSettings.show[0], "Create");
@@ -123,29 +160,23 @@ public class ActorWindow : EditorWindow
         }
         GUI.enabled = true;
         EditorGUILayout.EndVertical();
-        #endregion
 
-        #region Controller
         EditorGUILayout.BeginVertical(LayoutSettings.mainBox.style);
         EditorGUILayout.LabelField("Controllers", LayoutSettings.sectionLabel);
 
-        // Select and delete.
         EditorGUILayout.BeginHorizontal(LayoutSettings.editWidth);
         SelectMenu(contSettings);
         if (GUILayout.Button("Delete", LayoutSettings.buttonOp))
             contSettings.selectedObj.master.DeleteController();
         EditorGUILayout.EndHorizontal();
 
-        // Edit.
         contSettings.show[0] = EditorGUILayout.Foldout(contSettings.show[0], "Edit");
         if (contSettings.show[0])
         {
             if (contSettings.selectedObj != null)
             {
                 EditorGUILayout.BeginVertical(LayoutSettings.subBox.style);
-                // Custom edit menu.
                 contSettings.selectedObj.master.EditMenu();
-                // Save and load options.
                 EditorGUILayout.Space();
                 EditorGUILayout.BeginHorizontal(LayoutSettings.editFieldOp);
                 GUILayout.FlexibleSpace();
@@ -165,7 +196,7 @@ public class ActorWindow : EditorWindow
                 EditorGUILayout.EndVertical();
             }
         }
-        // Create.
+
         if (EditorApplication.isPlaying)
             GUI.enabled = false;
         contSettings.show[1] = EditorGUILayout.Foldout(contSettings.show[1], "Create");
@@ -184,20 +215,19 @@ public class ActorWindow : EditorWindow
         }
         GUI.enabled = true;
         EditorGUILayout.EndVertical();
-        #endregion
 
         GUILayout.EndScrollView();
     }
 
-    // Menu Functions.
+    /// <summary>Renders the object selection field and handles selection recovery.</summary>
+    /// <typeparam name="T">The type of Unity Object to select.</typeparam>
+    /// <param name="settings">The menu settings containing the selection state.</param>
     private void SelectMenu<T>(MenuSettings<T> settings)
         where T : UnityEngine.Object
     {
-        // Object cant be found (possible serialization on run)
         if (settings.selectedObj == null)
         {
             T obj = null;
-            // Check if entity ID is valid
             if (settings.selectedEntityId != EntityId.None)
             {
                 try
@@ -207,9 +237,8 @@ public class ActorWindow : EditorWindow
                 catch (System.InvalidCastException)
                 {
                     obj = null;
-                } // catches changed entityID on restart.
+                }
             }
-            // Otherwise find first on list.
             if (obj == null)
             {
                 obj = FindAnyObjectByType<T>();
@@ -222,46 +251,46 @@ public class ActorWindow : EditorWindow
         settings.selectedObj = (T)EditorGUILayout.ObjectField(settings.selectedObj, typeof(T), true);
     }
 
+    /// <summary>Renders the create button with validation for duplicate and empty names.</summary>
+    /// <typeparam name="T">The type of Unity Object to create.</typeparam>
+    /// <param name="settings">The menu settings containing the new object name.</param>
     private void CreateButton<T>(MenuSettings<T> settings)
         where T : UnityEngine.Object
     {
         EditorGUILayout.BeginHorizontal();
-        T[] objs = FindObjectsByType<T>(FindObjectsSortMode.None);
-        string[] names = objs.Select(x => x.name).ToArray();
-        string msg = "";
-        if (ArrayUtility.Contains(names, settings.name))
+        T[] existingObjects = FindObjectsByType<T>(FindObjectsSortMode.None);
+        string[] existingNames = existingObjects.Select(x => x.name).ToArray();
+        string validationMessage = "";
+        if (ArrayUtility.Contains(existingNames, settings.name))
         {
-            msg = "Duplicate name";
+            validationMessage = "Duplicate name";
             GUI.enabled = false;
         }
         if (settings.name == "")
         {
-            msg = "Empty Name";
+            validationMessage = "Empty Name";
             GUI.enabled = false;
         }
-        EditorGUILayout.LabelField(msg, GUILayout.Width(197));
+        EditorGUILayout.LabelField(validationMessage, GUILayout.Width(197));
         if (GUILayout.Button("Create", LayoutSettings.buttonOp))
         {
-            GameObject obj = new GameObject(settings.name);
-            //Controller.
+            GameObject newObject = new GameObject(settings.name);
+
             if (typeof(T) == typeof(ControllerOutput))
             {
-                //Create Controller.
-                ControllerObject cont = (ControllerObject)
-                    obj.AddComponent(System.Type.GetType(string.Format("Gimbl.{0}", contType.ToString())));
-                cont.InitiateController();
-                //Create general Output Object and link.
-                ControllerOutput contOut = obj.AddComponent<ControllerOutput>();
-                contOut.master = cont;
-                // Select created.
-                settings.selectedObj = contOut as T;
+                ControllerObject controller = (ControllerObject)
+                    newObject.AddComponent(System.Type.GetType(string.Format("Gimbl.{0}", contType.ToString())));
+                controller.InitiateController();
+                ControllerOutput controllerOutput = newObject.AddComponent<ControllerOutput>();
+                controllerOutput.master = controller;
+                settings.selectedObj = controllerOutput as T;
             }
-            //Actor.
+
             if (typeof(T) == typeof(ActorObject))
             {
-                ActorObject act = obj.AddComponent<ActorObject>();
-                act.InitiateActor(actorModels[selectedModel], trackCam);
-                settings.selectedObj = act as T;
+                ActorObject actor = newObject.AddComponent<ActorObject>();
+                actor.InitiateActor(actorModels[selectedModel], trackCam);
+                settings.selectedObj = actor as T;
             }
 
             settings.name = "";

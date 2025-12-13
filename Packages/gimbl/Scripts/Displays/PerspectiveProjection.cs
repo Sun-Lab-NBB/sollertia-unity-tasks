@@ -1,27 +1,60 @@
-﻿using System.Collections;
+/// <summary>
+/// Provides the PerspectiveProjection class for off-axis projection rendering.
+///
+/// Calculates custom projection matrices for VR displays based on physical screen
+/// position relative to the camera, enabling accurate perspective for multi-monitor setups.
+/// </summary>
+using System.Collections;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
+/// <summary>
+/// Handles off-axis perspective projection for VR displays.
+/// </summary>
 [ExecuteInEditMode]
 public class PerspectiveProjection : MonoBehaviour
 {
+    /// <summary>The GameObject representing the physical projection screen.</summary>
     public GameObject projectionScreen;
-    public Gimbl.DisplayObject dispObj;
-    public bool estimateViewFrustrum = true;
-    public bool setNearClipPlane = true;
-    public float nearClipDistanceOffset = -0.01f;
-    public bool isDebug = false;
-    private string meshType;
-    private Camera cameraComponent;
-    private Matrix4x4 p; // projection matrix.
-    private Matrix4x4 rm; // rotation matrix.
-    private Matrix4x4 tm; // translation matrix.
-    private Quaternion q;
 
+    /// <summary>The display object this projection belongs to.</summary>
+    public Gimbl.DisplayObject dispObj;
+
+    /// <summary>Determines whether to estimate view frustum for culling.</summary>
+    public bool estimateViewFrustrum = true;
+
+    /// <summary>Determines whether to automatically set the near clip plane.</summary>
+    public bool setNearClipPlane = true;
+
+    /// <summary>The offset applied to the near clip plane distance.</summary>
+    public float nearClipDistanceOffset = -0.01f;
+
+    /// <summary>Enables debug logging when true.</summary>
+    public bool isDebug = false;
+
+    /// <summary>The mesh type of the projection screen (Plane or Quad).</summary>
+    private string meshType;
+
+    /// <summary>The camera component for this projection.</summary>
+    private Camera cameraComponent;
+
+    /// <summary>The projection matrix.</summary>
+    private Matrix4x4 projectionMatrix;
+
+    /// <summary>The rotation matrix.</summary>
+    private Matrix4x4 rotationMatrix;
+
+    /// <summary>The translation matrix.</summary>
+    private Matrix4x4 translationMatrix;
+
+    /// <summary>The quaternion for camera rotation.</summary>
+    private Quaternion cameraRotation;
+
+    /// <summary>The material for brightness adjustment post-processing.</summary>
     public Material material;
 
-    // Start is called before the first frame update
+    /// <summary>Initializes the brightness shader material and display object reference.</summary>
     void Awake()
     {
         if (material == null)
@@ -31,15 +64,15 @@ public class PerspectiveProjection : MonoBehaviour
         dispObj = GetComponentInParent<Gimbl.DisplayObject>();
     }
 
-    // Update is called once per frame
+    /// <summary>Updates the projection view after all other updates.</summary>
     void LateUpdate()
     {
         UpdateView();
     }
 
+    /// <summary>Calculates and applies the off-axis projection matrix.</summary>
     public void UpdateView()
     {
-        // Get components.
         if (meshType == null)
         {
             meshType = projectionScreen.GetComponent<MeshFilter>().sharedMesh.name;
@@ -49,60 +82,48 @@ public class PerspectiveProjection : MonoBehaviour
             cameraComponent = gameObject.GetComponent<Camera>();
         }
 
-        // Get view.
         if (projectionScreen != null && cameraComponent != null)
         {
-            Vector3 pa = new Vector3();
-            Vector3 pb = new Vector3();
-            Vector3 pc = new Vector3();
+            Vector3 screenLowerLeft = new Vector3();
+            Vector3 screenLowerRight = new Vector3();
+            Vector3 screenUpperLeft = new Vector3();
             switch (meshType)
             {
                 case "Plane":
-                    // lower-left.
-                    pa = projectionScreen.transform.TransformPoint(new Vector3(-5.0f, 0.0f, -5.0f));
-                    // lower-right.
-                    pb = projectionScreen.transform.TransformPoint(new Vector3(5.0f, 0.0f, -5.0f));
-                    // upper-left.
-                    pc = projectionScreen.transform.TransformPoint(new Vector3(-5.0f, 0.0f, 5.0f));
+                    screenLowerLeft = projectionScreen.transform.TransformPoint(new Vector3(-5.0f, 0.0f, -5.0f));
+                    screenLowerRight = projectionScreen.transform.TransformPoint(new Vector3(5.0f, 0.0f, -5.0f));
+                    screenUpperLeft = projectionScreen.transform.TransformPoint(new Vector3(-5.0f, 0.0f, 5.0f));
                     break;
                 case "Quad":
-                    // lower-left.
-                    pa = projectionScreen.transform.TransformPoint(new Vector3(-0.5f, -0.5f, 0.0f));
-                    // lower-right.
-                    pb = projectionScreen.transform.TransformPoint(new Vector3(0.5f, -0.5f, 0.0f));
-                    // upper-left.
-                    pc = projectionScreen.transform.TransformPoint(new Vector3(-0.5f, 0.5f, 0.0f));
+                    screenLowerLeft = projectionScreen.transform.TransformPoint(new Vector3(-0.5f, -0.5f, 0.0f));
+                    screenLowerRight = projectionScreen.transform.TransformPoint(new Vector3(0.5f, -0.5f, 0.0f));
+                    screenUpperLeft = projectionScreen.transform.TransformPoint(new Vector3(-0.5f, 0.5f, 0.0f));
                     break;
             }
 
-            //eye position.
-            Vector3 pe = transform.position;
-            //distance near/far clipping plane.
-            float n = cameraComponent.nearClipPlane;
-            float f = cameraComponent.farClipPlane;
+            Vector3 eyePosition = transform.position;
+            float nearClipDistance = cameraComponent.nearClipPlane;
+            float farClipDistance = cameraComponent.farClipPlane;
 
-            //distances.
-            Vector3 vr = pb - pa; // right axis of screen.
-            Vector3 vu = pc - pa; // up axis of screen.
-            Vector3 va = pa - pe; // from pe to pa.
-            Vector3 vb = pb - pe; // from pe to pb.
-            Vector3 vc = pc - pe; // from pe to pc.
+            Vector3 screenRightAxis = screenLowerRight - screenLowerLeft;
+            Vector3 screenUpAxis = screenUpperLeft - screenLowerLeft;
+            Vector3 eyeToLowerLeft = screenLowerLeft - eyePosition;
+            Vector3 eyeToLowerRight = screenLowerRight - eyePosition;
+            Vector3 eyeToUpperLeft = screenUpperLeft - eyePosition;
 
-            //Check facing backface of plane.
-            if (Vector3.Dot(-Vector3.Cross(va, vc), vb) < 0.0)
+            if (Vector3.Dot(-Vector3.Cross(eyeToLowerLeft, eyeToUpperLeft), eyeToLowerRight) < 0.0)
             {
                 if (isDebug)
                 {
                     Debug.Log("Facing backface of plane");
                 }
-                //mirror points along z axis (most users expect x axis to stay fixed).
-                vu = -vu;
-                pa = pc;
-                pb = pa + vr;
-                pc = pa + vu;
-                va = pa - pe;
-                vb = pb - pe;
-                vc = pc - pe;
+                screenUpAxis = -screenUpAxis;
+                screenLowerLeft = screenUpperLeft;
+                screenLowerRight = screenLowerLeft + screenRightAxis;
+                screenUpperLeft = screenLowerLeft + screenUpAxis;
+                eyeToLowerLeft = screenLowerLeft - eyePosition;
+                eyeToLowerRight = screenLowerRight - eyePosition;
+                eyeToUpperLeft = screenUpperLeft - eyePosition;
             }
             else
             {
@@ -112,121 +133,125 @@ public class PerspectiveProjection : MonoBehaviour
                 }
             }
 
-            // Screen distances.
-            vr.Normalize();
-            vu.Normalize();
-            Vector3 vn = -Vector3.Cross(vr, vu); // Normal vector of screen. Need minus sign because of unities left-handed coordinate system.
+            screenRightAxis.Normalize();
+            screenUpAxis.Normalize();
+            Vector3 screenNormal = -Vector3.Cross(screenRightAxis, screenUpAxis);
 
-            float d = -Vector3.Dot(va, vn); //distance from eye to screen.
+            float eyeToScreenDistance = -Vector3.Dot(eyeToLowerLeft, screenNormal);
             if (setNearClipPlane)
             {
-                n = d + nearClipDistanceOffset;
-                cameraComponent.nearClipPlane = n;
+                nearClipDistance = eyeToScreenDistance + nearClipDistanceOffset;
+                cameraComponent.nearClipPlane = nearClipDistance;
             }
-            float l = Vector3.Dot(vr, va) * n / d; //distance to left screen edge.
-            float r = Vector3.Dot(vr, vb) * n / d; //distance to right screen edge.
-            float b = Vector3.Dot(vu, va) * n / d; //distance to bottom screen edge.
-            float t = Vector3.Dot(vu, vc) * n / d; //distance to top screen edge.
+            float leftEdgeDistance =
+                Vector3.Dot(screenRightAxis, eyeToLowerLeft) * nearClipDistance / eyeToScreenDistance;
+            float rightEdgeDistance =
+                Vector3.Dot(screenRightAxis, eyeToLowerRight) * nearClipDistance / eyeToScreenDistance;
+            float bottomEdgeDistance =
+                Vector3.Dot(screenUpAxis, eyeToLowerLeft) * nearClipDistance / eyeToScreenDistance;
+            float topEdgeDistance = Vector3.Dot(screenUpAxis, eyeToUpperLeft) * nearClipDistance / eyeToScreenDistance;
 
-            //Projection matrix.
+            projectionMatrix[0, 0] = 2.0f * nearClipDistance / (rightEdgeDistance - leftEdgeDistance);
+            projectionMatrix[0, 1] = 0.0f;
+            projectionMatrix[0, 2] = (rightEdgeDistance + leftEdgeDistance) / (rightEdgeDistance - leftEdgeDistance);
+            projectionMatrix[0, 3] = 0.0f;
 
-            p[0, 0] = 2.0f * n / (r - l);
-            p[0, 1] = 0.0f;
-            p[0, 2] = (r + l) / (r - l);
-            p[0, 3] = 0.0f;
+            projectionMatrix[1, 0] = 0.0f;
+            projectionMatrix[1, 1] = 2.0f * nearClipDistance / (topEdgeDistance - bottomEdgeDistance);
+            projectionMatrix[1, 2] = (topEdgeDistance + bottomEdgeDistance) / (topEdgeDistance - bottomEdgeDistance);
+            projectionMatrix[1, 3] = 0.0f;
 
-            p[1, 0] = 0.0f;
-            p[1, 1] = 2.0f * n / (t - b);
-            p[1, 2] = (t + b) / (t - b);
-            p[1, 3] = 0.0f;
+            projectionMatrix[2, 0] = 0.0f;
+            projectionMatrix[2, 1] = 0.0f;
+            projectionMatrix[2, 2] = (farClipDistance + nearClipDistance) / (nearClipDistance - farClipDistance);
+            projectionMatrix[2, 3] = 2.0f * farClipDistance * nearClipDistance / (nearClipDistance - farClipDistance);
 
-            p[2, 0] = 0.0f;
-            p[2, 1] = 0.0f;
-            p[2, 2] = (f + n) / (n - f);
-            p[2, 3] = 2.0f * f * n / (n - f);
+            projectionMatrix[3, 0] = 0.0f;
+            projectionMatrix[3, 1] = 0.0f;
+            projectionMatrix[3, 2] = -1.0f;
+            projectionMatrix[3, 3] = 0.0f;
 
-            p[3, 0] = 0.0f;
-            p[3, 1] = 0.0f;
-            p[3, 2] = -1.0f;
-            p[3, 3] = 0.0f;
+            rotationMatrix[0, 0] = screenRightAxis.x;
+            rotationMatrix[0, 1] = screenRightAxis.y;
+            rotationMatrix[0, 2] = screenRightAxis.z;
+            rotationMatrix[0, 3] = 0.0f;
 
-            //Rotation matrix.
-            rm[0, 0] = vr.x;
-            rm[0, 1] = vr.y;
-            rm[0, 2] = vr.z;
-            rm[0, 3] = 0.0f;
+            rotationMatrix[1, 0] = screenUpAxis.x;
+            rotationMatrix[1, 1] = screenUpAxis.y;
+            rotationMatrix[1, 2] = screenUpAxis.z;
+            rotationMatrix[1, 3] = 0.0f;
 
-            rm[1, 0] = vu.x;
-            rm[1, 1] = vu.y;
-            rm[1, 2] = vu.z;
-            rm[1, 3] = 0.0f;
+            rotationMatrix[2, 0] = screenNormal.x;
+            rotationMatrix[2, 1] = screenNormal.y;
+            rotationMatrix[2, 2] = screenNormal.z;
+            rotationMatrix[2, 3] = 0.0f;
 
-            rm[2, 0] = vn.x;
-            rm[2, 1] = vn.y;
-            rm[2, 2] = vn.z;
-            rm[2, 3] = 0.0f;
+            rotationMatrix[3, 0] = 0.0f;
+            rotationMatrix[3, 1] = 0.0f;
+            rotationMatrix[3, 2] = 0.0f;
+            rotationMatrix[3, 3] = 1.0f;
 
-            rm[3, 0] = 0.0f;
-            rm[3, 1] = 0.0f;
-            rm[3, 2] = 0.0f;
-            rm[3, 3] = 1.0f;
+            translationMatrix[0, 0] = 1.0f;
+            translationMatrix[0, 1] = 0.0f;
+            translationMatrix[0, 2] = 0.0f;
+            translationMatrix[0, 3] = -eyePosition.x;
 
-            //translation matrix.
-            tm[0, 0] = 1.0f;
-            tm[0, 1] = 0.0f;
-            tm[0, 2] = 0.0f;
-            tm[0, 3] = -pe.x;
+            translationMatrix[1, 0] = 0.0f;
+            translationMatrix[1, 1] = 1.0f;
+            translationMatrix[1, 2] = 0.0f;
+            translationMatrix[1, 3] = -eyePosition.y;
 
-            tm[1, 0] = 0.0f;
-            tm[1, 1] = 1.0f;
-            tm[1, 2] = 0.0f;
-            tm[1, 3] = -pe.y;
+            translationMatrix[2, 0] = 0.0f;
+            translationMatrix[2, 1] = 0.0f;
+            translationMatrix[2, 2] = 1.0f;
+            translationMatrix[2, 3] = -eyePosition.z;
 
-            tm[2, 0] = 0.0f;
-            tm[2, 1] = 0.0f;
-            tm[2, 2] = 1.0f;
-            tm[2, 3] = -pe.z;
+            translationMatrix[3, 0] = 0.0f;
+            translationMatrix[3, 1] = 0.0f;
+            translationMatrix[3, 2] = 0.0f;
+            translationMatrix[3, 3] = 1.0f;
 
-            tm[3, 0] = 0.0f;
-            tm[3, 1] = 0.0f;
-            tm[3, 2] = 0.0f;
-            tm[3, 3] = 1.0f;
-
-            // set matrices
-            cameraComponent.projectionMatrix = p;
-            cameraComponent.worldToCameraMatrix = rm * tm;
-            // The original paper puts everything into the projection
-            // matrix (i.e. sets it to p * rm * tm and the other
-            // matrix to the identity), but this doesn't appear to
-            // work with Unity's shadow maps.
+            cameraComponent.projectionMatrix = projectionMatrix;
+            cameraComponent.worldToCameraMatrix = rotationMatrix * translationMatrix;
 
             if (estimateViewFrustrum)
             {
-                // rotate camera to screen for culling to work
-                q.SetLookRotation((0.5f * (pb + pc) - pe), vu);
-                // look at center of screen
-                cameraComponent.transform.rotation = q;
+                cameraRotation.SetLookRotation(
+                    (0.5f * (screenLowerRight + screenUpperLeft) - eyePosition),
+                    screenUpAxis
+                );
+                cameraComponent.transform.rotation = cameraRotation;
 
-                // set fieldOfView to a conservative estimate
-                // to make frustum tall enough
                 if (cameraComponent.aspect >= 1.0)
                 {
                     cameraComponent.fieldOfView =
-                        Mathf.Rad2Deg * Mathf.Atan(((pb - pa).magnitude + (pc - pa).magnitude) / va.magnitude);
+                        Mathf.Rad2Deg
+                        * Mathf.Atan(
+                            (
+                                (screenLowerRight - screenLowerLeft).magnitude
+                                + (screenUpperLeft - screenLowerLeft).magnitude
+                            ) / eyeToLowerLeft.magnitude
+                        );
                 }
                 else
                 {
-                    // take the camera aspect into account to
-                    // make the frustum wide enough
                     cameraComponent.fieldOfView =
                         Mathf.Rad2Deg
                         / cameraComponent.aspect
-                        * Mathf.Atan(((pb - pa).magnitude + (pc - pa).magnitude) / va.magnitude);
+                        * Mathf.Atan(
+                            (
+                                (screenLowerRight - screenLowerLeft).magnitude
+                                + (screenUpperLeft - screenLowerLeft).magnitude
+                            ) / eyeToLowerLeft.magnitude
+                        );
                 }
             }
         }
     }
 
+    /// <summary>Applies brightness adjustment to the rendered image.</summary>
+    /// <param name="source">The source render texture.</param>
+    /// <param name="destination">The destination render texture.</param>
     public void OnRenderImage(RenderTexture source, RenderTexture destination)
     {
         if (dispObj.settings.isActive)
