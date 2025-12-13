@@ -1,164 +1,221 @@
-﻿    using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+/// <summary>
+/// Provides the ControllerObject base class and related types for input handling.
+///
+/// Defines the abstract controller interface and the ValueBuffer class for
+/// accumulating input between frames.
+/// </summary>
 using UnityEditor;
+using UnityEngine;
 
 namespace Gimbl
 {
-    // Avialable types.
+    /// <summary>
+    /// The available controller types in the system.
+    /// </summary>
     public enum ControllerTypes
     {
         LinearTreadmill,
         SimulatedLinearTreadmill,
     }
 
+    /// <summary>
+    /// Abstract base class for all input controllers.
+    /// </summary>
     public abstract class ControllerObject : MonoBehaviour
     {
+        /// <summary>The actor receiving input from this controller.</summary>
         public ActorObject Actor;
-        public abstract void EditMenu();                            // Custom edit menu.
-        public abstract void LinkSettings(string assetPath = "");   // Creates or links a settings file (ScriptableObject).
 
-        // Handling of gamepads
-        public Gamepad gamepad = new Gamepad();
-        public string[] deviceNames = Gamepad.GetDeviceNames();
+        /// <summary>Renders the custom editor GUI for this controller type.</summary>
+        public abstract void EditMenu();
 
-        // General buffer for inputs
+        /// <summary>Creates or links the settings ScriptableObject for this controller.</summary>
+        /// <param name="assetPath">The path to an existing settings asset, or empty to create new.</param>
+        public abstract void LinkSettings(string assetPath = "");
+
+        /// <summary>
+        /// The class that buffers values for accumulating input between frames.
+        /// </summary>
         public class ValueBuffer
         {
-            public float[] x;
-            public float[] y;
-            public float[] z;
-            public Vector3 res = new Vector3();
-            public int bufferSize;
-            public int counter;
-            private bool isCircular;
-            public ValueBuffer(int reqBufferSize, bool reqIsCircular)
+            /// <summary>The array storing buffered values.</summary>
+            private float[] _values;
+
+            /// <summary>The maximum size of the buffer.</summary>
+            private int _bufferSize;
+
+            /// <summary>The current write position in the buffer.</summary>
+            private int _counter;
+
+            /// <summary>Determines whether the buffer wraps around when full.</summary>
+            private bool _isCircular;
+
+            /// <summary>Creates a new value buffer with the specified size and mode.</summary>
+            /// <param name="size">The maximum number of values to buffer.</param>
+            /// <param name="circular">If true, the buffer wraps around when full.</param>
+            public ValueBuffer(int size, bool circular)
             {
-                bufferSize = reqBufferSize;
-                x = new float[bufferSize];
-                y = new float[bufferSize];
-                z = new float[bufferSize];
-                counter = 0;
-                isCircular = reqIsCircular;
+                _bufferSize = size;
+                _values = new float[_bufferSize];
+                _counter = 0;
+                _isCircular = circular;
             }
-            public void Add(float newX, float newY, float newZ)
+
+            /// <summary>Adds a value to the buffer.</summary>
+            /// <param name="value">The value to add.</param>
+            public void Add(float value)
             {
-                x[counter] = newX;
-                y[counter] = newY;
-                z[counter] = newZ;
-                counter++;
-                if (counter == bufferSize)
+                _values[_counter] = value;
+                _counter++;
+
+                if (_counter == _bufferSize)
                 {
-                    if (isCircular) { counter = 0; }
-                    else { counter = bufferSize-1; } //overwrites.
+                    _counter = _isCircular ? 0 : _bufferSize - 1;
                 }
             }
-            public Vector3 Sum()
+
+            /// <summary>Returns the sum of all buffered values.</summary>
+            /// <returns>The sum of values in the buffer.</returns>
+            public float Sum()
             {
-                res.x = 0; res.y = 0; res.z = 0;
-                for (int i = 0; i < GetBufferLimit(); i++)
-                { res.x += x[i]; res.y += y[i]; res.z += z[i]; }
-                return res;
+                float result = 0;
+                int limit = _isCircular ? _bufferSize : _counter;
+
+                for (int i = 0; i < limit; i++)
+                {
+                    result += _values[i];
+                }
+
+                return result;
             }
-            public Vector3 Average()
-            {
-                res.x = 0; res.y = 0; res.z = 0;
-                for (int i = 0; i < GetBufferLimit(); i++)
-                { res.x += x[i]; res.y += y[i]; res.z += z[i]; }
-                res.x /= bufferSize; res.y /= bufferSize; res.z /= bufferSize;
-                return res;
-            }
+
+            /// <summary>Clears all values from the buffer.</summary>
             public void Clear()
             {
-                res.x = 0; res.y = 0; res.z = 0;
-                for (int i = 0; i < GetBufferLimit(); i++)
-                { x[i] = 0; y[i] = 0; z[i] = 0; }
-                counter = 0;
-            }
+                int limit = _isCircular ? _bufferSize : _counter;
 
-            private int GetBufferLimit()
-            {
-                if (isCircular) { return bufferSize; }
-                else { return counter; }
+                for (int i = 0; i < limit; i++)
+                {
+                    _values[i] = 0;
+                }
+
+                _counter = 0;
             }
         }
-        public ValueBuffer movement = new ValueBuffer(100, false); // Stores ball rotations.
-        public int GetBufferSize(float setting)
-        {
-            int size = (int)(((float)setting / 1000) / (1f / Screen.currentResolution.refreshRateRatio.value));
-            if (size == 0) size = 1;
-            return size;
-        }
 
+        /// <summary>The buffer for accumulating movement input between frames.</summary>
+        public ValueBuffer movement = new ValueBuffer(100, false);
+
+        /// <summary>Initializes a new controller and creates its settings asset.</summary>
         public void InitiateController()
         {
             gameObject.transform.SetParent(GameObject.Find("Controllers").transform);
-            // Create settings file.
             LinkSettings();
-            //update main controller parent.
-            UnityEditor.Undo.RegisterCreatedObjectUndo(gameObject, "Create Controller");
+            Undo.RegisterCreatedObjectUndo(gameObject, "Create Controller");
         }
 
+        /// <summary>Saves the controller settings to a user-specified file.</summary>
         public void SaveController()
         {
             GameObject controller = this.gameObject;
-            // get controller type and file extension.
-            string sourceType = UnityEditor.AssetDatabase.GetMainAssetTypeAtPath(string.Format("Assets/VRSettings/Controllers/{0}.asset", this.name)).ToString();
+
+            // Gets controller type and file extension
+            string sourceType = AssetDatabase
+                .GetMainAssetTypeAtPath($"Assets/VRSettings/Controllers/{this.name}.asset")
+                .ToString();
             string[] s = sourceType.Split('.');
+            if (s.Length < 2)
+            {
+                Debug.LogError($"Controller.SaveController: Invalid asset type format '{sourceType}'");
+                return;
+            }
             string extension = s[1];
-            // File dialogue.
-            string outputFile = UnityEditor.EditorUtility.SaveFilePanel("Save Controller settings as..",
-             "",
-             "",
-             extension);
-            if (outputFile.Length == 0) return;
-            UnityEditor.AssetDatabase.SaveAssets();
-            string sourcePath = System.IO.Path.Combine(Application.dataPath, string.Format("VRSettings/Controllers/{0}.asset", controller.name));
-            UnityEditor.FileUtil.ReplaceFile(sourcePath, outputFile);
+
+            string outputFile = EditorUtility.SaveFilePanel("Save Controller settings as..", "", "", extension);
+            if (outputFile.Length == 0)
+            {
+                return;
+            }
+
+            AssetDatabase.SaveAssets();
+            string sourcePath = System.IO.Path.Combine(
+                Application.dataPath,
+                $"VRSettings/Controllers/{controller.name}.asset"
+            );
+            FileUtil.ReplaceFile(sourcePath, outputFile);
         }
 
+        /// <summary>Loads controller settings from a user-specified file.</summary>
         public void LoadController()
         {
             GameObject controller = this.gameObject;
-            // get controller type and file extension.
-            string sourceFile = string.Format("Assets/VRSettings/Controllers/{0}.asset", this.gameObject.name);
-            string sourceType = UnityEditor.AssetDatabase.GetMainAssetTypeAtPath(sourceFile).ToString();
+
+            // Gets controller type and file extension
+            string sourceFile = $"Assets/VRSettings/Controllers/{this.gameObject.name}.asset";
+            string sourceType = AssetDatabase.GetMainAssetTypeAtPath(sourceFile).ToString();
             string[] s = sourceType.Split('.');
+            if (s.Length < 2)
+            {
+                Debug.LogError($"Controller.LoadController: Invalid asset type format '{sourceType}'");
+                return;
+            }
             string extension = s[1];
-            // File Dialogue.
-            string inputFile = UnityEditor.EditorUtility.OpenFilePanel("Import Setup", Application.dataPath, extension);
-            if (inputFile.Length == 0) return;
-            // Remove current settings file.
-            string settingsFileAssetPath = string.Format("Assets/VRSettings/Controllers/{0}.asset", controller.name);
-            UnityEditor.AssetDatabase.DeleteAsset(settingsFileAssetPath);
-            // Copy new file to location.
-            string newLoc = System.IO.Path.Combine(Application.dataPath, string.Format("VRSettings/Controllers/{0}.asset", controller.name));
-            UnityEditor.FileUtil.CopyFileOrDirectory(inputFile, newLoc);
-            UnityEditor.AssetDatabase.ImportAsset(settingsFileAssetPath);
-            // Link to controller.
+
+            string inputFile = EditorUtility.OpenFilePanel("Import Setup", Application.dataPath, extension);
+            if (inputFile.Length == 0)
+            {
+                return;
+            }
+
+            // Removes current settings file and copies new one
+            string settingsFileAssetPath = $"Assets/VRSettings/Controllers/{controller.name}.asset";
+            AssetDatabase.DeleteAsset(settingsFileAssetPath);
+
+            string newLoc = System.IO.Path.Combine(
+                Application.dataPath,
+                $"VRSettings/Controllers/{controller.name}.asset"
+            );
+            FileUtil.CopyFileOrDirectory(inputFile, newLoc);
+            AssetDatabase.ImportAsset(settingsFileAssetPath);
+
             controller.GetComponent<ControllerObject>().LinkSettings(settingsFileAssetPath);
         }
 
+        /// <summary>Deletes this controller after user confirmation.</summary>
         public void DeleteController()
         {
             GameObject controller = this.gameObject;
-            bool accept = UnityEditor.EditorUtility.DisplayDialog(string.Format("Remove Controller {0}?", controller.name),
-                string.Format("Are you sure you want to delete Controller {0}?", controller.name), "Delete", "Cancel");
+
+            bool accept = EditorUtility.DisplayDialog(
+                $"Remove Controller {controller.name}?",
+                $"Are you sure you want to delete Controller {controller.name}?",
+                "Delete",
+                "Cancel"
+            );
+
             if (accept)
             {
-                // Not deleting scriptable object asset so delete it can be undone.
-                UnityEditor.Undo.DestroyObjectImmediate(controller);
+                Undo.DestroyObjectImmediate(controller);
             }
         }
 
+        /// <summary>Renders the controller menu title with status color.</summary>
+        /// <param name="isActive">Determines whether the controller is active.</param>
+        /// <param name="type">The display name of the controller type.</param>
         public void ControllerMenuTitle(bool isActive, string type)
         {
             EditorGUILayout.BeginHorizontal();
-            if (isActive && Actor != null) { EditorGUILayout.LabelField(string.Format("<color=#66CC00>{0}</color> - {1}", name,type), LayoutSettings.controllerLabel); }
-            else { EditorGUILayout.LabelField(string.Format("<color=#EE0000>{0}</color> - {1}", name,type), LayoutSettings.controllerLabel); }
+
+            if (isActive && Actor != null)
+            {
+                EditorGUILayout.LabelField($"<color=#66CC00>{name}</color> - {type}", LayoutSettings.controllerLabel);
+            }
+            else
+            {
+                EditorGUILayout.LabelField($"<color=#EE0000>{name}</color> - {type}", LayoutSettings.controllerLabel);
+            }
+
             EditorGUILayout.EndHorizontal();
         }
-
     }
-
 }

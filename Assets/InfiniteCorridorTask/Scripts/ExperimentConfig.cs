@@ -1,3 +1,9 @@
+/// <summary>
+/// Provides data classes for parsing and accessing experiment configuration from YAML files.
+///
+/// These classes mirror the Python configuration classes from sl-shared-assets, containing only
+/// the subset of data needed by Unity for the VR corridor system.
+/// </summary>
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -39,10 +45,10 @@ namespace SL.Config
         /// <summary>The ordered sequence of cue names that comprise this segment.</summary>
         public List<string> cue_sequence;
 
-        /// <summary>Optional transition probabilities to other segments. If provided, must sum to 1.0.</summary>
+        /// <summary>The optional transition probabilities to other segments. If provided, must sum to 1.0.</summary>
         public List<float> transition_probabilities;
 
-        /// <summary>Returns true if transition probabilities are defined.</summary>
+        /// <summary>Determines whether transition probabilities are defined for this segment.</summary>
         public bool HasTransitionProbabilities =>
             transition_probabilities != null && transition_probabilities.Count > 0;
     }
@@ -82,7 +88,7 @@ namespace SL.Config
         /// <summary>The conversion factor from centimeters to Unity units.</summary>
         public float cm_per_unity_unit = 10.0f;
 
-        /// <summary>Returns corridor spacing in Unity units.</summary>
+        /// <summary>Returns the corridor spacing in Unity units.</summary>
         public float CorridorSpacingUnity => corridor_spacing_cm / cm_per_unity_unit;
     }
 
@@ -98,22 +104,22 @@ namespace SL.Config
         public string unity_scene_name;
 
         /// <summary>
-        /// Specifies the offset of the animal's starting position relative to the VR environment's
+        /// The offset of the animal's starting position relative to the VR environment's
         /// cue sequence origin, in centimeters.
         /// </summary>
         public float cue_offset_cm;
 
-        /// <summary>List of all cues used in the experiment.</summary>
+        /// <summary>The list of all cues used in the experiment.</summary>
         public List<Cue> cues;
 
-        /// <summary>List of visual segments for the Unity corridor system.</summary>
+        /// <summary>The list of visual segments for the Unity corridor system.</summary>
         public List<Segment> segments;
 
-        /// <summary>Configuration for the Unity VR corridor system.</summary>
+        /// <summary>The configuration for the Unity VR corridor system.</summary>
         public VREnvironment vr_environment;
 
         /// <summary>
-        /// Dictionary of trial structures mapping trial names to their configurations.
+        /// The dictionary of trial structures mapping trial names to their configurations.
         /// Each trial references a segment and contains visibility settings.
         /// </summary>
         public Dictionary<string, BaseTrial> trial_structures;
@@ -141,11 +147,11 @@ namespace SL.Config
         /// <summary>Returns segment lengths in Unity units as an array.</summary>
         public float[] GetSegmentLengthsUnity()
         {
-            var cueMap = GetCueByName();
+            Dictionary<string, Cue> cueMap = GetCueByName();
             float cmPerUnit = vr_environment.cm_per_unity_unit;
-            return segments.Select(s =>
-                s.cue_sequence.Sum(cueName => cueMap[cueName].LengthUnity(cmPerUnit))
-            ).ToArray();
+            return segments
+                .Select(s => s.cue_sequence.Sum(cueName => cueMap[cueName].LengthUnity(cmPerUnit)))
+                .ToArray();
         }
 
         /// <summary>Returns cue lengths in Unity units as an array.</summary>
@@ -155,7 +161,7 @@ namespace SL.Config
             return cues.Select(c => c.LengthUnity(cmPerUnit)).ToArray();
         }
 
-        /// <summary>Returns segment by name lookup dictionary.</summary>
+        /// <summary>Returns a segment by name lookup dictionary.</summary>
         public Dictionary<string, Segment> GetSegmentByName()
         {
             return segments.ToDictionary(s => s.name, s => s);
@@ -164,8 +170,8 @@ namespace SL.Config
         /// <summary>Calculates the total length of a segment in Unity units.</summary>
         public float GetSegmentLengthUnity(string segmentName)
         {
-            var segment = GetSegmentByName()[segmentName];
-            var cueMap = GetCueByName();
+            Segment segment = GetSegmentByName()[segmentName];
+            Dictionary<string, Cue> cueMap = GetCueByName();
             float cmPerUnit = vr_environment.cm_per_unity_unit;
             return segment.cue_sequence.Sum(cueName => cueMap[cueName].LengthUnity(cmPerUnit));
         }
@@ -173,8 +179,8 @@ namespace SL.Config
         /// <summary>Gets the cue codes for a segment's cue sequence.</summary>
         public List<byte> GetSegmentCueCodes(string segmentName)
         {
-            var segment = GetSegmentByName()[segmentName];
-            var nameToCode = GetCueNameToCode();
+            Segment segment = GetSegmentByName()[segmentName];
+            Dictionary<string, byte> nameToCode = GetCueNameToCode();
             return segment.cue_sequence.Select(cueName => nameToCode[cueName]).ToList();
         }
 
@@ -186,13 +192,18 @@ namespace SL.Config
         public bool GetSegmentMarkerVisibility(string segmentName)
         {
             if (trial_structures == null)
+            {
                 return false;
+            }
 
-            foreach (var trial in trial_structures.Values)
+            foreach (BaseTrial trial in trial_structures.Values)
             {
                 if (trial.segment_name == segmentName)
+                {
                     return trial.show_stimulus_collision_boundary;
+                }
             }
+
             return false;
         }
     }

@@ -1,0 +1,18 @@
+# CSharpier ignore file for sl-unity-tasks
+# Excludes Unity-generated files and third-party packages from formatting
+
+# Unity generated directories
+Library/
+Temp/
+Logs/
+obj/
+Build/
+Builds/
+
+# Third-party packages (format manually if needed)
+Packages/com.unity.*
+Packages/com.google.*
+
+# Keep gimbl package excluded (has its own style)
+# Remove this line if you want to format gimbl too
+# Packages/gimbl/

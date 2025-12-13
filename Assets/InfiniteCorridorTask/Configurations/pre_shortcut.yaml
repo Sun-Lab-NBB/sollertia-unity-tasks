@@ -1,0 +1,70 @@
+# Pre-Shortcut Experiment Configuration
+# Single ABDC (extension) trial structure before shortcut introduction.
+
+unity_scene_name: "ChelseaSceneExt"
+cue_offset_cm: 10.0
+
+cues:
+  - name: "Gray"
+    code: 0
+    length_cm: 30.0
+  - name: "A"
+    code: 1
+    length_cm: 30.0
+  - name: "B"
+    code: 2
+    length_cm: 30.0
+  - name: "C"
+    code: 3
+    length_cm: 30.0
+  - name: "D"
+    code: 4
+    length_cm: 30.0
+
+segments:
+  - name: "Segment_abdc"
+    cue_sequence: ["A", "Gray", "B", "Gray", "D", "Gray", "C", "Gray"]
+
+vr_environment:
+  corridor_spacing_cm: 20.0
+  segments_per_corridor: 3
+  padding_prefab_name: "Padding"
+  cm_per_unity_unit: 10.0
+
+trial_structures:
+  ABDC:
+    segment_name: "Segment_abdc"
+    stimulus_trigger_zone_start_cm: 188.0
+    stimulus_trigger_zone_end_cm: 202.0
+    stimulus_location_cm: 195.0
+    show_stimulus_collision_boundary: false
+    reward_size_ul: 5.0
+    reward_tone_duration_ms: 300
+
+experiment_states:
+  baseline:
+    experiment_state_code: 1
+    system_state_code: 1
+    state_duration_s: 300.0
+    supported_trial_structures: ["ABDC"]
+    reinforcing_initial_guided_trials: 0
+    reinforcing_recovery_failed_threshold: 0
+    reinforcing_recovery_guided_trials: 0
+
+  run:
+    experiment_state_code: 2
+    system_state_code: 2
+    state_duration_s: 3600.0
+    supported_trial_structures: ["ABDC"]
+    reinforcing_initial_guided_trials: 3
+    reinforcing_recovery_failed_threshold: 8
+    reinforcing_recovery_guided_trials: 2
+
+  cooldown:
+    experiment_state_code: 3
+    system_state_code: 1
+    state_duration_s: 300.0
+    supported_trial_structures: ["ABDC"]
+    reinforcing_initial_guided_trials: 0
+    reinforcing_recovery_failed_threshold: 0
+    reinforcing_recovery_guided_trials: 0

@@ -1,3 +1,7 @@
+/// <summary>
+/// Provides the ConfigLoader class for loading and validating experiment configurations from YAML files.
+/// </summary>
+using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 using YamlDotNet.Serialization;
@@ -6,13 +10,11 @@ using YamlDotNet.Serialization.NamingConventions;
 namespace SL.Config
 {
     /// <summary>
-    /// Loads experiment configuration from YAML files.
+    /// Loads and validates experiment configuration from YAML files.
     /// </summary>
     public static class ConfigLoader
     {
-        /// <summary>
-        /// Loads a MesoscopeExperimentConfiguration from a YAML file.
-        /// </summary>
+        /// <summary>Loads a MesoscopeExperimentConfiguration from a YAML file.</summary>
         /// <param name="filePath">The absolute path to the YAML configuration file.</param>
         /// <returns>The parsed configuration, or null if loading fails.</returns>
         public static MesoscopeExperimentConfiguration Load(string filePath)
@@ -23,13 +25,13 @@ namespace SL.Config
                 return null;
             }
 
-            var deserializer = new DeserializerBuilder()
+            IDeserializer deserializer = new DeserializerBuilder()
                 .WithNamingConvention(UnderscoredNamingConvention.Instance)
                 .IgnoreUnmatchedProperties()
                 .Build();
 
             string yaml = File.ReadAllText(filePath);
-            var config = deserializer.Deserialize<MesoscopeExperimentConfiguration>(yaml);
+            MesoscopeExperimentConfiguration config = deserializer.Deserialize<MesoscopeExperimentConfiguration>(yaml);
 
             if (!Validate(config))
             {
@@ -39,9 +41,9 @@ namespace SL.Config
             return config;
         }
 
-        /// <summary>
-        /// Validates the loaded configuration.
-        /// </summary>
+        /// <summary>Validates the loaded configuration for required fields and data integrity.</summary>
+        /// <param name="config">The configuration to validate.</param>
+        /// <returns>True if the configuration is valid, false otherwise.</returns>
         private static bool Validate(MesoscopeExperimentConfiguration config)
         {
             if (config == null)
@@ -68,11 +70,11 @@ namespace SL.Config
                 return false;
             }
 
-            // Validate cue codes are unique and within uint8 range
-            var seenCodes = new System.Collections.Generic.HashSet<int>();
-            var seenNames = new System.Collections.Generic.HashSet<string>();
+            // Validates cue codes are unique and within uint8 range
+            HashSet<int> seenCodes = new HashSet<int>();
+            HashSet<string> seenNames = new HashSet<string>();
 
-            foreach (var cue in config.cues)
+            foreach (Cue cue in config.cues)
             {
                 if (cue.code < 0 || cue.code > 255)
                 {
@@ -99,8 +101,8 @@ namespace SL.Config
                 }
             }
 
-            // Validate segment cue sequences reference valid cues
-            foreach (var segment in config.segments)
+            // Validates segment cue sequences reference valid cues
+            foreach (Segment segment in config.segments)
             {
                 if (segment.cue_sequence == null || segment.cue_sequence.Count == 0)
                 {
@@ -108,7 +110,7 @@ namespace SL.Config
                     return false;
                 }
 
-                foreach (var cueName in segment.cue_sequence)
+                foreach (string cueName in segment.cue_sequence)
                 {
                     if (!seenNames.Contains(cueName))
                     {
@@ -117,11 +119,11 @@ namespace SL.Config
                     }
                 }
 
-                // Validate transition probabilities if provided
+                // Validates transition probabilities sum to 1.0 if provided
                 if (segment.transition_probabilities != null && segment.transition_probabilities.Count > 0)
                 {
                     float sum = 0f;
-                    foreach (var p in segment.transition_probabilities)
+                    foreach (float p in segment.transition_probabilities)
                     {
                         sum += p;
                     }

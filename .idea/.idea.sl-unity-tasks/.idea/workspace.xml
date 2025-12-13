@@ -9,9 +9,24 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="858b5d1f-b275-4d4f-b4d6-f5de8b5af873" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/Packages/gimbl/Editor/DisplaysWindow.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Packages/gimbl/Editor/DisplaysWindow.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Packages/gimbl/Scripts/MQTT/MQTTConnectorObject.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Packages/gimbl/Scripts/MQTT/MQTTConnectorObject.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Packages/packages-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/Packages/packages-lock.json" afterDir="false" />
+      <change
+        beforePath="$PROJECT_DIR$/Packages/gimbl/Editor/DisplaysWindow.cs"
+        beforeDir="false"
+        afterPath="$PROJECT_DIR$/Packages/gimbl/Editor/DisplaysWindow.cs"
+        afterDir="false"
+      />
+      <change
+        beforePath="$PROJECT_DIR$/Packages/gimbl/Scripts/MQTT/MQTTConnectorObject.cs"
+        beforeDir="false"
+        afterPath="$PROJECT_DIR$/Packages/gimbl/Scripts/MQTT/MQTTConnectorObject.cs"
+        afterDir="false"
+      />
+      <change
+        beforePath="$PROJECT_DIR$/Packages/packages-lock.json"
+        beforeDir="false"
+        afterPath="$PROJECT_DIR$/Packages/packages-lock.json"
+        afterDir="false"
+      />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -30,15 +45,18 @@
     <setting file="file://$PROJECT_DIR$/Packages/gimbl/Scripts/MQTT/MQTTConnectorObject.cs" root0="SKIP_HIGHLIGHTING" />
   </component>
   <component name="MetaFilesCheckinStateConfiguration" checkMetaFiles="true" />
-  <component name="ProjectColorInfo">{
+  <component name="ProjectColorInfo"
+    >{
   &quot;associatedIndex&quot;: 0
-}</component>
+}</component
+  >
   <component name="ProjectId" id="307BJNtwX9VDiaxrSldFhgQARl4" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
+  <component name="PropertiesComponent"
+    >{
   &quot;keyToString&quot;: {
     &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
@@ -52,7 +70,8 @@
     &quot;settings.editor.selected.configurable&quot;: &quot;preferences.sourceCode.C#&quot;,
     &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}</component>
+}</component
+  >
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
       <changelist id="858b5d1f-b275-4d4f-b4d6-f5de8b5af873" name="Changes" comment="" />
@@ -83,15 +102,27 @@
     <breakpoint-manager>
       <breakpoints>
         <breakpoint enabled="true" type="DotNet_Exception_Breakpoints">
-          <properties exception="System.OperationCanceledException" breakIfHandledByOtherCode="false" displayValue="System.OperationCanceledException" />
+          <properties
+            exception="System.OperationCanceledException"
+            breakIfHandledByOtherCode="false"
+            displayValue="System.OperationCanceledException"
+          />
           <option name="timeStamp" value="1" />
         </breakpoint>
         <breakpoint enabled="true" type="DotNet_Exception_Breakpoints">
-          <properties exception="System.Threading.Tasks.TaskCanceledException" breakIfHandledByOtherCode="false" displayValue="System.Threading.Tasks.TaskCanceledException" />
+          <properties
+            exception="System.Threading.Tasks.TaskCanceledException"
+            breakIfHandledByOtherCode="false"
+            displayValue="System.Threading.Tasks.TaskCanceledException"
+          />
           <option name="timeStamp" value="2" />
         </breakpoint>
         <breakpoint enabled="true" type="DotNet_Exception_Breakpoints">
-          <properties exception="System.Threading.ThreadAbortException" breakIfHandledByOtherCode="false" displayValue="System.Threading.ThreadAbortException" />
+          <properties
+            exception="System.Threading.ThreadAbortException"
+            breakIfHandledByOtherCode="false"
+            displayValue="System.Threading.ThreadAbortException"
+          />
           <option name="timeStamp" value="3" />
         </breakpoint>
       </breakpoints>

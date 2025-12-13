@@ -1,99 +1,155 @@
+/// <summary>
+/// Provides the Task class that manages the infinite corridor VR environment for mesoscope experiments.
+///
+/// Controls the generation and cycling of random maze segments, manages animal position
+/// within the corridor system, and handles MQTT communication for cue sequences and scene information.
+/// </summary>
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.IO;
-using UnityEngine;
+using System.Linq;
 using Gimbl;
-using UnityEngine.SceneManagement;
 using SL.Config;
+using UnityEngine;
+using UnityEngine.SceneManagement;
 
+/// <summary>
+/// Controls the infinite corridor VR task, managing segment generation, animal positioning, and MQTT communication.
+/// </summary>
+/// <remarks>
+/// Terminology:
+/// - Cue: A visual pattern displayed on the corridor walls.
+/// - Segment: A portion of the maze composed of a sequence of cues.
+/// - Corridor: A grouping of adjacent segments forming a visual unit.
+/// </remarks>
 public class Task : MonoBehaviour
 {
-    // Some words for parts of the maze:
-    //  Cue: A certain pattern on a wall
-    //  Segment: A portion of the maze that cycles back to the start cue
-    //  Corridor: A grouping of segments
+    /// <summary>The actor (animal) being tracked in the VR environment.</summary>
+    public ActorObject actor = null;
 
-    public Gimbl.ActorObject actor = null;
-    public bool mustLick = false;
+    /// <summary>Determines whether the animal must lick to receive a reward (lick guidance mode toggle).</summary>
+    public bool requireLick = false;
 
-    // The track is infinite but need to specify how many random segments keep track of.
-    // The track length should always be an overestimate to how far the mouse is actually going to run.
+    /// <summary>Determines whether the animal must wait in the occupancy zone (occupancy guidance mode toggle).</summary>
+    public bool requireWait = false;
+
+    /// <summary>
+    /// The total length of the pre-generated random segment sequence.
+    /// Should overestimate the distance the animal will actually travel.
+    /// </summary>
     public float trackLength = 15000;
 
-    // A seed for creation of random segments, a specific seed will always create the same pattern of cues.
-    // If trackSeed is -1, then no seed will be used.
+    /// <summary>
+    /// The seed for random segment generation. A specific seed produces the same cue pattern.
+    /// Set to -1 to use a random seed.
+    /// </summary>
     public int trackSeed = -1;
 
-    // Path to the YAML configuration file (relative to Application.dataPath)
-    [System.NonSerialized]
+    /// <summary>The path to the YAML configuration file, relative to Application.dataPath.</summary>
     public string configPath;
 
-    // For keeping track of where in the random sequence the mouse is.
-    private int current_segment_index;
+    /// <summary>The current index in the segment sequence array.</summary>
+    private int _currentSegmentIndex;
 
-    // Each time the mouse completes a segment, it will go into a new random segment.
-    // The segment sequence array holds the order of segments.
-    private int[] segment_sequence_array;
+    /// <summary>The array holding the order of randomly generated segments.</summary>
+    private int[] _segmentSequenceArray;
 
-    // Holds the order of cues
-    private byte[] cue_sequence_array;
+    /// <summary>The array holding the flattened cue codes for the entire sequence.</summary>
+    private byte[] _cueSequenceArray;
 
-    // A wrapper class for sending cue_sequence_array over MQTT
+    /// <summary>Wrapper class for sending cue sequence over MQTT.</summary>
     public class SequenceMsg
     {
         public byte[] cue_sequence;
     }
-    private MQTTChannel cueSequenceTrigger;
-    private MQTTChannel<SequenceMsg> cueSequenceChannel;
 
-    private string sceneName;
+    /// <summary>The MQTT channel that triggers sending the cue sequence.</summary>
+    private MQTTChannel _cueSequenceTrigger;
+
+    /// <summary>The MQTT channel for sending the cue sequence data.</summary>
+    private MQTTChannel<SequenceMsg> _cueSequenceChannel;
+
+    /// <summary>The name of the currently active Unity scene.</summary>
+    private string _sceneName;
+
+    /// <summary>Wrapper class for sending scene name over MQTT.</summary>
     public class SceneNameMsg
     {
         public string name;
     }
-    private MQTTChannel sceneNameTrigger;
-    private MQTTChannel<SceneNameMsg> sceneNameChannel;
 
-    private MQTTChannel mustLickTrue;
-    private MQTTChannel mustLickFalse;
+    /// <summary>The MQTT channel that triggers sending the scene name.</summary>
+    private MQTTChannel _sceneNameTrigger;
 
-    private MQTTChannel showDisplay;
-    private MQTTChannel blankDisplay;
+    /// <summary>The MQTT channel for sending the scene name data.</summary>
+    private MQTTChannel<SceneNameMsg> _sceneNameChannel;
 
-    private DisplayObject[] displayObjects;
+    /// <summary>The MQTT channel for enabling lick requirement (lick guidance mode off).</summary>
+    private MQTTChannel _requireLickTrue;
 
-    private int depth;
-    private int n_segments;
-    private MesoscopeExperimentConfiguration config;
+    /// <summary>The MQTT channel for disabling lick requirement (lick guidance mode on).</summary>
+    private MQTTChannel _requireLickFalse;
 
-    private Dictionary<string, byte> cue_ids;
-    private float[] segment_lengths;
-    private float[] cue_lengths;
+    /// <summary>The MQTT channel for enabling wait requirement (occupancy guidance mode off).</summary>
+    private MQTTChannel _requireWaitTrue;
 
-    private Dictionary<string, (float, float)> corridorMap;
+    /// <summary>The MQTT channel for disabling wait requirement (occupancy guidance mode on).</summary>
+    private MQTTChannel _requireWaitFalse;
 
-    private List<int> cur_segment;
-    private Vector3 pos;
+    /// <summary>The number of segments visible in each corridor (corridor depth).</summary>
+    private int _depth;
 
+    /// <summary>The total number of unique segment types.</summary>
+    private int _nSegments;
+
+    /// <summary>The loaded experiment configuration.</summary>
+    private MesoscopeExperimentConfiguration _config;
+
+    /// <summary>The mapping of cue names to their byte codes.</summary>
+    private Dictionary<string, byte> _cueIds;
+
+    /// <summary>The lengths of each segment type in Unity units.</summary>
+    private float[] _segmentLengths;
+
+    /// <summary>The lengths of each cue type in Unity units.</summary>
+    private float[] _cueLengths;
+
+    /// <summary>
+    /// Maps corridor ID string to (x-position, first segment length).
+    /// Used for teleporting the animal between corridors.
+    /// </summary>
+    private Dictionary<string, (float, float)> _corridorMap;
+
+    /// <summary>The current corridor segment indices.</summary>
+    private List<int> _curSegment;
+
+    /// <summary>The cached actor position for updates.</summary>
+    private Vector3 _pos;
+
+    /// <summary>Validates and auto-assigns the actor reference in the editor.</summary>
     void OnValidate()
     {
         if (actor == null)
         {
-            Gimbl.ActorObject[] all_actors = FindObjectsByType<Gimbl.ActorObject>(FindObjectsSortMode.None);
-            if (all_actors.Length > 0)
+            ActorObject[] allActors = FindObjectsByType<ActorObject>(FindObjectsSortMode.None);
+            if (allActors.Length > 0)
             {
-                actor = all_actors[0];
+                actor = allActors[0];
             }
         }
     }
 
-    // Start is called before the first frame update
+    /// <summary>Initializes the task, loads configuration, and sets up MQTT channels.</summary>
     void Start()
     {
+        // Warns if Task is not at origin
         if (transform.position != Vector3.zero)
         {
-            Debug.LogWarning($"Task is positioned at {transform.position}. Automatically Setting Task position to (0,0,0) for this runtime but it is recommended to permanently set the task position to (0,0,0) in Editor Mode.");
+            Debug.LogWarning(
+                $"Task is positioned at {transform.position}. Automatically Setting Task position to "
+                    + "(0,0,0) for this runtime but it is recommended to permanently set the task position to "
+                    + "(0,0,0) in Editor Mode."
+            );
             transform.position = Vector3.zero;
         }
 
@@ -105,118 +161,143 @@ public class Task : MonoBehaviour
             return;
         }
 
-        // Load configuration from YAML
-        config = ConfigLoader.Load(globalConfigPath);
-        if (config == null)
+        // Loads and validates configuration
+        _config = ConfigLoader.Load(globalConfigPath);
+        if (_config == null)
         {
             Debug.LogError("Failed to load configuration from YAML file.");
             return;
         }
 
-        n_segments = config.segments.Count;
-        cue_ids = config.GetCueNameToCode();
-        segment_lengths = config.GetSegmentLengthsUnity();
-        cue_lengths = config.GetCueLengthsUnity();
-        depth = config.vr_environment.segments_per_corridor;
+        // Extracts configuration values
+        _nSegments = _config.segments.Count;
+        _cueIds = _config.GetCueNameToCode();
+        _segmentLengths = _config.GetSegmentLengthsUnity();
+        _cueLengths = _config.GetCueLengthsUnity();
+        _depth = _config.vr_environment.segments_per_corridor;
 
-        // To teleport the mouse correctly between corridors, you need to know when to teleport
-        // (ie when the first segment of the current corridor ends) and where to teleport
-        // (ie where the first segment of the next corridor starts).
-        // Corridor map holds this info, the first float is the position of the corridor
-        // and the second float is the length of the first segment in the corridor.
-        corridorMap = new Dictionary<string, (float, float)>();
+        // Builds corridor map for teleportation.
+        // Maps corridor segment combination to (x-position, first segment length).
+        _corridorMap = new Dictionary<string, (float, float)>();
 
-        int[] corridor_segments = new int[depth];
-        float cur_corridor_x = 0;
-        float corridor_x_shift = config.vr_environment.CorridorSpacingUnity;
+        int[] corridorSegments = new int[_depth];
+        float curCorridorX = 0;
+        float corridorXShift = _config.vr_environment.CorridorSpacingUnity;
 
-        for (int i = 0; i < Mathf.Pow(n_segments, depth); i++)
+        for (int i = 0; i < Mathf.Pow(_nSegments, _depth); i++)
         {
-            // Generate the combination for the current index
-            for (int j = 0; j < depth; j++)
+            // Generates segment combination for current corridor index
+            for (int j = 0; j < _depth; j++)
             {
-                corridor_segments[j] = i / (int)Mathf.Pow(n_segments, depth - j - 1) % n_segments;
+                corridorSegments[j] = i / (int)Mathf.Pow(_nSegments, _depth - j - 1) % _nSegments;
             }
 
-            corridorMap[string.Join("-", corridor_segments)] = (cur_corridor_x, segment_lengths[corridor_segments[0]]);
-            cur_corridor_x += corridor_x_shift;
+            _corridorMap[string.Join("-", corridorSegments)] = (curCorridorX, _segmentLengths[corridorSegments[0]]);
+            curCorridorX += corridorXShift;
         }
 
-        // Create random sequence of segments
-        (segment_sequence_array, cue_sequence_array) = GenerateRandomMaze(trackLength, trackSeed);
+        // Generates random maze sequence
+        (_segmentSequenceArray, _cueSequenceArray) = GenerateRandomMaze(trackLength, trackSeed);
 
-        // Figure out what the first corridor is from the first segments
-        current_segment_index = 0;
-        cur_segment = new List<int>(segment_sequence_array.Take(depth));
+        // Initializes current segment tracking
+        _currentSegmentIndex = 0;
+        _curSegment = new List<int>(_segmentSequenceArray.Take(_depth));
 
+        // Positions actor at the first corridor
         if (actor != null)
         {
-            pos = actor.transform.position;
-            pos.x = corridorMap[string.Join("-", cur_segment)].Item1;
-            actor.transform.position = pos;
+            string corridorKey = string.Join("-", _curSegment);
+            if (_corridorMap.TryGetValue(corridorKey, out var corridorData))
+            {
+                _pos = actor.transform.position;
+                _pos.x = corridorData.Item1;
+                actor.transform.position = _pos;
+            }
+            else
+            {
+                Debug.LogError($"Task: Corridor key '{corridorKey}' not found in corridor map");
+            }
         }
 
-        // Create MQTT channels for sending cue sequence
-        cueSequenceTrigger = new MQTTChannel("CueSequenceTrigger/", true);
-        cueSequenceTrigger.Event.AddListener(OnCueSequenceTrigger);
-        cueSequenceChannel = new MQTTChannel<SequenceMsg>("CueSequence/", false);
+        // Sets up MQTT channels for cue sequence requests
+        _cueSequenceTrigger = new MQTTChannel("CueSequenceTrigger/", true);
+        _cueSequenceTrigger.Event.AddListener(OnCueSequenceTrigger);
+        _cueSequenceChannel = new MQTTChannel<SequenceMsg>("CueSequence/", false);
 
-        // Create MQTT channels for sending the name of the active scene
-        sceneName = SceneManager.GetActiveScene().name;
-        sceneNameTrigger = new MQTTChannel("SceneNameTrigger/", true);
-        sceneNameTrigger.Event.AddListener(OnSceneNameTrigger);
-        sceneNameChannel = new MQTTChannel<SceneNameMsg>("SceneName/", false);
+        // Sets up MQTT channels for scene name requests
+        _sceneName = SceneManager.GetActiveScene().name;
+        _sceneNameTrigger = new MQTTChannel("SceneNameTrigger/", true);
+        _sceneNameTrigger.Event.AddListener(OnSceneNameTrigger);
+        _sceneNameChannel = new MQTTChannel<SceneNameMsg>("SceneName/", false);
 
-        // Create MQTT channel for toggling mustLick
-        mustLickTrue = new MQTTChannel("MustLick/True/", true);
-        mustLickTrue.Event.AddListener(SetMustLickTrue);
+        // Sets up MQTT channels for lick guidance mode control
+        _requireLickTrue = new MQTTChannel("RequireLick/True/", true);
+        _requireLickTrue.Event.AddListener(SetRequireLickTrue);
 
-        mustLickFalse = new MQTTChannel("MustLick/False/", true);
-        mustLickFalse.Event.AddListener(SetMustLickFalse);
+        _requireLickFalse = new MQTTChannel("RequireLick/False/", true);
+        _requireLickFalse.Event.AddListener(SetRequireLickFalse);
 
-        // Create MQTT channels for blacking out and displaying the screen
-        displayObjects = FindObjectsByType<DisplayObject>(FindObjectsSortMode.None);
-        showDisplay = new MQTTChannel("Display/Show/", true);
-        showDisplay.Event.AddListener(Show);
-        blankDisplay = new MQTTChannel("Display/Blank/", true);
-        blankDisplay.Event.AddListener(Blank);
+        // Sets up MQTT channels for occupancy guidance mode control
+        _requireWaitTrue = new MQTTChannel("RequireWait/True/", true);
+        _requireWaitTrue.Event.AddListener(SetRequireWaitTrue);
+
+        _requireWaitFalse = new MQTTChannel("RequireWait/False/", true);
+        _requireWaitFalse.Event.AddListener(SetRequireWaitFalse);
     }
 
-    // Update is called once per frame
+    /// <summary>Checks animal position and handles corridor transitions each frame.</summary>
     void Update()
     {
-        if (actor != null)
+        if (actor == null)
         {
-            pos = actor.transform.position;
-            // Check if the mouse has traveled through the entire segment
-            if (pos.z > corridorMap[string.Join("-", cur_segment)].Item2)
-            {
-                // Teleport the mouse back to the start of the corridors
-                pos.z -= corridorMap[string.Join("-", cur_segment)].Item2;
-
-                // Switch to a different corridor according to the future segments
-                current_segment_index++;
-                if (current_segment_index <= segment_sequence_array.Length - depth)
-                {
-                    cur_segment.RemoveAt(0);
-                    cur_segment.Add(segment_sequence_array[current_segment_index + depth - 1]);
-                }
-                else
-                {
-                    throw new System.Exception("Mouse ran through all generated segments.");
-                }
-
-                // Teleport the mouse to the new corridor
-                pos.x = corridorMap[string.Join("-", cur_segment)].Item1;
-                actor.transform.position = pos;
-            }
+            return;
         }
-        else
+
+        string corridorKey = string.Join("-", _curSegment);
+        if (!_corridorMap.TryGetValue(corridorKey, out var corridorData))
         {
-            Debug.LogError("Actor is null.");
+            Debug.LogError($"Task: Corridor key '{corridorKey}' not found in corridor map");
+            return;
+        }
+
+        _pos = actor.transform.position;
+
+        // Checks if animal has traveled through the current segment
+        if (_pos.z > corridorData.Item2)
+        {
+            // Teleports animal back to start of corridor
+            _pos.z -= corridorData.Item2;
+
+            // Advances to next corridor based on future segments
+            _currentSegmentIndex++;
+            if (_currentSegmentIndex <= _segmentSequenceArray.Length - _depth)
+            {
+                _curSegment.RemoveAt(0);
+                _curSegment.Add(_segmentSequenceArray[_currentSegmentIndex + _depth - 1]);
+            }
+            else
+            {
+                throw new Exception("Animal ran through all generated segments.");
+            }
+
+            // Teleports to new corridor
+            string newCorridorKey = string.Join("-", _curSegment);
+            if (_corridorMap.TryGetValue(newCorridorKey, out var newCorridorData))
+            {
+                _pos.x = newCorridorData.Item1;
+                actor.transform.position = _pos;
+            }
+            else
+            {
+                Debug.LogError($"Task: New corridor key '{newCorridorKey}' not found in corridor map");
+            }
         }
     }
 
+    /// <summary>Samples an index from a probability distribution.</summary>
+    /// <param name="probabilities">The array of probabilities that must sum to 1.0.</param>
+    /// <param name="random">The random number generator instance.</param>
+    /// <returns>The sampled index.</returns>
     private int SampleFromDistribution(float[] probabilities, System.Random random)
     {
         float r = (float)random.NextDouble();
@@ -226,92 +307,89 @@ public class Task : MonoBehaviour
         {
             cumulative += probabilities[i];
             if (r < cumulative)
+            {
                 return i;
+            }
         }
 
         return probabilities.Length - 1;
     }
 
-    /// <summary>
-    /// Generates a random sequence of maze segments based on the specified length and optional seed.
-    /// </summary>
-    /// <param name="length">The total desired length of the maze sequence.</param>
-    /// <param name="seed">An optional seed value for the random number generator. If -1, a new random generator is used.</param>
-    /// <returns>
-    /// A tuple containing two arrays:
-    /// - An integer array representing the sequence of segments in the maze.
-    /// - A byte array representing the cues associated with the maze sequence.
-    /// </returns>
+    /// <summary>Generates a random sequence of maze segments based on the specified length and optional seed.</summary>
+    /// <param name="length">The total desired length of the maze sequence in Unity units.</param>
+    /// <param name="seed">The optional seed for random number generator. Use -1 for random seed.</param>
+    /// <returns>A tuple containing (segment indices array, flattened cue codes array).</returns>
     private (int[], byte[]) GenerateRandomMaze(float length, int? seed = null)
     {
-        float sequence_length = 0;
+        float sequenceLength = 0;
 
         System.Random random = seed.HasValue && seed != -1 ? new System.Random(seed.Value) : new System.Random();
 
-        List<int> segment_sequence = new List<int>();
-        List<byte> cue_sequence = new List<byte>();
+        List<int> segmentSequence = new List<int>();
+        List<byte> cueSequence = new List<byte>();
 
-        int choice = random.Next(n_segments);
+        int choice = random.Next(_nSegments);
 
-        while (sequence_length < length)
+        while (sequenceLength < length)
         {
-            segment_sequence.Add(choice);
+            segmentSequence.Add(choice);
 
-            var segment = config.segments[choice];
+            Segment segment = _config.segments[choice];
             foreach (string cue in segment.cue_sequence)
             {
-                cue_sequence.Add(cue_ids[cue]);
+                cueSequence.Add(_cueIds[cue]);
             }
 
-            sequence_length += segment_lengths[choice];
+            sequenceLength += _segmentLengths[choice];
 
+            // Uses transition probabilities if defined, otherwise uniform random
             if (segment.HasTransitionProbabilities)
             {
                 choice = SampleFromDistribution(segment.transition_probabilities.ToArray(), random);
             }
             else
             {
-                choice = random.Next(n_segments);
+                choice = random.Next(_nSegments);
             }
         }
 
-        return (segment_sequence.ToArray(), cue_sequence.ToArray());
+        return (segmentSequence.ToArray(), cueSequence.ToArray());
     }
 
+    /// <summary>MQTT callback that sends the cue sequence when requested.</summary>
     private void OnCueSequenceTrigger()
     {
         Debug.Log("received request for cue sequence");
-        cueSequenceChannel.Send(new SequenceMsg() { cue_sequence = cue_sequence_array });
+        _cueSequenceChannel.Send(new SequenceMsg() { cue_sequence = _cueSequenceArray });
     }
 
+    /// <summary>MQTT callback that sends the scene name when requested.</summary>
     private void OnSceneNameTrigger()
     {
-        sceneNameChannel.Send(new SceneNameMsg() { name = sceneName });
+        _sceneNameChannel.Send(new SceneNameMsg() { name = _sceneName });
     }
 
-    private void Blank()
+    /// <summary>MQTT callback that enables lick requirement (disables lick guidance mode).</summary>
+    private void SetRequireLickTrue()
     {
-        foreach (DisplayObject display in displayObjects)
-        {
-            display.Blank();
-        }
+        requireLick = true;
     }
 
-    private void Show()
+    /// <summary>MQTT callback that disables lick requirement (enables lick guidance mode).</summary>
+    private void SetRequireLickFalse()
     {
-        foreach (DisplayObject display in displayObjects)
-        {
-            display.Show();
-        }
+        requireLick = false;
     }
 
-    private void SetMustLickTrue()
+    /// <summary>MQTT callback that enables wait requirement (disables occupancy guidance mode).</summary>
+    private void SetRequireWaitTrue()
     {
-        mustLick = true;
+        requireWait = true;
     }
 
-    private void SetMustLickFalse()
+    /// <summary>MQTT callback that disables wait requirement (enables occupancy guidance mode).</summary>
+    private void SetRequireWaitFalse()
     {
-        mustLick = false;
+        requireWait = false;
     }
 }

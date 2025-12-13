@@ -1,207 +1,122 @@
-﻿using UnityEditor;
-using UnityEngine;
+/// <summary>
+/// Provides utilities for programmatically managing Unity tags and layers.
+///
+/// Adapted from https://answers.unity.com/questions/33597/is-it-possible-to-create-a-tag-programmatically.html
+/// </summary>
 using System.Collections;
-// Taken from https://answers.unity.com/questions/33597/is-it-possible-to-create-a-tag-programmatically.html
+using UnityEditor;
+using UnityEngine;
+
 namespace TagLayerEditor
 {
-
+    /// <summary>
+    /// Manages Unity tags and layers through the TagManager asset.
+    /// </summary>
     public class TagsAndLayers
     {
-
+        /// <summary>The maximum number of tags allowed.</summary>
         private static int maxTags = 10000;
+
+        /// <summary>The maximum number of layers allowed.</summary>
         private static int maxLayers = 31;
-        /// <summary>
-        /// Adds the tag.
-        /// </summary>
-        /// <returns><c>true</c>, if tag was added, <c>false</c> otherwise.</returns>
-        /// <param name="tagName">Tag name.</param>
+
+        /// <summary>Adds a new tag to the project if it doesn't already exist.</summary>
+        /// <param name="tagName">The name of the tag to add.</param>
+        /// <returns>True if the tag was added, false if it already exists or limit reached.</returns>
         public static bool AddTag(string tagName)
         {
-            // Open tag manager
-            SerializedObject tagManager = new SerializedObject(AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/TagManager.asset")[0]);
-            // Tags Property
+            SerializedObject tagManager = new SerializedObject(
+                AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/TagManager.asset")[0]
+            );
             SerializedProperty tagsProp = tagManager.FindProperty("tags");
             if (tagsProp.arraySize >= maxTags)
             {
                 Debug.Log("No more tags can be added to the Tags property. You have " + tagsProp.arraySize + " tags");
                 return false;
             }
-            // if not found, add it
             if (!PropertyExists(tagsProp, 0, tagsProp.arraySize, tagName))
             {
                 int index = tagsProp.arraySize;
-                // Insert new array element
                 tagsProp.InsertArrayElementAtIndex(index);
-                SerializedProperty sp = tagsProp.GetArrayElementAtIndex(index);
-                // Set array element to tagName
-                sp.stringValue = tagName;
-                //Debug.Log("Tag: " + tagName + " has been added");
-                // Save settings
+                SerializedProperty newTag = tagsProp.GetArrayElementAtIndex(index);
+                newTag.stringValue = tagName;
                 tagManager.ApplyModifiedProperties();
                 return true;
             }
-            else
-            {
-                //Debug.Log ("Tag: " + tagName + " already exists");
-            }
             return false;
         }
-        /// <summary>
-        /// Removes the tag.
-        /// </summary>
-        /// <returns><c>true</c>, if tag was removed, <c>false</c> otherwise.</returns>
-        /// <param name="tagName">Tag name.</param>
-        public static bool RemoveTag(string tagName)
-        {
 
-            // Open tag manager
-            SerializedObject tagManager = new SerializedObject(AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/TagManager.asset")[0]);
-
-            // Tags Property
-            SerializedProperty tagsProp = tagManager.FindProperty("tags");
-
-            if (PropertyExists(tagsProp, 0, tagsProp.arraySize, tagName))
-            {
-                SerializedProperty sp;
-
-                for (int i = 0, j = tagsProp.arraySize; i < j; i++)
-                {
-
-                    sp = tagsProp.GetArrayElementAtIndex(i);
-                    if (sp.stringValue == tagName)
-                    {
-                        tagsProp.DeleteArrayElementAtIndex(i);
-                        //Debug.Log("Tag: " + tagName + " has been removed");
-                        // Save settings
-                        tagManager.ApplyModifiedProperties();
-                        return true;
-                    }
-
-                }
-            }
-
-            return false;
-
-        }
-
-        /// <summary>
-        /// Checks to see if tag exists.
-        /// </summary>
-        /// <returns><c>true</c>, if tag exists, <c>false</c> otherwise.</returns>
-        /// <param name="tagName">Tag name.</param>
-        public static bool TagExists(string tagName)
-        {
-            // Open tag manager
-            SerializedObject tagManager = new SerializedObject(AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/TagManager.asset")[0]);
-
-            // Layers Property
-            SerializedProperty tagsProp = tagManager.FindProperty("tags");
-            return PropertyExists(tagsProp, 0, maxTags, tagName);
-        }
-        /// <summary>
-        /// Adds the layer.
-        /// </summary>
-        /// <returns><c>true</c>, if layer was added, <c>false</c> otherwise.</returns>
-        /// <param name="layerName">Layer name.</param>
+        /// <summary>Adds a new layer to the project if it doesn't already exist.</summary>
+        /// <param name="layerName">The name of the layer to add.</param>
+        /// <returns>True if the layer was added, false if it already exists or no slots available.</returns>
         public static bool AddLayer(string layerName)
         {
-            // Open tag manager
-            SerializedObject tagManager = new SerializedObject(AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/TagManager.asset")[0]);
-            // Layers Property
+            SerializedObject tagManager = new SerializedObject(
+                AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/TagManager.asset")[0]
+            );
             SerializedProperty layersProp = tagManager.FindProperty("layers");
             if (!PropertyExists(layersProp, 0, maxLayers, layerName))
             {
-                SerializedProperty sp;
-                // Start at layer 9th index -> 8 (zero based) => first 8 reserved for unity / greyed out
-                for (int i = 8, j = maxLayers; i < j; i++)
+                SerializedProperty layerSlot;
+                for (int layerIndex = 8, lastIndex = maxLayers; layerIndex < lastIndex; layerIndex++)
                 {
-                    sp = layersProp.GetArrayElementAtIndex(i);
-                    if (sp.stringValue == "")
+                    layerSlot = layersProp.GetArrayElementAtIndex(layerIndex);
+                    if (layerSlot.stringValue == "")
                     {
-                        // Assign string value to layer
-                        sp.stringValue = layerName;
-                        //Debug.Log("Layer: " + layerName + " has been added");
-                        // Save settings
+                        layerSlot.stringValue = layerName;
                         tagManager.ApplyModifiedProperties();
                         return true;
                     }
-                    if (i == j)
+                    if (layerIndex == lastIndex)
                         Debug.Log("All allowed layers have been filled");
                 }
-            }
-            else
-            {
-                //Debug.Log ("Layer: " + layerName + " already exists");
             }
             return false;
         }
 
-        /// <summary>
-        /// Removes the layer.
-        /// </summary>
-        /// <returns><c>true</c>, if layer was removed, <c>false</c> otherwise.</returns>
-        /// <param name="layerName">Layer name.</param>
+        /// <summary>Removes a layer from the project.</summary>
+        /// <param name="layerName">The name of the layer to remove.</param>
+        /// <returns>True if the layer was removed, false if it doesn't exist.</returns>
         public static bool RemoveLayer(string layerName)
         {
+            SerializedObject tagManager = new SerializedObject(
+                AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/TagManager.asset")[0]
+            );
 
-            // Open tag manager
-            SerializedObject tagManager = new SerializedObject(AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/TagManager.asset")[0]);
-
-            // Tags Property
             SerializedProperty layersProp = tagManager.FindProperty("layers");
 
             if (PropertyExists(layersProp, 0, layersProp.arraySize, layerName))
             {
-                SerializedProperty sp;
+                SerializedProperty layerSlot;
 
-                for (int i = 0, j = layersProp.arraySize; i < j; i++)
+                for (int layerIndex = 0, arraySize = layersProp.arraySize; layerIndex < arraySize; layerIndex++)
                 {
+                    layerSlot = layersProp.GetArrayElementAtIndex(layerIndex);
 
-                    sp = layersProp.GetArrayElementAtIndex(i);
-
-                    if (sp.stringValue == layerName)
+                    if (layerSlot.stringValue == layerName)
                     {
-                        sp.stringValue = "";
-                        //Debug.Log("Layer: " + layerName + " has been removed");
-                        // Save settings
+                        layerSlot.stringValue = "";
                         tagManager.ApplyModifiedProperties();
                         return true;
                     }
-
                 }
             }
 
             return false;
-
         }
-        /// <summary>
-        /// Checks to see if layer exists.
-        /// </summary>
-        /// <returns><c>true</c>, if layer exists, <c>false</c> otherwise.</returns>
-        /// <param name="layerName">Layer name.</param>
-        public static bool LayerExists(string layerName)
-        {
-            // Open tag manager
-            SerializedObject tagManager = new SerializedObject(AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/TagManager.asset")[0]);
 
-            // Layers Property
-            SerializedProperty layersProp = tagManager.FindProperty("layers");
-            return PropertyExists(layersProp, 0, maxLayers, layerName);
-        }
-        /// <summary>
-        /// Checks if the value exists in the property.
-        /// </summary>
-        /// <returns><c>true</c>, if exists was propertyed, <c>false</c> otherwise.</returns>
-        /// <param name="property">Property.</param>
-        /// <param name="start">Start.</param>
-        /// <param name="end">End.</param>
-        /// <param name="value">Value.</param>
+        /// <summary>Checks if a value exists in a serialized array property.</summary>
+        /// <param name="property">The serialized array property to search.</param>
+        /// <param name="start">The starting index for the search.</param>
+        /// <param name="end">The ending index for the search.</param>
+        /// <param name="value">The value to search for.</param>
+        /// <returns>True if the value exists in the property range.</returns>
         private static bool PropertyExists(SerializedProperty property, int start, int end, string value)
         {
-            for (int i = start; i < end; i++)
+            for (int elementIndex = start; elementIndex < end; elementIndex++)
             {
-                SerializedProperty t = property.GetArrayElementAtIndex(i);
-                if (t.stringValue.Equals(value))
+                SerializedProperty element = property.GetArrayElementAtIndex(elementIndex);
+                if (element.stringValue.Equals(value))
                 {
                     return true;
                 }
