@@ -20,11 +20,15 @@ namespace Gimbl
         /// <summary>The Unity Input System action map for keyboard/mouse simulation.</summary>
         private SimulatedInput _input;
 
+        private MQTTChannel _lickTrigger;
+
+
         /// <summary>Initializes the Input System for keyboard/mouse simulation on start.</summary>
         public void Start()
         {
             _input = new SimulatedInput();
             _input.Enable();
+            _lickTrigger = new MQTTChannel("LickPort/");
         }
 
         /// <summary>Cleans up the Input System resources when destroyed.</summary>
@@ -41,6 +45,14 @@ namespace Gimbl
         public new void Update()
         {
             GetSimulatedInput();
+            if (settings != null &&
+                settings.isActive &&
+                Actor != null &&
+                Mouse.current != null &&
+                Mouse.current.leftButton.wasPressedThisFrame)
+            {
+                _lickTrigger?.Send();
+            }
             ProcessMovement();
         }
 

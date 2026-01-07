@@ -295,19 +295,6 @@ These notes are primarily directory to project developers and task creators.
 * The original GIMBL package was designed to log all non-brian-activity experiment data. Since this project is
   explicitly designed to work with sl-experiment that now does all logging, **all Unity logging has been removed from
   this project**.
-* The simulated linear treadmill feature has the option for
-  [button topics](https://github.com/winnubstj/Gimbl?tab=readme-ov-file#try-out-the-task). Button topics are displayed
-  in the **edit controller** window, but the ability to add a new button topic is currently unavailable. To test
-  reaction to lick events manually, add the correct button topic directly to the asset file for the specific controller.
-  To do so, navigate to **Assets/VRSettings/Controllers** and find the **.asset** file associated with the controller.
-  Open this file and replace
-
-      buttonTopics: []
-
-  with
-
-      buttonTopics:
-      - LickPort/
 * For information on how to send MQTT messages to Unity, see
   [here](https://github.com/winnubstj/Gimbl/wiki/Example-code-of-MQTT-subscribing-and-publishing).
 
