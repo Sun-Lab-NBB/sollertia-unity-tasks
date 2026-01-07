@@ -82,7 +82,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 1
     m_VerticalOverflow: 1
     m_LineSpacing: 1
-  m_Text: Reward!
+  m_Text: Stimulus!
 --- !u!111 &6458362314562198767
 Animation:
   m_ObjectHideFlags: 0
@@ -91,13 +91,14 @@ Animation:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6458362314562198754}
   m_Enabled: 1
-  serializedVersion: 3
+  serializedVersion: 4
   m_Animation: {fileID: 7400000, guid: d1f6509575c4da4478a4caba2308c54b, type: 2}
   m_Animations:
   - {fileID: 7400000, guid: d1f6509575c4da4478a4caba2308c54b, type: 2}
   m_WrapMode: 0
   m_PlayAutomatically: 1
   m_AnimatePhysics: 0
+  m_UpdateMode: 0
   m_CullingType: 0
 --- !u!114 &6458362314562198766
 MonoBehaviour:
