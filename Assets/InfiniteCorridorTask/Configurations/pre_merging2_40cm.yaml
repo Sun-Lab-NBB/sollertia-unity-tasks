@@ -1,7 +1,7 @@
-# Pre-Shortcut Experiment Configuration
-# Single ABDC trial structure before shortcut introduction.
+# Pre-Merging Experiment Configuration
+# Single AGFE trial structure before merging.
 
-unity_scene_name: "ChelseaSceneExt"
+unity_scene_name: "ChelseaScene"
 cue_offset_cm: 10.0
 
 cues:
@@ -20,10 +20,19 @@ cues:
   - name: "D"
     code: 4
     length_cm: 40.0
+  - name: "E"
+    code: 5
+    length_cm: 40.0
+  - name: "F"
+    code: 6
+    length_cm: 40.0
+  - name: "G"
+    code: 7
+    length_cm: 40.0
 
 segments:
-  - name: "Segment_abdc_40cm"
-    cue_sequence: ["A", "Gray", "B", "Gray", "D", "Gray", "C", "Gray"]
+  - name: "Segment_agfe_40cm"
+    cue_sequence: ["A", "Gray", "G", "Gray", "F", "Gray", "E", "Gray"]
 
 vr_environment:
   corridor_spacing_cm: 20.0
@@ -32,11 +41,11 @@ vr_environment:
   cm_per_unity_unit: 10.0
 
 trial_structures:
-  ABDC:
-    segment_name: "Segment_abdc_40cm"
-    stimulus_trigger_zone_start_cm: 248.0
-    stimulus_trigger_zone_end_cm: 272.0
-    stimulus_location_cm: 268.0
+  AGFE:
+    segment_name: "Segment_agfe_40cm"
+    stimulus_trigger_zone_start_cm: 168.0
+    stimulus_trigger_zone_end_cm: 192.0
+    stimulus_location_cm: 188.0
     show_stimulus_collision_boundary: false
     reward_size_ul: 5.0
     reward_tone_duration_ms: 300
@@ -46,7 +55,7 @@ experiment_states:
     experiment_state_code: 1
     system_state_code: 1
     state_duration_s: 300.0
-    supported_trial_structures: ["ABDC"]
+    supported_trial_structures: ["ABC"]
     reinforcing_initial_guided_trials: 0
     reinforcing_recovery_failed_threshold: 0
     reinforcing_recovery_guided_trials: 0
@@ -55,7 +64,7 @@ experiment_states:
     experiment_state_code: 2
     system_state_code: 2
     state_duration_s: 3600.0
-    supported_trial_structures: ["ABDC"]
+    supported_trial_structures: ["ABC"]
     reinforcing_initial_guided_trials: 3
     reinforcing_recovery_failed_threshold: 8
     reinforcing_recovery_guided_trials: 2
@@ -64,7 +73,7 @@ experiment_states:
     experiment_state_code: 3
     system_state_code: 1
     state_duration_s: 300.0
-    supported_trial_structures: ["ABDC"]
+    supported_trial_structures: ["ABC"]
     reinforcing_initial_guided_trials: 0
     reinforcing_recovery_failed_threshold: 0
     reinforcing_recovery_guided_trials: 0
