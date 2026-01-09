@@ -1,14 +1,9 @@
-# Extension-Shortcut Experiment Configuration
-# Unified YAML configuration for the Mesoscope VR behavioral task.
-# This file serves both the Unity VR environment and the Python data acquisition/analysis systems.
+# Defines an experiment that uses shortcut (ABC) and extension (ABDC) trial structures with reward zones at C.
+# This experiment configuration is used for the StateSpaceOdyssey cohort 0.
 
-# Unity scene metadata
 unity_scene_name: "ChelseaSceneExt"
 cue_offset_cm: 10.0
 
-# Cue definitions - single source of truth
-# Each cue has a unique name (used in segment cue sequences), a unique uint8 code (for MQTT/analysis),
-# and a length in centimeters.
 cues:
   - name: "Gray"
     code: 0
@@ -26,8 +21,6 @@ cues:
     code: 4
     length_cm: 30.0
 
-# Visual segment definitions for Unity corridor system
-# Each segment is a sequence of cues with optional transition probabilities.
 segments:
   - name: "Segment_abc"
     cue_sequence: ["A", "Gray", "B", "Gray", "C", "Gray"]
@@ -37,15 +30,12 @@ segments:
     cue_sequence: ["A", "Gray", "B", "Gray", "D", "Gray", "C", "Gray"]
     transition_probabilities: [0.5, 0.5]
 
-# VR environment configuration
 vr_environment:
   corridor_spacing_cm: 20.0
   segments_per_corridor: 3
   padding_prefab_name: "Padding"
   cm_per_unity_unit: 10.0
 
-# Trial structures - behavioral overlays on segments
-# These are WaterRewardTrial types with lick-triggered rewards
 trial_structures:
   ABC:
     segment_name: "Segment_abc"
@@ -65,32 +55,42 @@ trial_structures:
     reward_size_ul: 5.0
     reward_tone_duration_ms: 300
 
-# Experiment state machine
-# Defines the phases/states of the experiment and which trials are used in each.
 experiment_states:
   baseline:
     experiment_state_code: 1
     system_state_code: 1
     state_duration_s: 300.0
+    supports_trials: false
     supported_trial_structures: ["ABC", "ABDC"]
     reinforcing_initial_guided_trials: 0
     reinforcing_recovery_failed_threshold: 0
     reinforcing_recovery_guided_trials: 0
+    aversive_initial_guided_trials: 0
+    aversive_recovery_failed_threshold: 0
+    aversive_recovery_guided_trials: 0
 
   run:
     experiment_state_code: 2
     system_state_code: 2
     state_duration_s: 3600.0
+    supports_trials: true
     supported_trial_structures: ["ABC", "ABDC"]
     reinforcing_initial_guided_trials: 3
     reinforcing_recovery_failed_threshold: 8
     reinforcing_recovery_guided_trials: 2
+    aversive_initial_guided_trials: 0
+    aversive_recovery_failed_threshold: 0
+    aversive_recovery_guided_trials: 0
 
   cooldown:
     experiment_state_code: 3
     system_state_code: 1
     state_duration_s: 300.0
+    supports_trials: false
     supported_trial_structures: ["ABC", "ABDC"]
     reinforcing_initial_guided_trials: 0
     reinforcing_recovery_failed_threshold: 0
     reinforcing_recovery_guided_trials: 0
+    aversive_initial_guided_trials: 0
+    aversive_recovery_failed_threshold: 0
+    aversive_recovery_guided_trials: 0
