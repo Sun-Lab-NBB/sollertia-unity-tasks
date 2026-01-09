@@ -2,7 +2,7 @@
 # This experiment configuration was used for the MaalstroomicFlow cohorts 1 and above for the first week of the
 # experiment protocol.
 
-unity_scene_name: "IvanScene"
+unity_scene_name: "MaalstroomicFlow_Reward"
 cue_offset_cm: 10.0
 
 cues:

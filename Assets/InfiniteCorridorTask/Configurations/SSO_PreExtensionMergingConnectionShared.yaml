@@ -1,7 +1,7 @@
-# Defines an experiment that uses merging trial structures (ABC with reward at C, AGFE with reward at E).
+# Defines an experiment that uses a single ABC trial structure with reward zone at C.
 # This experiment configuration is used for the StateSpaceOdyssey cohorts 1 and above.
 
-unity_scene_name: "ChelseaSceneExt"
+unity_scene_name: "StateSpaceOdyssey_PreExtensionMergingConnectionShared"
 cue_offset_cm: 10.0
 
 cues:
@@ -17,28 +17,10 @@ cues:
   - name: "C"
     code: 3
     length_cm: 40.0
-  - name: "D"
-    code: 4
-    length_cm: 40.0
-  - name: "E"
-    code: 5
-    length_cm: 40.0
-  - name: "F"
-    code: 6
-    length_cm: 40.0
-  - name: "G"
-    code: 7
-    length_cm: 40.0
-
 
 segments:
   - name: "Segment_abc_40cm"
     cue_sequence: ["A", "Gray", "B", "Gray", "C", "Gray"]
-    transition_probabilities: [0.5, 0.5]
-
-  - name: "Segment_agfe_40cm"
-    cue_sequence: ["A", "Gray", "G", "Gray", "F", "Gray", "E", "Gray"]
-    transition_probabilities: [0.5, 0.5]
 
 vr_environment:
   corridor_spacing_cm: 20.0
@@ -55,14 +37,6 @@ trial_structures:
     show_stimulus_collision_boundary: false
     reward_size_ul: 5.0
     reward_tone_duration_ms: 300
-  AGFE:
-    segment_name: "Segment_agfe_40cm"
-    stimulus_trigger_zone_start_cm: 168.0
-    stimulus_trigger_zone_end_cm: 192.0
-    stimulus_location_cm: 188.0
-    show_stimulus_collision_boundary: false
-    reward_size_ul: 5.0
-    reward_tone_duration_ms: 300
 
 experiment_states:
   baseline:
@@ -70,7 +44,7 @@ experiment_states:
     system_state_code: 1
     state_duration_s: 300.0
     supports_trials: false
-    supported_trial_structures: ["ABC", "AGFE"]
+    supported_trial_structures: ["ABC"]
     reinforcing_initial_guided_trials: 0
     reinforcing_recovery_failed_threshold: 0
     reinforcing_recovery_guided_trials: 0
@@ -83,7 +57,7 @@ experiment_states:
     system_state_code: 2
     state_duration_s: 3600.0
     supports_trials: true
-    supported_trial_structures: ["ABC", "AGFE"]
+    supported_trial_structures: ["ABC"]
     reinforcing_initial_guided_trials: 3
     reinforcing_recovery_failed_threshold: 8
     reinforcing_recovery_guided_trials: 2
@@ -96,7 +70,7 @@ experiment_states:
     system_state_code: 1
     state_duration_s: 300.0
     supports_trials: false
-    supported_trial_structures: ["ABC", "AGFE"]
+    supported_trial_structures: ["ABC"]
     reinforcing_initial_guided_trials: 0
     reinforcing_recovery_failed_threshold: 0
     reinforcing_recovery_guided_trials: 0
