@@ -1,7 +1,7 @@
-# Defines an experiment that uses a single DEFG trial structure with reward zone at G.
+# Defines an experiment that uses a single ABDC (extension) trial structure with reward zone at C.
 # This experiment configuration is used for the StateSpaceOdyssey cohorts 1 and above.
 
-unity_scene_name: "ChelseaScene"
+unity_scene_name: "StateSpaceOdyssey_PreShortcut"
 cue_offset_cm: 10.0
 
 cues:
@@ -20,20 +20,10 @@ cues:
   - name: "D"
     code: 4
     length_cm: 40.0
-  - name: "E"
-    code: 5
-    length_cm: 40.0
-  - name: "F"
-    code: 6
-    length_cm: 40.0
-  - name: "G"
-    code: 7
-    length_cm: 40.0
-
 
 segments:
-  - name: "Segment_defg_40cm"
-    cue_sequence: ["D", "Gray", "E", "Gray", "F", "Gray", "G", "Gray"]
+  - name: "Segment_abdc_40cm"
+    cue_sequence: ["A", "Gray", "B", "Gray", "D", "Gray", "C", "Gray"]
 
 vr_environment:
   corridor_spacing_cm: 20.0
@@ -42,8 +32,8 @@ vr_environment:
   cm_per_unity_unit: 10.0
 
 trial_structures:
-  DEFG:
-    segment_name: "Segment_defg_40cm"
+  ABDC:
+    segment_name: "Segment_abdc_40cm"
     stimulus_trigger_zone_start_cm: 248.0
     stimulus_trigger_zone_end_cm: 272.0
     stimulus_location_cm: 268.0
@@ -57,7 +47,7 @@ experiment_states:
     system_state_code: 1
     state_duration_s: 300.0
     supports_trials: false
-    supported_trial_structures: ["DEFG"]
+    supported_trial_structures: ["ABDC"]
     reinforcing_initial_guided_trials: 0
     reinforcing_recovery_failed_threshold: 0
     reinforcing_recovery_guided_trials: 0
@@ -70,7 +60,7 @@ experiment_states:
     system_state_code: 2
     state_duration_s: 3600.0
     supports_trials: true
-    supported_trial_structures: ["DEFG"]
+    supported_trial_structures: ["ABDC"]
     reinforcing_initial_guided_trials: 3
     reinforcing_recovery_failed_threshold: 8
     reinforcing_recovery_guided_trials: 2
@@ -83,7 +73,7 @@ experiment_states:
     system_state_code: 1
     state_duration_s: 300.0
     supports_trials: false
-    supported_trial_structures: ["DEFG"]
+    supported_trial_structures: ["ABDC"]
     reinforcing_initial_guided_trials: 0
     reinforcing_recovery_failed_threshold: 0
     reinforcing_recovery_guided_trials: 0
