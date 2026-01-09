@@ -41,20 +41,11 @@ cues:
 segments:
   - name: "Segment_abc_40cm"
     cue_sequence: ["A", "Gray", "B", "Gray", "C", "Gray"]
-    transition_probabilities: [0.5, 0.5, 0.0, 0.0]
+    transition_probabilities: [0.5, 0.5]
 
-  - name: "Segment_abca_40cm"
-    cue_sequence: ["A", "Gray", "B", "Gray", "C", "Gray", "A", "Gray"]
-    transition_probabilities: [0.0, 0.0, 0.5, 0.5]
-
-  - name: "Segment_defg_40cm"
-    cue_sequence: ["D", "Gray", "E", "Gray", "F", "Gray", "G", "Gray"]
-    transition_probabilities: [0.0, 0.0, 0.5, 0.5]
-
-  - name: "Segment_defgd_40cm"
-    cue_sequence: ["D", "Gray", "E", "Gray", "F", "Gray", "G", "Gray", "D", "Gray"]
-    transition_probabilities: [0.5, 0.5, 0.0, 0.0]
-
+  - name: "Segment_agfe_40cm"
+    cue_sequence: ["A", "Gray", "G", "Gray", "F", "Gray", "E", "Gray"]
+    transition_probabilities: [0.5, 0.5]
 
 # VR environment configuration
 vr_environment:
@@ -74,34 +65,14 @@ trial_structures:
     show_stimulus_collision_boundary: false
     reward_size_ul: 5.0
     reward_tone_duration_ms: 300
-
-  ABCA:
-    segment_name: "Segment_abca_40cm"
+  AGFE:
+    segment_name: "Segment_agfe_40cm"
     stimulus_trigger_zone_start_cm: 168.0
     stimulus_trigger_zone_end_cm: 192.0
     stimulus_location_cm: 188.0
     show_stimulus_collision_boundary: false
     reward_size_ul: 5.0
     reward_tone_duration_ms: 300
-
-  DEFG:
-    segment_name: "Segment_defg_40cm"
-    stimulus_trigger_zone_start_cm: 248.0
-    stimulus_trigger_zone_end_cm: 272.0
-    stimulus_location_cm: 268.0
-    show_stimulus_collision_boundary: false
-    reward_size_ul: 5.0
-    reward_tone_duration_ms: 300
-
-  DEFGD:
-    segment_name: "Segment_defgd_40cm"
-    stimulus_trigger_zone_start_cm: 248.0
-    stimulus_trigger_zone_end_cm: 272.0
-    stimulus_location_cm: 268.0
-    show_stimulus_collision_boundary: false
-    reward_size_ul: 5.0
-    reward_tone_duration_ms: 300
-
 
 # Experiment state machine
 # Defines the phases/states of the experiment and which trials are used in each.
@@ -110,7 +81,7 @@ experiment_states:
     experiment_state_code: 1
     system_state_code: 1
     state_duration_s: 300.0
-    supported_trial_structures: ["ABC", "ABCA", "DEFG", "DEFGD"]
+    supported_trial_structures: ["ABC", "AGFE"]
     reinforcing_initial_guided_trials: 0
     reinforcing_recovery_failed_threshold: 0
     reinforcing_recovery_guided_trials: 0
@@ -119,7 +90,7 @@ experiment_states:
     experiment_state_code: 2
     system_state_code: 2
     state_duration_s: 3600.0
-    supported_trial_structures: ["ABC", "ABCA", "DEFG", "DEFGD"]
+    supported_trial_structures: ["ABC", "AGFE"]
     reinforcing_initial_guided_trials: 3
     reinforcing_recovery_failed_threshold: 8
     reinforcing_recovery_guided_trials: 2
@@ -128,7 +99,7 @@ experiment_states:
     experiment_state_code: 3
     system_state_code: 1
     state_duration_s: 300.0
-    supported_trial_structures: ["ABC", "ABCA", "DEFG", "DEFGD"]
+    supported_trial_structures: ["ABC", "AGFE"]
     reinforcing_initial_guided_trials: 0
     reinforcing_recovery_failed_threshold: 0
     reinforcing_recovery_guided_trials: 0
