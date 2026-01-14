@@ -25,7 +25,7 @@ namespace Gimbl
         public void ParentToActor(ActorObject actor)
         {
             gameObject.transform.SetParent(actor.transform, false);
-            gameObject.transform.localPosition = new Vector3(0, settings.heightInVR, 0);
+            gameObject.transform.localPosition = new Vector3(0, settings != null ? settings.heightInVR : 0, 0);
 
             foreach (Camera cam in gameObject.GetComponentsInChildren<Camera>())
             {

@@ -145,7 +145,7 @@ public class StimulusTriggerZone : MonoBehaviour
         // The OccupancyZone handles the timer and MQTT messages.
 
         // Boundary collision triggers stimulus only when boundary is ARMED
-        if (_inZone && !_occupancyZone.boundaryDisarmed)
+        if (_inZone && _occupancyZone != null && !_occupancyZone.boundaryDisarmed)
         {
             TriggerStimulus();
         }

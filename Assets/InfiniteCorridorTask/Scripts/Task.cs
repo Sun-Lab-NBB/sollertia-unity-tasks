@@ -124,7 +124,7 @@ public class Task : MonoBehaviour
     private List<int> _curSegment;
 
     /// <summary>The cached actor position for updates.</summary>
-    private Vector3 _positionition;
+    private Vector3 _position;
 
     /// <summary>Validates and auto-assigns the actor reference in the editor.</summary>
     void OnValidate()

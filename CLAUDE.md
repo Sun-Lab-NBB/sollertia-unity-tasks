@@ -17,6 +17,7 @@ the Sun Lab conventions. This applies to ALL file types including:
 - C# source files (`.cs`)
 - Documentation files (`README.md`)
 - YAML configuration files when adding comments or descriptions
+- Git commit messages
 
 All contributions must strictly follow these conventions and all reviews must check for compliance. Key conventions
 include:
@@ -25,6 +26,7 @@ include:
 - Allman brace style (braces on new lines)
 - Third person imperative mood for comments and documentation
 - 120 character line limit with CSharpier formatting
+- Commit messages use past tense verbs (Added, Fixed, Updated) and end with periods
 
 ## Cross-Referenced Library Verification
 

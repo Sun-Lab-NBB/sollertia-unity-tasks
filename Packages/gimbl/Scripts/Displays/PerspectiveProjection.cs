@@ -258,7 +258,11 @@ namespace Gimbl
         /// <param name="destination">The destination render texture.</param>
         public void OnRenderImage(RenderTexture source, RenderTexture destination)
         {
-            if (dispObj.settings.isActive)
+            if (dispObj == null)
+            {
+                material.SetFloat("_brightness", 100f);
+            }
+            else if (dispObj.settings == null || dispObj.settings.isActive)
             {
                 material.SetFloat("_brightness", dispObj.currentBrightness);
             }

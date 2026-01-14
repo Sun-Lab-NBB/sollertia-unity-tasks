@@ -27,7 +27,7 @@ namespace Gimbl
         private float _moved;
 
         /// <summary>The cached actor position for updates.</summary>
-        private Vector3 _positionition;
+        private Vector3 _position;
 
         /// <summary>The cached actor rotation for updates.</summary>
         private Quaternion _newRot;
@@ -35,7 +35,7 @@ namespace Gimbl
         /// <summary>Sets up the MQTT listener for this treadmill on start.</summary>
         void Start()
         {
-            if (this.GetType() == typeof(LinearTreadmill))
+            if (this.GetType() == typeof(LinearTreadmill) && settings != null)
             {
                 MQTTChannel<TreadmillMessage> channel = new MQTTChannel<TreadmillMessage>(
                     $"{settings.deviceName}/Data"
@@ -55,7 +55,7 @@ namespace Gimbl
         {
             lock (movement)
             {
-                if (Actor != null && settings.isActive)
+                if (Actor != null && (settings == null || settings.isActive))
                 {
                     _moved = movement.Sum();
 
