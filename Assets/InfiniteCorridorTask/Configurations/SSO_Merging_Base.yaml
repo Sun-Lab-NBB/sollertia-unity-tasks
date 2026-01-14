@@ -1,7 +1,9 @@
-# Defines an experiment that uses shortcut (ABC) and extension (ABDC) trial structures with reward zones at C.
-# This experiment configuration is used for the StateSpaceOdyssey cohorts 1 and above.
+# Project: StateSpaceOdyssey
+# Purpose: Teaches the AGFE segment structure before merging trials.
+# Layout:  Segment AGFE with the rewarding stimulus (water) trigger zone in cue E.
+# Related: SSO_Shared_Base (ABC base training), SSO_Merging (combined ABC/AGFE trials)
 
-unity_scene_name: "StateSpaceOdyssey_ExtensionShortcut"
+unity_scene_name: "SSO_Merging_Base"
 cue_offset_cm: 10.0
 
 cues:
@@ -20,15 +22,19 @@ cues:
   - name: "D"
     code: 4
     length_cm: 40.0
+  - name: "E"
+    code: 5
+    length_cm: 40.0
+  - name: "F"
+    code: 6
+    length_cm: 40.0
+  - name: "G"
+    code: 7
+    length_cm: 40.0
 
 segments:
-  - name: "Segment_abc_40cm"
-    cue_sequence: ["A", "Gray", "B", "Gray", "C", "Gray"]
-    transition_probabilities: [0.5, 0.5]
-
-  - name: "Segment_abdc_40cm"
-    cue_sequence: ["A", "Gray", "B", "Gray", "D", "Gray", "C", "Gray"]
-    transition_probabilities: [0.5, 0.5]
+  - name: "Segment_agfe_40cm"
+    cue_sequence: ["A", "Gray", "G", "Gray", "F", "Gray", "E", "Gray"]
 
 vr_environment:
   corridor_spacing_cm: 20.0
@@ -37,20 +43,11 @@ vr_environment:
   cm_per_unity_unit: 10.0
 
 trial_structures:
-  ABC:
-    segment_name: "Segment_abc_40cm"
+  AGFE:
+    segment_name: "Segment_agfe_40cm"
     stimulus_trigger_zone_start_cm: 168.0
     stimulus_trigger_zone_end_cm: 192.0
     stimulus_location_cm: 188.0
-    show_stimulus_collision_boundary: false
-    reward_size_ul: 5.0
-    reward_tone_duration_ms: 300
-
-  ABDC:
-    segment_name: "Segment_abdc_40cm"
-    stimulus_trigger_zone_start_cm: 248.0
-    stimulus_trigger_zone_end_cm: 272.0
-    stimulus_location_cm: 268.0
     show_stimulus_collision_boundary: false
     reward_size_ul: 5.0
     reward_tone_duration_ms: 300
@@ -61,7 +58,7 @@ experiment_states:
     system_state_code: 1
     state_duration_s: 300.0
     supports_trials: false
-    supported_trial_structures: ["ABC", "ABDC"]
+    supported_trial_structures: ["AGFE"]
     reinforcing_initial_guided_trials: 0
     reinforcing_recovery_failed_threshold: 0
     reinforcing_recovery_guided_trials: 0
@@ -74,7 +71,7 @@ experiment_states:
     system_state_code: 2
     state_duration_s: 3600.0
     supports_trials: true
-    supported_trial_structures: ["ABC", "ABDC"]
+    supported_trial_structures: ["AGFE"]
     reinforcing_initial_guided_trials: 3
     reinforcing_recovery_failed_threshold: 8
     reinforcing_recovery_guided_trials: 2
@@ -87,7 +84,7 @@ experiment_states:
     system_state_code: 1
     state_duration_s: 300.0
     supports_trials: false
-    supported_trial_structures: ["ABC", "ABDC"]
+    supported_trial_structures: ["AGFE"]
     reinforcing_initial_guided_trials: 0
     reinforcing_recovery_failed_threshold: 0
     reinforcing_recovery_guided_trials: 0

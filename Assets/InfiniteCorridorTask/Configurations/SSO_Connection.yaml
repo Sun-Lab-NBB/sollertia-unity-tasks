@@ -1,7 +1,11 @@
-# Defines an experiment that uses connection trial structures (ABC/ABCA with reward at C, DEFG/DEFGD with reward at G).
-# This experiment configuration is used for the StateSpaceOdyssey cohorts 1 and above.
+# Project: StateSpaceOdyssey
+# Purpose: Introduces pseudorandom connections between segments ABC and DEFG.
+# Layout:  Segments ABC and ABCA with the rewarding stimulus (water) trigger zone in cue C.
+#          Segments DEFG and DEFGD with the rewarding stimulus (water) trigger zone in cue G.
+#          ABCA always transitions to DEFG/D and DEFGD always transitions to ABC/A.
+# Related: SSO_Shared_Base (ABC base training), SSO_Connection_Base (DEFG base training)
 
-unity_scene_name: "StateSpaceOdyssey_Connection"
+unity_scene_name: "SSO_Connection"
 cue_offset_cm: 10.0
 
 cues:

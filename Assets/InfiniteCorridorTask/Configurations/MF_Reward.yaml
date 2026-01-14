@@ -1,8 +1,9 @@
-# Defines an experiment that uses a cyclic 8-cue trial structure with reward zone at the end of the corridor.
-# This experiment configuration was used for the MaalstroomicFlow cohorts 1 and above for the first week of the
-# experiment protocol.
+# Project: MaalstroomicFlow
+# Purpose: Defines a cyclic 8-cue corridor with a rewarding stimulus trigger zone at the end of the corridor.
+# Layout:  Segment ABCDEFGH with the rewarding stimulus (water) trigger zone in cue H.
+# Related: MF_Aversion_Reward (extends the task to allow studying both reward and aversion coding).
 
-unity_scene_name: "MaalstroomicFlow_Reward"
+unity_scene_name: "MF_Reward"
 cue_offset_cm: 10.0
 
 cues:

@@ -1,7 +1,9 @@
-# Defines an experiment that uses a single DEFG trial structure with reward zone at G.
-# This experiment configuration is used for the StateSpaceOdyssey cohorts 1 and above.
+# Project: StateSpaceOdyssey
+# Purpose: Teaches the DEFG segment structure before connection trials.
+# Layout:  Segment DEFG with the rewarding stimulus (water) trigger zone in cue G.
+# Related: SSO_Shared_Base (ABC base training), SSO_Connection (ABC-DEFG connection trials)
 
-unity_scene_name: "StateSpaceOdyssey_PreConnection"
+unity_scene_name: "SSO_Connection_Base"
 cue_offset_cm: 10.0
 
 cues:

@@ -58,6 +58,7 @@ actual library state to prevent integration errors.
 
 - `/explore-codebase` - Perform in-depth codebase exploration for Unity/C# projects
 - `/sun-lab-style` - Apply Sun Lab C# and Unity coding conventions (REQUIRED for all code and documentation changes)
+- `/configuration-verification` - Verify prefab positions match YAML configuration constants (REQUIRED when working with configuration files)
 
 ## Related Libraries
 
@@ -128,12 +129,28 @@ csharpier .
 csharpier --check .
 ```
 
+## Configuration File Workflow
+
+Configuration files follow:
+- **Naming convention**: `ProjectAbbreviation_TaskDescription.yaml` (e.g., `SSO_Merging.yaml`)
+- **Header format**: Each file must include Project, Purpose, Layout, and Related fields as YAML comments
+
+See the style guide for complete naming and header conventions.
+
+When creating or modifying YAML configuration files, you MUST invoke the `/configuration-verification` skill to verify that:
+- Referenced segment prefabs exist
+- Zone positions in prefabs match configuration constants
+- Zone ranges are within segment length bounds
+
+This ensures experiment configurations are valid before task generation.
+
 ## Creating New Tasks
 
 1. Create or modify a YAML configuration file in `Assets/InfiniteCorridorTask/Configurations/`
-2. Use the CreateTask editor tool: `CreateTask > New Task` menu
-3. Select the YAML file and save the generated prefab
-4. Create a new scene from ExperimentTemplate and add the task prefab
+2. Run `/configuration-verification` to validate prefab/config alignment
+3. Use the CreateTask editor tool: `CreateTask > New Task` menu
+4. Select the YAML file and save the generated prefab
+5. Create a new scene from ExperimentTemplate and add the task prefab
 
 ## Testing Workflow
 
