@@ -22,7 +22,6 @@ namespace Gimbl
 
         private MQTTChannel _lickTrigger;
 
-
         /// <summary>Initializes the Input System for keyboard/mouse simulation on start.</summary>
         public void Start()
         {
@@ -45,11 +44,13 @@ namespace Gimbl
         public new void Update()
         {
             GetSimulatedInput();
-            if (settings != null &&
-                settings.isActive &&
-                Actor != null &&
-                Mouse.current != null &&
-                Mouse.current.leftButton.wasPressedThisFrame)
+            if (
+                settings != null
+                && settings.isActive
+                && Actor != null
+                && Mouse.current != null
+                && Mouse.current.leftButton.wasPressedThisFrame
+            )
             {
                 _lickTrigger?.Send();
             }

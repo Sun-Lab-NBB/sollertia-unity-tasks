@@ -1,8 +1,6 @@
 /// <summary>
 /// Provides the DisplayType enumeration for available display types.
 /// </summary>
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 namespace Gimbl

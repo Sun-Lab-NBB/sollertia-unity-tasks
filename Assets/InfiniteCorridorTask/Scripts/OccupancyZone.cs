@@ -50,9 +50,7 @@ public class OccupancyZone : MonoBehaviour
     void Update()
     {
         if (!isActive || boundaryDisarmed)
-        {
             return;
-        }
 
         if (_occupancyTimer.IsRunning && inZone)
         {
@@ -67,9 +65,7 @@ public class OccupancyZone : MonoBehaviour
     void OnTriggerEnter(Collider other)
     {
         if (!isActive || boundaryDisarmed)
-        {
             return;
-        }
 
         inZone = true;
         _occupancyTimer.Restart();
@@ -80,9 +76,7 @@ public class OccupancyZone : MonoBehaviour
     void OnTriggerExit(Collider other)
     {
         if (!isActive)
-        {
             return;
-        }
 
         inZone = false;
         _occupancyTimer.Stop();

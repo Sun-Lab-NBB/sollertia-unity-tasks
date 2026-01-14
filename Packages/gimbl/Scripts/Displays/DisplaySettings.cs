@@ -1,8 +1,6 @@
 /// <summary>
 /// Provides the DisplaySettings class for display configuration storage.
 /// </summary>
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 namespace Gimbl

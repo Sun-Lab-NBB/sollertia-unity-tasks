@@ -13,6 +13,5 @@ Builds/
 Packages/com.unity.*
 Packages/com.google.*
 
-# Keep gimbl package excluded (has its own style)
-# Remove this line if you want to format gimbl too
-# Packages/gimbl/
+# Auto-generated Unity InputSystem code
+Packages/gimbl/Scripts/Controllers/SimulatedInput.cs

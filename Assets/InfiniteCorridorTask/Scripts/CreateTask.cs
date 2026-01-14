@@ -12,6 +12,9 @@ using UnityEngine;
 /// </summary>
 public class CreateTask : MonoBehaviour
 {
+    /// <summary>The tolerance for comparing measured prefab lengths against configured lengths.</summary>
+    private const float LengthComparisonEpsilon = 0.01f;
+
     /// <summary>Creates a new Task prefab from a selected YAML configuration file.</summary>
     [MenuItem("CreateTask/New Task")]
     public static void CreateNewTask()
@@ -71,10 +74,9 @@ public class CreateTask : MonoBehaviour
         float[] measuredSegmentLengths = Utility.GetSegmentLengths(segmentPrefabs);
         float[] segmentLengths = config.GetSegmentLengthsUnity();
 
-        float epsilon = 0.01f;
         for (int i = 0; i < nSegments; i++)
         {
-            if (Mathf.Abs(measuredSegmentLengths[i] - segmentLengths[i]) > epsilon)
+            if (Mathf.Abs(measuredSegmentLengths[i] - segmentLengths[i]) > LengthComparisonEpsilon)
             {
                 Debug.Log(
                     $"Warning: For {config.segments[i].name}, there is a mismatch between the prefab length "
@@ -88,8 +90,8 @@ public class CreateTask : MonoBehaviour
         float paddingZShift = depth * Mathf.Min(segmentLengths) - 1;
 
         // Creates task GameObject hierarchy
-        string newTaskName = "newTask";
-        GameObject task = new GameObject(newTaskName);
+        string taskName = "newTask";
+        GameObject task = new GameObject(taskName);
         Task taskScript = task.AddComponent<Task>();
         taskScript.requireLick = true;
         taskScript.configPath = configPath;
@@ -162,7 +164,7 @@ public class CreateTask : MonoBehaviour
         string savePath = EditorUtility.SaveFilePanel(
             "Save Task Prefab",
             Application.dataPath + "/InfiniteCorridorTask/Tasks/",
-            newTaskName + ".prefab",
+            taskName + ".prefab",
             "prefab"
         );
 

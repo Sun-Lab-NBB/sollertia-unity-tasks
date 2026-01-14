@@ -18,7 +18,7 @@ namespace Gimbl
         public LinearTreadmillSettings settings;
 
         /// <summary>The MQTT message class containing movement data.</summary>
-        public class MSG
+        public class TreadmillMessage
         {
             public float movement;
         }
@@ -27,7 +27,7 @@ namespace Gimbl
         private float _moved;
 
         /// <summary>The cached actor position for updates.</summary>
-        private Vector3 _pos;
+        private Vector3 _positionition;
 
         /// <summary>The cached actor rotation for updates.</summary>
         private Quaternion _newRot;
@@ -37,7 +37,9 @@ namespace Gimbl
         {
             if (this.GetType() == typeof(LinearTreadmill))
             {
-                MQTTChannel<MSG> channel = new MQTTChannel<MSG>($"{settings.deviceName}/Data");
+                MQTTChannel<TreadmillMessage> channel = new MQTTChannel<TreadmillMessage>(
+                    $"{settings.deviceName}/Data"
+                );
                 channel.Event.AddListener(OnMessage);
             }
         }
@@ -57,14 +59,14 @@ namespace Gimbl
                 {
                     _moved = movement.Sum();
 
-                    _pos = Actor.transform.position;
+                    _position = Actor.transform.position;
                     _newRot = Actor.transform.rotation;
 
-                    _pos.z = _pos.z + _moved;
+                    _position.z = _position.z + _moved;
 
                     if (Actor.isActive)
                     {
-                        Actor.transform.position = _pos;
+                        Actor.transform.position = _position;
                         Actor.transform.rotation = _newRot;
                     }
                 }
@@ -75,7 +77,7 @@ namespace Gimbl
 
         /// <summary>MQTT callback that receives movement data from the treadmill.</summary>
         /// <param name="msg">The message containing the movement value.</param>
-        public void OnMessage(MSG msg)
+        public void OnMessage(TreadmillMessage msg)
         {
             lock (movement)
             {

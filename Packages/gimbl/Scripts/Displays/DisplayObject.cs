@@ -4,8 +4,6 @@
 /// Manages display attachment to actors and camera culling mask configuration
 /// for proper VR rendering.
 /// </summary>
-using System.Collections;
-using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
