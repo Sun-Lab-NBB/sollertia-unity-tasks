@@ -1,7 +1,9 @@
-# Defines an experiment that uses a single ABC trial structure with reward zone at C.
-# This experiment configuration is used for the StateSpaceOdyssey cohorts 1 and above.
+# Project: StateSpaceOdyssey
+# Purpose: Teaches the ABC segment structure as foundational training for multiple other SSO tasks.
+# Layout:  Segment ABC with the rewarding stimulus (water) trigger zone in cue C.
+# Related: SSO_Extension_Shortcut (extension only), SSO_Merging, SSO_Connection (tasks that build on this base training)
 
-unity_scene_name: "StateSpaceOdyssey_PreExtensionMergingConnectionShared"
+unity_scene_name: "SSO_Shared_Base"
 cue_offset_cm: 10.0
 
 cues:

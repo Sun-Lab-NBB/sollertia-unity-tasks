@@ -1,7 +1,10 @@
-# Defines an experiment that uses merging trial structures (ABC with reward at C, AGFE with reward at E).
-# This experiment configuration is used for the StateSpaceOdyssey cohorts 1 and above.
+# Project: StateSpaceOdyssey
+# Purpose: Merges ABC and AGFE trial structures by sharing the A cue.
+# Layout:  Segment ABC with the rewarding stimulus (water) trigger zone in cue C.
+#          Segment AGFE with the rewarding stimulus (water) trigger zone in cue E.
+# Related: SSO_Shared_Base (ABC base training), SSO_Merging_Base (AGFE base training)
 
-unity_scene_name: "StateSpaceOdyssey_Merging"
+unity_scene_name: "SSO_Merging"
 cue_offset_cm: 10.0
 
 cues:

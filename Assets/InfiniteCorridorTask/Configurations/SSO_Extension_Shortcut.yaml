@@ -1,7 +1,11 @@
-# Defines an experiment that uses a single ABDC (extension) trial structure with reward zone at C.
-# This experiment configuration is used for the StateSpaceOdyssey cohorts 1 and above.
+# Project: StateSpaceOdyssey
+# Purpose: Interleaves ABC and ABDC trials. Depending on the chosen base trial, this constitutes either shortcut
+#          (one less cue) or extension (one more cue) modification relative to the base trial.
+# Layout:  Segment ABC with the rewarding stimulus (water) trigger zone in cue C.
+#          Segment ABDC with the rewarding stimulus (water) trigger zone in cue C.
+# Related: SSO_Shared_Base (ABC base training), SSO_Shortcut_Base (ABDC base training)
 
-unity_scene_name: "StateSpaceOdyssey_PreShortcut"
+unity_scene_name: "SSO_Extension_Shortcut"
 cue_offset_cm: 10.0
 
 cues:
@@ -22,8 +26,13 @@ cues:
     length_cm: 40.0
 
 segments:
+  - name: "Segment_abc_40cm"
+    cue_sequence: ["A", "Gray", "B", "Gray", "C", "Gray"]
+    transition_probabilities: [0.5, 0.5]
+
   - name: "Segment_abdc_40cm"
     cue_sequence: ["A", "Gray", "B", "Gray", "D", "Gray", "C", "Gray"]
+    transition_probabilities: [0.5, 0.5]
 
 vr_environment:
   corridor_spacing_cm: 20.0
@@ -32,6 +41,15 @@ vr_environment:
   cm_per_unity_unit: 10.0
 
 trial_structures:
+  ABC:
+    segment_name: "Segment_abc_40cm"
+    stimulus_trigger_zone_start_cm: 168.0
+    stimulus_trigger_zone_end_cm: 192.0
+    stimulus_location_cm: 188.0
+    show_stimulus_collision_boundary: false
+    reward_size_ul: 5.0
+    reward_tone_duration_ms: 300
+
   ABDC:
     segment_name: "Segment_abdc_40cm"
     stimulus_trigger_zone_start_cm: 248.0
@@ -47,7 +65,7 @@ experiment_states:
     system_state_code: 1
     state_duration_s: 300.0
     supports_trials: false
-    supported_trial_structures: ["ABDC"]
+    supported_trial_structures: ["ABC", "ABDC"]
     reinforcing_initial_guided_trials: 0
     reinforcing_recovery_failed_threshold: 0
     reinforcing_recovery_guided_trials: 0
@@ -60,7 +78,7 @@ experiment_states:
     system_state_code: 2
     state_duration_s: 3600.0
     supports_trials: true
-    supported_trial_structures: ["ABDC"]
+    supported_trial_structures: ["ABC", "ABDC"]
     reinforcing_initial_guided_trials: 3
     reinforcing_recovery_failed_threshold: 8
     reinforcing_recovery_guided_trials: 2
@@ -73,7 +91,7 @@ experiment_states:
     system_state_code: 1
     state_duration_s: 300.0
     supports_trials: false
-    supported_trial_structures: ["ABDC"]
+    supported_trial_structures: ["ABC", "ABDC"]
     reinforcing_initial_guided_trials: 0
     reinforcing_recovery_failed_threshold: 0
     reinforcing_recovery_guided_trials: 0

@@ -621,6 +621,115 @@ or by name. Avoid first person ("I," "we") and second person ("you") where possi
 
 ---
 
+## Configuration File Naming
+
+YAML experiment configuration files follow the naming convention:
+
+```
+ProjectAbbreviation_TaskDescription.yaml
+```
+
+### Components
+
+**ProjectAbbreviation**: A short identifier for the project or experiment cohort.
+
+| Abbreviation | Project Name      |
+|--------------|-------------------|
+| MF           | MaalstroomicFlow  |
+| SSO          | StateSpaceOdyssey |
+
+**TaskDescription**: One or more words separated by underscores describing the task variant or trial structure.
+
+### Examples
+
+```
+MF_Reward.yaml                    # MaalstroomicFlow reward-only task
+MF_Aversion_Reward.yaml           # MaalstroomicFlow aversion + reward task
+SSO_Shared_Base.yaml              # StateSpaceOdyssey shared base training task
+SSO_Connection.yaml               # StateSpaceOdyssey connection trials
+SSO_Connection_Base.yaml          # StateSpaceOdyssey connection base training
+SSO_Extension_Shortcut.yaml       # StateSpaceOdyssey extension/shortcut trials
+SSO_Merging.yaml                  # StateSpaceOdyssey merging trials
+```
+
+### Conventions
+
+- Use `_Base` suffix for single-segment training configurations that precede multi-segment tasks
+- Use descriptive task names that reflect the trial structure or behavioral paradigm
+- Capitalize each word in the task description
+- Separate multiple words with underscores
+
+### Unity Scene Name
+
+The `unity_scene_name` field must match the configuration file name (without the `.yaml` extension):
+
+```yaml
+# File: SSO_Shared_Base.yaml
+unity_scene_name: "SSO_Shared_Base"
+
+# File: MF_Aversion_Reward.yaml
+unity_scene_name: "MF_Aversion_Reward"
+```
+
+This ensures consistency between configuration files and their corresponding Unity scenes.
+
+### Configuration Header
+
+Each configuration file must begin with a YAML comment header containing the following information:
+
+```yaml
+# Project: [Full project name]
+# Purpose: [Single sentence describing the task structure]
+# Layout:  [Segment names with cue letters and zone placements]
+# Related: [Related config file (parenthetical explanation of relationship)]
+```
+
+**Multi-line Wrapping**: When content exceeds the line length, wrap to the next line and align continuation
+text with the first character after the field name:
+
+```yaml
+# Project: MaalstroomicFlow
+# Purpose: Extends the base MF_Reward trial structure to also include an aversive stimulus in the ABCD segment.
+# Layout:  Segment ABCD with occupancy zone at cue C and the aversive stimulus (air puff) trigger zone in cue D.
+#          Segment EFGH with the rewarding stimulus (water) trigger zone in cue H.
+# Related: MF_Reward (the base version of this task that only includes the reward zone)
+```
+
+**Single-Segment Example:**
+
+```yaml
+# Project: MaalstroomicFlow
+# Purpose: Defines a cyclic 8-cue corridor with a rewarding stimulus trigger zone at the end of the corridor.
+# Layout:  Segment ABCDEFGH with the rewarding stimulus (water) trigger zone in cue H.
+# Related: MF_Aversion_Reward (extends the task to allow studying both reward and aversion coding).
+```
+
+**Guidelines:**
+
+- **Project**: Use the full project name, not the abbreviation
+- **Purpose**: Single sentence describing the task structure; use verbs like "Defines", "Extends", "Teaches"
+- **Layout**: Use two spaces after `#` for alignment; include segment names with cue letters (e.g., "Segment ABCD"),
+  zone types (occupancy zone, trigger zone), and parenthetical stimulus clarifications (e.g., "(water)", "(air puff)")
+- **Related**: Explain the relationship in parentheses (e.g., "extends the task to...", "the base version of...")
+
+### Inline YAML Comments
+
+Add inline comments to clarify non-obvious YAML values:
+
+```yaml
+cues:
+  - name: "Gray" # This is a placeholder, the task does not use Gray cues.
+    code: 0
+    length_cm: 1.0
+```
+
+Use inline comments when:
+- A value exists for technical reasons but isn't actively used
+- A field name is ambiguous in context
+- Special values need explanation
+
+---
+
 ## Commit Messages
 
 ### Format

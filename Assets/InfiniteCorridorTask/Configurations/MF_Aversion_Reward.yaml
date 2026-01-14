@@ -1,9 +1,10 @@
-# Defines an experiment that uses a cyclic 8-cue trial structure with an aversion zone in the middle of the corridor and
-# a reward zone at the end of the corridor.
-# This experiment configuration was used for the MaalstroomicFlow cohorts 1 and above for the second and third (last)
-# weeks of the experiment protocol.
+# Project: MaalstroomicFlow
+# Purpose: Extends the base MF_Reward trial structure to also include an aversive stimulus in the ABCD segment.
+# Layout:  Segment ABCD with occupancy zone at cue C and the aversive stimulus (air puff) trigger zone in cue D.
+#          Segment EFGH with the rewarding stimulus (water) trigger zone in cue H.
+# Related: MF_Reward (the base version of this task that only includes the reward zone)
 
-unity_scene_name: "MaalstroomicFlow_Aversion_Reward"
+unity_scene_name: "MF_Aversion_Reward"
 cue_offset_cm: 10.0
 
 cues:
