@@ -46,7 +46,7 @@ Place file-level documentation at the top of the file, before using statements:
 
 ```csharp
 /// <summary>
-/// Provides the ConfigLoader class for loading and validating experiment configurations from YAML files.
+/// Provides the ConfigLoader class for loading and validating task templates from YAML files.
 /// </summary>
 using System.Collections.Generic;
 using System.IO;
@@ -717,6 +717,18 @@ private void ProcessData() { }
 ```
 ````
 
+### Voice and Directional Language
+
+Skill files use two voice styles depending on context:
+
+- **Descriptive content**: Use third person imperative (same as code documentation). Example: "Extracts zone positions
+  from prefab files."
+- **Agent directives**: Use second person with "You MUST", "You should", etc. when instructing the agent to perform
+  specific actions. Example: "You MUST use the Task tool with `subagent_type: Explore`."
+
+Directional language is appropriate for skills because they are instructions for an AI agent, not documentation for
+human readers.
+
 ### Skill File Checklist
 
 When creating or modifying skill files:
@@ -725,14 +737,14 @@ When creating or modifying skill files:
 2. **Tables**: Use pretty formatting with aligned columns
 3. **Sections**: Separate major sections with horizontal rules (`---`)
 4. **Code blocks**: Include language identifiers
-5. **Voice**: Use third person imperative (same as code documentation)
+5. **Voice**: Third person imperative for descriptions; second person directives for agent instructions
 6. **Headers**: Use sentence case for section headers
 
 ---
 
-## Configuration File Naming
+## Task Template File Naming
 
-YAML experiment configuration files follow the naming convention:
+YAML task template files follow the naming convention:
 
 ```
 ProjectAbbreviation_TaskDescription.yaml
@@ -768,29 +780,25 @@ SSO_Merging.yaml                  # StateSpaceOdyssey merging trials
 - Capitalize each word in the task description
 - Separate multiple words with underscores
 
-### Unity Scene Name
+### Template Name Derivation
 
-The `unity_scene_name` field must match the configuration file name (without the `.yaml` extension):
+The template name and Unity scene name are derived from the YAML filename (without the `.yaml` extension). No
+explicit `unity_scene_name` field is needed in task templates.
 
-```yaml
-# File: SSO_Shared_Base.yaml
-unity_scene_name: "SSO_Shared_Base"
-
-# File: MF_Aversion_Reward.yaml
-unity_scene_name: "MF_Aversion_Reward"
+```
+SSO_Shared_Base.yaml      → Template name: "SSO_Shared_Base", Scene name: "SSO_Shared_Base"
+MF_Aversion_Reward.yaml   → Template name: "MF_Aversion_Reward", Scene name: "MF_Aversion_Reward"
 ```
 
-This ensures consistency between configuration files and their corresponding Unity scenes.
+### Task Template Header
 
-### Configuration Header
-
-Each configuration file must begin with a YAML comment header containing the following information:
+Each task template file must begin with a YAML comment header containing the following information:
 
 ```yaml
 # Project: [Full project name]
 # Purpose: [Single sentence describing the task structure]
 # Layout:  [Segment names with cue letters and zone placements]
-# Related: [Related config file (parenthetical explanation of relationship)]
+# Related: [Related template file (parenthetical explanation of relationship)]
 ```
 
 **Multi-line Wrapping**: When content exceeds the line length, wrap to the next line and align continuation

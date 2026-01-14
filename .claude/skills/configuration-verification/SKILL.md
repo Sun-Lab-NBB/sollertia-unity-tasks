@@ -1,486 +1,198 @@
-# Configuration Verification Skill
+# Task Template Verification Skill
 
-Verifies that YAML experiment configuration files comply with the sl-shared-assets schema and that Unity prefabs
-match the configuration values. Use this skill when creating, modifying, or reviewing configuration files.
-
----
-
-## When to Use
-
-- Creating new YAML experiment configurations
-- Modifying existing configuration zone positions or trial structures
-- Reviewing configuration files for correctness
-- Debugging zone trigger issues
-- Creating new segment prefabs
-- Verifying configuration compliance with sl-shared-assets schema
+Verifies YAML task templates against Unity prefab state using pre-baked expected values.
 
 ---
 
-## sl-shared-assets Version Verification
+## Verification Workflow
 
-**CRITICAL**: Before validating any configuration, verify the local sl-shared-assets version matches the latest release.
+Follow this procedure exactly. Most verifications require NO bash commands.
 
-### Verification Steps
+### Step 1: Compare Against Pre-Baked Values
 
-1. **Check local version**:
-   ```bash
-   grep -E "^version" /home/cyberaxolotl/Desktop/GitHubRepos/sl-shared-assets/pyproject.toml
-   ```
+For each template being verified, compare the YAML content against the **Expected Values** tables below:
 
-2. **Check latest GitHub release**:
-   ```bash
-   gh api repos/Sun-Lab-NBB/sl-shared-assets/releases/latest --jq '.tag_name'
-   ```
+1. **Read the template YAML** to extract: `cm_per_unity_unit`, `cue_offset_cm`, segment names, trial zone ranges
+2. **Look up each segment** in the Current Segment Prefabs table
+3. **Verify zone ranges** using the formula: `range = (zone_z ± size/2) × cm_per_unity_unit`
+4. **Report results**: List each template as PASS or FAIL with specific mismatches
 
-3. **If versions differ**: Notify the user and ask whether to:
-   - Use the online version (fetch from GitHub)
-   - Update the local copy before proceeding
+**If all values match the pre-baked tables: Verification complete. Report PASS.**
 
-### Source File Location
+### Step 2: Handle Inconsistencies
 
-The authoritative schema is defined in:
+If a template or prefab value does NOT match the pre-baked tables:
+
+1. **Run the Single-Pass Extraction Script** (see below) to get actual values from files
+2. **Determine the source of mismatch**:
+   - If **template changed**: Verify the new template values are correct, update Expected Values tables
+   - If **prefab changed**: Verify the prefab is correct, update Expected Values tables
+   - If **pre-baked data was wrong**: Fix the tables
+3. **Update this skill file** with corrected Expected Values
+4. **Notify the user** of what changed and the final verification result
+
+### Step 3: Report Results
+
+Provide a summary table:
+
 ```
-sl-shared-assets/src/sl_shared_assets/data_classes/configuration_data.py
-```
-
----
-
-## Complete Configuration Schema
-
-### MesoscopeExperimentConfiguration (Root)
-
-The root configuration class that defines an experiment session. All YAML configuration files must conform to this
-structure.
-
-```yaml
-# Required fields
-cues: []                           # list[Cue] - VR wall cues
-segments: []                       # list[Segment] - VR corridor segments
-trial_structures: {}               # dict[str, WaterRewardTrial | GasPuffTrial]
-experiment_states: {}              # dict[str, MesoscopeExperimentState]
-vr_environment: {}                 # VREnvironment - corridor configuration
-unity_scene_name: ""               # str - Unity scene name (must match filename)
-
-# Optional fields
-cue_offset_cm: 0.0                 # float - animal starting position offset
+| Template | Status | Notes |
+|----------|--------|-------|
+| Name     | PASS   |       |
+| Name     | FAIL   | Reason|
 ```
 
 ---
 
-## Data Class Definitions
+## Expected Values (Pre-Baked)
 
-### Cue
+Use these tables for Step 1 verification. These values were extracted from actual files and should match.
 
-Defines a single visual cue used in the VR environment.
+### Templates
 
-| Field | Type | Required | Constraints | Description |
-|-------|------|----------|-------------|-------------|
-| `name` | str | Yes | Unique | Visual identifier (e.g., 'A', 'B', 'Gray') |
-| `code` | int | Yes | 0-255, unique | uint8 code for MQTT communication |
-| `length_cm` | float | Yes | > 0 | Length of the cue in centimeters |
+| Template               | cm_per_unit | cue_offset | Segments Used                                                              |
+|------------------------|-------------|------------|----------------------------------------------------------------------------|
+| MF_Aversion_Reward     | 10.0        | 10.0       | Segment_airPuff1, Segment_airPuff2                                         |
+| MF_Reward              | 10.0        | 10.0       | Segment_abcdefgh                                                           |
+| SSO_Connection         | 10.0        | 10.0       | Segment_abc_40cm, Segment_abca_40cm, Segment_defg_40cm, Segment_defgd_40cm |
+| SSO_Connection_Base    | 10.0        | 10.0       | Segment_defg_40cm                                                          |
+| SSO_Extension_Shortcut | 10.0        | 10.0       | Segment_abc_40cm, Segment_abdc_40cm                                        |
+| SSO_Merging            | 10.0        | 10.0       | Segment_abc_40cm, Segment_agfe_40cm                                        |
+| SSO_Merging_Base       | 10.0        | 10.0       | Segment_agfe_40cm                                                          |
+| SSO_Shared_Base        | 10.0        | 10.0       | Segment_abc_40cm                                                           |
+| SSO_Shortcut_Base      | 10.0        | 10.0       | Segment_abdc_40cm                                                          |
 
-**Validation Rules**:
-- `code` must be a uint8 value (0-255)
-- `code` must be unique across all cues
-- `name` must be unique across all cues
-- `length_cm` must be positive
+### Segment Prefabs
 
-```yaml
-cues:
-  - name: "A"
-    code: 1
-    length_cm: 50.0
-  - name: "Gray"
-    code: 0
-    length_cm: 25.0
+| Segment            | Wall Scale | Cue Count | Zone Type | Zone Z | Zone Size | Reset Z |
+|--------------------|------------|-----------|-----------|--------|-----------|---------|
+| Segment_abc_40cm   | 24         | 6         | Stimulus  | 18     | 2.4       | 1       |
+| Segment_abca_40cm  | 32         | 8         | Stimulus  | 18     | 2.4       | 1       |
+| Segment_abdc_40cm  | 32         | 8         | Stimulus  | 26     | 2.4       | 1       |
+| Segment_agfe_40cm  | 32         | 8         | Stimulus  | 18     | 2.4       | 1       |
+| Segment_defg_40cm  | 32         | 8         | Stimulus  | 26     | 2.4       | 1       |
+| Segment_defgd_40cm | 40         | 10        | Stimulus  | 26     | 2.4       | 1       |
+| Segment_abcdefgh   | 40         | 8         | Stimulus  | 37.5   | 3.5       | 1       |
+| Segment_airPuff1   | 20         | 4         | Occupancy | 17.5   | 3.5       | 1       |
+| Segment_airPuff2   | 20         | 4         | Stimulus  | 17.5   | 3.5       | 1       |
+
+### Zone Range Formulas
+
+**StimulusTriggerZone** (center=0):
 ```
+range_start_cm = (zone_z - size/2) × cm_per_unity_unit
+range_end_cm = (zone_z + size/2) × cm_per_unity_unit
+```
+
+**OccupancyTriggerZone** (occupancy region center=-5):
+```
+occupancy_start_cm = (zone_z - 5 - size/2) × cm_per_unity_unit
+occupancy_end_cm = (zone_z - 5 + size/2) × cm_per_unity_unit
+```
+
+### Pre-Computed Zone Ranges
+
+| Segment            | Zone Range (cm)   | Calculation                        |
+|--------------------|-------------------|------------------------------------|
+| Segment_abc_40cm   | 168.0 - 192.0     | (18 ± 1.2) × 10                    |
+| Segment_abca_40cm  | 168.0 - 192.0     | (18 ± 1.2) × 10                    |
+| Segment_abdc_40cm  | 248.0 - 272.0     | (26 ± 1.2) × 10                    |
+| Segment_agfe_40cm  | 168.0 - 192.0     | (18 ± 1.2) × 10                    |
+| Segment_defg_40cm  | 248.0 - 272.0     | (26 ± 1.2) × 10                    |
+| Segment_defgd_40cm | 248.0 - 272.0     | (26 ± 1.2) × 10                    |
+| Segment_abcdefgh   | 357.5 - 392.5     | (37.5 ± 1.75) × 10                 |
+| Segment_airPuff1   | 107.5 - 142.5     | ((17.5 - 5) ± 1.75) × 10 occupancy |
+| Segment_airPuff2   | 157.5 - 192.5     | (17.5 ± 1.75) × 10                 |
+
+### Cue Offset Verification
+
+All templates use `cue_offset_cm: 10.0`. All prefabs have `reset_z: 1`.
+Verification: `1 × 10.0 = 10.0` cm.
 
 ---
 
-### Segment
+## Extraction Commands (Use Only When Inconsistencies Found)
 
-Defines a visual segment (sequence of cues) in the VR environment.
+Only run these commands if Step 1 comparison reveals mismatches or if updating pre-baked values.
 
-| Field | Type | Required | Constraints | Description |
-|-------|------|----------|-------------|-------------|
-| `name` | str | Yes | Must match prefab filename | Unity prefab identifier |
-| `cue_sequence` | list[str] | Yes | Non-empty, valid cue names | Ordered sequence of cue names |
-| `transition_probabilities` | list[float] | No | Sum to 1.0 (±0.001 tolerance) | Probabilities to other segments |
+### Single-Pass Extraction Script
 
-**Validation Rules**:
-- `cue_sequence` must have at least one cue
-- All cue names in `cue_sequence` must reference defined cues
-- If `transition_probabilities` is provided, it must sum to 1.0 (within ±0.001 tolerance)
-- `name` must match an existing prefab in `Assets/InfiniteCorridorTask/Prefabs/`
-
-```yaml
-segments:
-  - name: "Segment_ABCD"
-    cue_sequence: ["A", "B", "C", "D"]
-    transition_probabilities: [0.5, 0.5]  # Optional
-```
-
----
-
-### VREnvironment
-
-Defines the Unity VR corridor system configuration.
-
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `corridor_spacing_cm` | float | 20.0 | Horizontal spacing between corridor instances |
-| `segments_per_corridor` | int | 3 | Number of segments visible in each corridor |
-| `padding_prefab_name` | str | "Padding" | Unity prefab for corridor padding |
-| `cm_per_unity_unit` | float | 10.0 | Conversion factor: cm to Unity units |
-
-**Unit Conversion Formula**:
-```
-Unity units = cm / cm_per_unity_unit
-cm = Unity units × cm_per_unity_unit
-```
-
-```yaml
-vr_environment:
-  corridor_spacing_cm: 20.0
-  segments_per_corridor: 3
-  padding_prefab_name: "Padding"
-  cm_per_unity_unit: 10.0
-```
-
----
-
-### WaterRewardTrial
-
-Defines a trial that delivers water rewards when the animal licks in the trigger zone.
-
-| Field | Type | Required | Constraints | Description |
-|-------|------|----------|-------------|-------------|
-| `segment_name` | str | Yes | Must reference defined segment | Unity segment for this trial |
-| `stimulus_trigger_zone_start_cm` | float | Yes | 0 ≤ value ≤ trial_length | Zone start position |
-| `stimulus_trigger_zone_end_cm` | float | Yes | ≥ start, ≤ trial_length | Zone end position |
-| `stimulus_location_cm` | float | Yes | ≥ zone_start, ≤ trial_length | Stimulus boundary location |
-| `show_stimulus_collision_boundary` | bool | No | - | Show boundary marker (default: false) |
-| `reward_size_ul` | float | No | > 0 | Water volume in microliters (default: 5.0) |
-| `reward_tone_duration_ms` | int | No | > 0 | Auditory tone duration (default: 300) |
-
-**Trigger Mode**: Animal must lick while inside the stimulus trigger zone to receive the water reward.
-
-**Guidance Mode**: Animal receives the reward upon colliding with the stimulus boundary (no lick required).
-
-```yaml
-trial_structures:
-  ABCD_reward:
-    segment_name: "Segment_ABCD"
-    stimulus_trigger_zone_start_cm: 107.5
-    stimulus_trigger_zone_end_cm: 142.5
-    stimulus_location_cm: 157.5
-    show_stimulus_collision_boundary: false
-    reward_size_ul: 5.0
-    reward_tone_duration_ms: 300
-```
-
----
-
-### GasPuffTrial
-
-Defines a trial that delivers N2 gas puffs when the animal fails to meet occupancy duration.
-
-| Field | Type | Required | Constraints | Description |
-|-------|------|----------|-------------|-------------|
-| `segment_name` | str | Yes | Must reference defined segment | Unity segment for this trial |
-| `stimulus_trigger_zone_start_cm` | float | Yes | 0 ≤ value ≤ trial_length | Zone start position |
-| `stimulus_trigger_zone_end_cm` | float | Yes | ≥ start, ≤ trial_length | Zone end position |
-| `stimulus_location_cm` | float | Yes | ≥ zone_start, ≤ trial_length | Stimulus boundary location |
-| `show_stimulus_collision_boundary` | bool | No | - | Show boundary marker (default: false) |
-| `puff_duration_ms` | int | No | > 0 | Gas puff duration (default: 100) |
-| `occupancy_duration_ms` | int | No | > 0 | Required occupancy time (default: 1000) |
-
-**Trigger Mode**: Animal must occupy the trigger zone for the specified duration to disarm the stimulus boundary
-and avoid the gas puff.
-
-**Guidance Mode**: When the animal exits early, OccupancyFailed is emitted for movement blocking.
-
-```yaml
-trial_structures:
-  ABCD_aversive:
-    segment_name: "Segment_airPuff1"
-    stimulus_trigger_zone_start_cm: 107.5
-    stimulus_trigger_zone_end_cm: 142.5
-    stimulus_location_cm: 157.5
-    show_stimulus_collision_boundary: false
-    puff_duration_ms: 100
-    occupancy_duration_ms: 1000
-```
-
----
-
-### MesoscopeExperimentState
-
-Defines the structure and runtime parameters of an experiment state (phase).
-
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `experiment_state_code` | int | Required | Unique identifier for the experiment state |
-| `system_state_code` | int | Required | Data acquisition system state code |
-| `state_duration_s` | float | Required | Duration to maintain this state |
-| `supports_trials` | bool | true | Whether trials execute during this state |
-| `reinforcing_initial_guided_trials` | int | 0 | Initial guided reinforcing trials |
-| `reinforcing_recovery_failed_threshold` | int | 0 | Failed trials before recovery mode |
-| `reinforcing_recovery_guided_trials` | int | 0 | Guided trials in recovery mode |
-| `aversive_initial_guided_trials` | int | 0 | Initial guided aversive trials |
-| `aversive_recovery_failed_threshold` | int | 0 | Failed trials before recovery mode |
-| `aversive_recovery_guided_trials` | int | 0 | Guided trials in recovery mode |
-
-```yaml
-experiment_states:
-  habituation:
-    experiment_state_code: 1
-    system_state_code: 1
-    state_duration_s: 300.0
-    supports_trials: false
-  training:
-    experiment_state_code: 2
-    system_state_code: 2
-    state_duration_s: 1800.0
-    supports_trials: true
-    reinforcing_initial_guided_trials: 5
-    reinforcing_recovery_failed_threshold: 3
-    reinforcing_recovery_guided_trials: 2
-```
-
----
-
-## Zone Position Validation Rules
-
-The `_MesoscopeBaseTrial.validate_zones()` method enforces these rules:
-
-1. **Zone ordering**: `stimulus_trigger_zone_end_cm` ≥ `stimulus_trigger_zone_start_cm`
-2. **Zone start bounds**: 0 ≤ `stimulus_trigger_zone_start_cm` ≤ `trial_length_cm`
-3. **Zone end bounds**: 0 ≤ `stimulus_trigger_zone_end_cm` ≤ `trial_length_cm`
-4. **Stimulus bounds**: 0 ≤ `stimulus_location_cm` ≤ `trial_length_cm`
-5. **Stimulus after zone start**: `stimulus_location_cm` ≥ `stimulus_trigger_zone_start_cm`
-
-**Trial length calculation**:
-```
-trial_length_cm = sum(cue.length_cm for cue in segment.cue_sequence)
-```
-
----
-
-## Prefab Zone Architecture
-
-### StimulusTriggerZone.prefab (Reward Trials)
-
-Used for lick-based reward trials. Structure:
-```
-StimulusTriggerZone (root)
-├── Transform: local position defines zone location
-├── BoxCollider: trigger zone bounds (m_Size, m_Center)
-├── StimulusTriggerZone script
-└── GuidanceRegion (child)
-    ├── BoxCollider: guidance sub-zone
-    └── GuidanceZone script
-```
-
-### OccupancyTriggerZone.prefab (Aversive/Occupancy Trials)
-
-Used for occupancy-based aversive trials. Structure:
-```
-OccupancyTriggerZone (root)
-├── Transform: local position (e.g., z=17.5)
-├── BoxCollider: stimulus boundary (size z=3.5, center z=0)
-├── StimulusTriggerZone script
-└── OccupancyRegion (child)
-    ├── BoxCollider: occupancy zone (size z=3.5, center z=-5)
-    ├── OccupancyZone script
-    └── OccupancyGuidanceRegion (child)
-        ├── BoxCollider: guidance sub-zone
-        └── OccupancyGuidanceZone script
-```
-
-**Key Insight**: Child colliders use `m_Center` offsets to position zones relative to parent transform.
-
----
-
-## Prefab Verification Procedure
-
-### Step 1: Extract Config Values
-
-From the YAML configuration file:
-```yaml
-vr_environment:
-  cm_per_unity_unit: 10.0
-
-trial_structures:
-  ABCD:
-    segment_name: "Segment_airPuff1"
-    stimulus_trigger_zone_start_cm: 107.5
-    stimulus_trigger_zone_end_cm: 142.5
-    stimulus_location_cm: 157.5
-```
-
-### Step 2: Locate Segment Prefab
-
-Find the prefab referenced by `segment_name`:
-```
-Assets/InfiniteCorridorTask/Prefabs/{segment_name}.prefab
-```
-
-### Step 3: Extract Prefab Zone Positions
-
-Search for nested prefab instances and their transforms:
 ```bash
-# Find zone prefab references
-grep -n "m_SourcePrefab:" Segment_{name}.prefab
+TEMPLATE_DIR="Assets/InfiniteCorridorTask/Configurations"
+PREFAB_DIR="Assets/InfiniteCorridorTask/Prefabs"
 
-# Find zone transform positions
-grep -B5 -A15 "PrefabInstance:" Segment_{name}.prefab | grep "m_LocalPosition"
+echo "## Templates"
+for yaml in "$TEMPLATE_DIR"/*.yaml; do
+  name=$(basename "$yaml" .yaml)
+  cm_per_unit=$(grep "cm_per_unity_unit:" "$yaml" | grep -oP '[0-9.]+')
+  cue_offset=$(grep "cue_offset_cm:" "$yaml" | grep -oP '[0-9.]+')
+  segments=$(grep -oP 'name: "Segment_[^"]+' "$yaml" | cut -d'"' -f2 | sort -u | tr '\n' ',' | sed 's/,$//')
+  echo "$name|cm_per_unit=$cm_per_unit|cue_offset=$cue_offset|segments=[$segments]"
+done
+
+echo ""
+echo "## Segment Prefabs"
+for prefab in "$PREFAB_DIR"/Segment_*.prefab; do
+  seg=$(basename "$prefab" .prefab)
+  wall=$(awk '/m_Name: (Left|Right)Wall/{f=1} f && /m_LocalScale:/{print; f=0; exit}' "$prefab" | grep -oP 'x: \K[0-9.]+')
+  reset_z=$(grep -A15 "value: ResetZone" "$prefab" | grep "m_LocalPosition.z" -A1 | grep "value:" | head -1 | grep -oP 'value: \K[0-9.]+')
+  stim_z=$(grep -A50 "guid: e502aa673cd52774593125318db2aeb3" "$prefab" | grep "m_LocalPosition.z" -A1 | grep "value:" | head -1 | grep -oP 'value: \K[0-9.]+')
+  stim_size=$(grep -A100 "guid: e502aa673cd52774593125318db2aeb3" "$prefab" | grep "m_Size.z" -A1 | grep "value:" | head -1 | grep -oP 'value: \K[0-9.]+')
+  occ_z=$(grep -A50 "guid: 3d9e6b3219444f94e85ebcb948ade18a" "$prefab" | grep "m_LocalPosition.z" -A1 | grep "value:" | head -1 | grep -oP 'value: \K[0-9.]+')
+  echo "$seg|wall=$wall|reset_z=$reset_z|stim_z=$stim_z|stim_size=$stim_size|occ_z=$occ_z"
+done
 ```
-
-### Step 4: Calculate Effective Zone Positions
-
-For each zone, calculate the effective position:
-```
-Effective Position = Parent Local Position + Collider Center Offset
-Zone Range = Effective Position ± (Collider Size / 2)
-```
-
-**Example** (OccupancyTriggerZone at z=17.5):
-- OccupancyRegion collider: center z=-5, size z=3.5
-- Effective center: 17.5 + (-5) = 12.5 Unity units
-- Range: 12.5 ± 1.75 = 10.75 to 14.25 Unity units
-- In cm: 107.5 to 142.5 cm
-
-### Step 5: Compare Against Config
-
-| Zone | Prefab Position | Config Range | Status |
-|------|-----------------|--------------|--------|
-| OccupancyRegion | 107.5-142.5cm | 107.5-142.5cm | Valid |
-| Stimulus Boundary | 157.5-192.5cm | 157.5cm | Valid |
 
 ---
 
-## Common Zone Prefab GUIDs
+## Codebase Structure Reference
 
-Reference for identifying zone types in prefab files:
+### Directory Layout
 
-| Prefab | GUID | Purpose |
-|--------|------|---------|
-| ResetZone.prefab | 78e4c512d0af3c44cbfbb233f81d345f | Lap reset trigger |
-| StimulusTriggerZone.prefab | e502aa673cd52774593125318db2aeb3 | Reward trial zones |
-| OccupancyTriggerZone.prefab | 3d9e6b3219444f94e85ebcb948ade18a | Occupancy trial zones |
+```
+Assets/InfiniteCorridorTask/
+├── Configurations/           # YAML task templates
+│   └── {TemplateName}.yaml
+├── Prefabs/                  # Unity prefabs
+│   ├── Padding.prefab
+│   ├── ResetZone.prefab
+│   ├── StimulusTriggerZone.prefab
+│   ├── OccupancyTriggerZone.prefab
+│   └── Segment_*.prefab
+└── Scripts/
+```
+
+### Zone Prefab GUIDs (Stable)
+
+| Prefab                      | GUID                               |
+|-----------------------------|------------------------------------|
+| ResetZone.prefab            | `78e4c512d0af3c44cbfbb233f81d345f` |
+| StimulusTriggerZone.prefab  | `e502aa673cd52774593125318db2aeb3` |
+| OccupancyTriggerZone.prefab | `3d9e6b3219444f94e85ebcb948ade18a` |
+
+### Verification Formulas
+
+| Check              | Formula                                                                   |
+|--------------------|---------------------------------------------------------------------------|
+| **Segment length** | `wall_scale = sum(cue.length_cm for cue in cue_sequence) / cm_per_unit`   |
+| **Cue offset**     | `reset_z × cm_per_unity_unit = cue_offset_cm`                             |
+| **Zone range**     | `(zone_z ± size/2) × cm_per_unity_unit`                                   |
 
 ---
 
-## Complete Validation Checklist
-
-When verifying configuration files:
+## Validation Checklist
 
 ### Schema Compliance
-1. **Cue uniqueness**: All cue codes are unique (0-255)
-2. **Cue name uniqueness**: All cue names are unique
-3. **Cue lengths**: All cue lengths are positive
-4. **Segment cue references**: All segment cue_sequence entries reference defined cues
-5. **Transition probabilities**: If provided, sum to 1.0 (±0.001)
-6. **Trial segment references**: All trial segment_names reference defined segments
-7. **Zone position ordering**: end ≥ start for all trials
-8. **Zone bounds**: All zone positions within trial length
-9. **Stimulus after zone**: stimulus_location_cm ≥ stimulus_trigger_zone_start_cm
+1. Cue codes unique (0-255)
+2. Cue names unique
+3. Cue lengths positive
+4. Segment cue_sequence references valid cues
+5. Transition probabilities sum to 1.0 (±0.001)
+6. Trial segment_names reference valid segments
 
 ### Prefab Compliance
-10. **Segment exists**: Prefab file exists at `Prefabs/{segment_name}.prefab`
-11. **Zone present**: Segment contains appropriate zone prefab instance
-12. **Position valid**: Zone position is within segment length bounds
-13. **Range matches**: Calculated zone range matches config start/end values
-14. **Stimulus location**: Boundary trigger aligns with `stimulus_location_cm`
-
-### File Naming
-15. **Scene name match**: `unity_scene_name` matches the YAML filename (without extension)
-
----
-
-## Known Implementation Gap
-
-**Important**: The YAML position fields (`stimulus_trigger_zone_start_cm`, etc.) are:
-- Defined in YAML configuration files
-- Validated by sl-shared-assets during loading
-- **NOT** programmatically applied by Unity at runtime
-
-Zone positions are determined entirely by prefab transforms. The YAML values serve as documentation/specification
-and are validated by sl-experiment during runtime. Always verify prefab positions match intended config values
-manually.
-
----
-
-## Configuration File Header
-
-Each configuration file must include the standard header (per style guide):
-
-```yaml
-# Project: [Full project name]
-# Purpose: [Single sentence describing the task structure]
-# Layout:  [Segment names with cue letters and zone placements]
-# Related: [Related config file (parenthetical explanation of relationship)]
-```
-
----
-
-## Example Complete Configuration
-
-```yaml
-# Project: StateSpaceOdyssey
-# Purpose: Defines a two-segment corridor with reward delivery in segment EFGH.
-# Layout:  Segment ABCD with no zones. Segment EFGH with reward trigger zone in cue H.
-# Related: SSO_Connection (extends this task with additional segments)
-
-cues:
-  - name: "Gray"
-    code: 0
-    length_cm: 25.0
-  - name: "A"
-    code: 1
-    length_cm: 50.0
-  - name: "B"
-    code: 2
-    length_cm: 50.0
-  # ... additional cues
-
-segments:
-  - name: "Segment_ABCD"
-    cue_sequence: ["A", "B", "C", "D"]
-    transition_probabilities: [0.5, 0.5]
-  - name: "Segment_EFGH"
-    cue_sequence: ["E", "F", "G", "H"]
-    transition_probabilities: [0.5, 0.5]
-
-trial_structures:
-  EFGH_reward:
-    segment_name: "Segment_EFGH"
-    stimulus_trigger_zone_start_cm: 150.0
-    stimulus_trigger_zone_end_cm: 175.0
-    stimulus_location_cm: 190.0
-    show_stimulus_collision_boundary: false
-    reward_size_ul: 5.0
-    reward_tone_duration_ms: 300
-
-experiment_states:
-  habituation:
-    experiment_state_code: 1
-    system_state_code: 1
-    state_duration_s: 300.0
-    supports_trials: false
-  training:
-    experiment_state_code: 2
-    system_state_code: 2
-    state_duration_s: 1800.0
-    supports_trials: true
-
-vr_environment:
-  corridor_spacing_cm: 20.0
-  segments_per_corridor: 3
-  padding_prefab_name: "Padding"
-  cm_per_unity_unit: 10.0
-
-unity_scene_name: "SSO_Shared_Base"
-cue_offset_cm: 0.0
-```
+1. `Prefabs/{segment_name}.prefab` exists for each segment
+2. `Prefabs/Padding.prefab` exists
+3. Wall scale matches segment length
+4. ResetZone z × cm_per_unity_unit = cue_offset_cm
+5. Zone ranges match template values

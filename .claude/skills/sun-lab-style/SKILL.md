@@ -7,10 +7,11 @@ description: >-
 
 # Sun Lab Style Guide
 
-When writing, reviewing, or refactoring C# code, apply the conventions defined in the Sun Lab
-style guide.
+When writing, reviewing, or refactoring C# code, apply the conventions defined in the Sun Lab style guide.
 
 See @SUN_LAB_STYLE_GUIDE.md for complete guidelines.
+
+---
 
 ## Key Conventions
 
