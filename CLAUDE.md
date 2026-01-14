@@ -58,7 +58,7 @@ actual library state to prevent integration errors.
 
 - `/explore-codebase` - Perform in-depth codebase exploration for Unity/C# projects
 - `/sun-lab-style` - Apply Sun Lab C# and Unity coding conventions (REQUIRED for all code and documentation changes)
-- `/configuration-verification` - Verify prefab positions match YAML configuration constants (REQUIRED when working with configuration files)
+- `/configuration-verification` - Verify prefab positions match YAML task template constants (REQUIRED when working with template files)
 
 ## Related Libraries
 
@@ -67,7 +67,7 @@ This project integrates with other Sun Lab systems:
 | Library              | Relationship          | Integration Points                                    |
 |----------------------|-----------------------|-------------------------------------------------------|
 | **sl-experiment**    | Data acquisition      | MQTT communication, cue sequence exchange, scene info |
-| **sl-shared-assets** | Configuration schemas | Experiment configuration data classes                 |
+| **sl-shared-assets** | Configuration schemas | Task template and experiment configuration classes    |
 | **gimbl**            | VR framework          | ActorObject, MQTTChannel, Display system              |
 
 **When working on MQTT integration**, ensure topic names and message formats match sl-experiment expectations:
@@ -89,7 +89,7 @@ sequences while receiving stimuli based on behavior.
 | Directory                                     | Purpose                                     |
 |-----------------------------------------------|---------------------------------------------|
 | `Assets/InfiniteCorridorTask/Scripts/`        | Core C# scripts for task logic              |
-| `Assets/InfiniteCorridorTask/Configurations/` | YAML experiment configuration files         |
+| `Assets/InfiniteCorridorTask/Configurations/` | YAML task template files                    |
 | `Assets/InfiniteCorridorTask/Prefabs/`        | Segment and zone prefabs                    |
 | `Assets/InfiniteCorridorTask/Tasks/`          | Generated task prefabs                      |
 | `Assets/UI-lick-reward/`                      | UI feedback system for lick/stimulus events |
@@ -100,15 +100,15 @@ sequences while receiving stimuli based on behavior.
 - **Task System**: MonoBehaviour-based controller managing corridor generation and animal tracking
 - **Zone System**: Hierarchical zone components (StimulusTriggerZone, GuidanceZone, OccupancyZone)
 - **MQTT Integration**: Type-safe channels for communication with sl-experiment
-- **Configuration**: YAML-based experiment definitions loaded at runtime
-- **Prefab Generation**: Editor tool creates task prefabs from configuration files
+- **Configuration**: YAML-based task templates loaded at runtime
+- **Prefab Generation**: Editor tool creates task prefabs from template files
 
 ### Key Patterns
 
 - **MQTT Event System**: MQTTChannel and MQTTChannel<T> for type-safe messaging
 - **Corridor Teleportation**: Animals teleport between corridor combinations as they progress
 - **Zone Hierarchy**: Parent-child zone relationships determine stimulus behavior modes
-- **Configuration-Driven Tasks**: YAML files define all experiment parameters; no hardcoded values
+- **Template-Driven Tasks**: YAML files define all task parameters; no hardcoded values
 
 ### Code Standards
 
@@ -129,25 +129,49 @@ csharpier .
 csharpier --check .
 ```
 
-## Configuration File Workflow
+## Task Template Workflow
 
-Configuration files follow:
+Task template files follow:
 - **Naming convention**: `ProjectAbbreviation_TaskDescription.yaml` (e.g., `SSO_Merging.yaml`)
 - **Header format**: Each file must include Project, Purpose, Layout, and Related fields as YAML comments
+- **Template name derivation**: The template name and Unity scene name are derived from the filename
 
 See the style guide for complete naming and header conventions.
 
-When creating or modifying YAML configuration files, you MUST invoke the `/configuration-verification` skill to verify that:
+When creating or modifying YAML task template files, you MUST invoke the `/configuration-verification` skill to verify that:
 - Referenced segment prefabs exist
-- Zone positions in prefabs match configuration constants
+- Zone positions in prefabs match template constants (using correct `cm_per_unity_unit` conversion)
 - Zone ranges are within segment length bounds
 
-This ensures experiment configurations are valid before task generation.
+This ensures task templates are valid before task generation.
+
+### Maintaining Pre-Baked Verification Data
+
+The `/configuration-verification` skill contains pre-baked codebase structure (GUIDs, expected values, directory layout)
+that enables efficient single-pass verification. This data MUST be updated when:
+
+1. **Template changes**: Adding, removing, or modifying any YAML file in `Configurations/`
+2. **Prefab changes**: Adding, removing, or modifying segment prefabs (`Segment_*.prefab`) or zone prefabs
+3. **Directory structure changes**: Reorganizing the `Assets/InfiniteCorridorTask/` directory
+4. **Zone prefab GUID changes**: If zone prefabs are recreated (new GUIDs assigned)
+
+**When any of these changes occur, you MUST update the following sections in
+`.claude/skills/configuration-verification/SKILL.md`:**
+
+| Section                                | Update When                                    |
+|----------------------------------------|------------------------------------------------|
+| Directory Layout                       | Directory structure changes                    |
+| Zone Prefab GUIDs (Stable)             | Zone prefabs recreated with new GUIDs          |
+| Zone Collider Hierarchies              | Zone prefab internal structure changes         |
+| Current Templates (Pre-Computed)       | Any template added, removed, or modified       |
+| Current Segment Prefabs (Pre-Computed) | Any segment prefab added, removed, or modified |
+
+Run the single-pass verification script after updates to confirm the pre-baked values match actual state.
 
 ## Creating New Tasks
 
-1. Create or modify a YAML configuration file in `Assets/InfiniteCorridorTask/Configurations/`
-2. Run `/configuration-verification` to validate prefab/config alignment
+1. Create or modify a YAML task template file in `Assets/InfiniteCorridorTask/Configurations/`
+2. Run `/configuration-verification` to validate prefab/template alignment
 3. Use the CreateTask editor tool: `CreateTask > New Task` menu
 4. Select the YAML file and save the generated prefab
 5. Create a new scene from ExperimentTemplate and add the task prefab

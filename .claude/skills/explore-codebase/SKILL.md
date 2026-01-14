@@ -7,8 +7,10 @@ description: >-
 
 # Codebase Exploration
 
-When this skill is invoked, perform a thorough exploration of the codebase to build deep
-understanding before any coding work begins.
+When this skill is invoked, perform a thorough exploration of the codebase to build deep understanding before any
+coding work begins.
+
+---
 
 ## Exploration Requirements
 
@@ -69,6 +71,8 @@ You MUST use the Task tool with `subagent_type: Explore` to investigate the foll
 - List the most important files with brief descriptions
 - Include file paths and line counts where relevant
 
+---
+
 ## Output Format
 
 After exploration, provide a structured summary with:
@@ -79,6 +83,8 @@ After exploration, provide a structured summary with:
 - MQTT topic reference
 - Notable patterns or conventions
 - Any areas of complexity or concern
+
+---
 
 ## Usage
 

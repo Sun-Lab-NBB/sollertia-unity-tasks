@@ -46,7 +46,7 @@ Place file-level documentation at the top of the file, before using statements:
 
 ```csharp
 /// <summary>
-/// Provides the ConfigLoader class for loading and validating experiment configurations from YAML files.
+/// Provides the ConfigLoader class for loading and validating task templates from YAML files.
 /// </summary>
 using System.Collections.Generic;
 using System.IO;
@@ -621,9 +621,130 @@ or by name. Avoid first person ("I," "we") and second person ("you") where possi
 
 ---
 
-## Configuration File Naming
+## Skill and Asset Files
 
-YAML experiment configuration files follow the naming convention:
+Claude Code skill files (`.md` files in `.claude/skills/`) and related documentation assets follow specific
+formatting conventions to ensure readability and consistency.
+
+### Line Length
+
+All skill and asset markdown files must adhere to the **120 character line limit**. This matches the C# code
+formatting standard and ensures consistent readability across all project files.
+
+- Wrap prose text at 120 characters
+- Break long sentences at natural boundaries (after punctuation, between clauses)
+- Code blocks may exceed 120 characters only when necessary for readability
+
+### Table Formatting
+
+Use **pretty table formatting** with proper column alignment and consistent column widths:
+
+**Good - Properly formatted table:**
+
+```markdown
+| Field                  | Type        | Required | Description                              |
+|------------------------|-------------|----------|------------------------------------------|
+| `name`                 | str         | Yes      | Visual identifier (e.g., 'A', 'Gray')    |
+| `code`                 | int         | Yes      | Unique uint8 code for MQTT communication |
+| `length_cm`            | float       | Yes      | Length of the cue in centimeters         |
+| `transition_probs`     | list[float] | No       | Probabilities to other segments          |
+```
+
+**Avoid - Inconsistent column widths:**
+
+```markdown
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `name` | str | Yes | Visual identifier |
+| `code` | int | Yes | Unique uint8 code |
+```
+
+### Table Formatting Rules
+
+1. **Column separators**: Align all `|` characters vertically
+2. **Header separator**: Use dashes (`-`) that span the full column width
+3. **Cell padding**: Add spaces to pad cells to consistent widths within each column
+4. **Minimum width**: Each column should be at least as wide as its longest cell content
+5. **Code formatting**: Use backticks for field names, types, and values in tables
+
+### Section Organization
+
+Organize skill files with clear hierarchical sections:
+
+```markdown
+# Skill Name
+
+Brief description of the skill's purpose.
+
+---
+
+## When to Use
+
+- Bullet points describing use cases
+
+---
+
+## Main Content Section
+
+### Subsection
+
+Content with tables, code blocks, and explanations.
+
+---
+
+## Additional Sections
+
+Continue with logical organization.
+```
+
+### Code Blocks in Skills
+
+Use fenced code blocks with language identifiers:
+
+````markdown
+```yaml
+cues:
+  - name: "A"
+    code: 1
+```
+
+```bash
+grep -n "pattern" file.txt
+```
+
+```csharp
+private void ProcessData() { }
+```
+````
+
+### Voice and Directional Language
+
+Skill files use two voice styles depending on context:
+
+- **Descriptive content**: Use third person imperative (same as code documentation). Example: "Extracts zone positions
+  from prefab files."
+- **Agent directives**: Use second person with "You MUST", "You should", etc. when instructing the agent to perform
+  specific actions. Example: "You MUST use the Task tool with `subagent_type: Explore`."
+
+Directional language is appropriate for skills because they are instructions for an AI agent, not documentation for
+human readers.
+
+### Skill File Checklist
+
+When creating or modifying skill files:
+
+1. **Line length**: All lines ≤ 120 characters
+2. **Tables**: Use pretty formatting with aligned columns
+3. **Sections**: Separate major sections with horizontal rules (`---`)
+4. **Code blocks**: Include language identifiers
+5. **Voice**: Third person imperative for descriptions; second person directives for agent instructions
+6. **Headers**: Use sentence case for section headers
+
+---
+
+## Task Template File Naming
+
+YAML task template files follow the naming convention:
 
 ```
 ProjectAbbreviation_TaskDescription.yaml
@@ -659,29 +780,25 @@ SSO_Merging.yaml                  # StateSpaceOdyssey merging trials
 - Capitalize each word in the task description
 - Separate multiple words with underscores
 
-### Unity Scene Name
+### Template Name Derivation
 
-The `unity_scene_name` field must match the configuration file name (without the `.yaml` extension):
+The template name and Unity scene name are derived from the YAML filename (without the `.yaml` extension). No
+explicit `unity_scene_name` field is needed in task templates.
 
-```yaml
-# File: SSO_Shared_Base.yaml
-unity_scene_name: "SSO_Shared_Base"
-
-# File: MF_Aversion_Reward.yaml
-unity_scene_name: "MF_Aversion_Reward"
+```
+SSO_Shared_Base.yaml      → Template name: "SSO_Shared_Base", Scene name: "SSO_Shared_Base"
+MF_Aversion_Reward.yaml   → Template name: "MF_Aversion_Reward", Scene name: "MF_Aversion_Reward"
 ```
 
-This ensures consistency between configuration files and their corresponding Unity scenes.
+### Task Template Header
 
-### Configuration Header
-
-Each configuration file must begin with a YAML comment header containing the following information:
+Each task template file must begin with a YAML comment header containing the following information:
 
 ```yaml
 # Project: [Full project name]
 # Purpose: [Single sentence describing the task structure]
 # Layout:  [Segment names with cue letters and zone placements]
-# Related: [Related config file (parenthetical explanation of relationship)]
+# Related: [Related template file (parenthetical explanation of relationship)]
 ```
 
 **Multi-line Wrapping**: When content exceeds the line length, wrap to the next line and align continuation
@@ -733,6 +850,9 @@ Use inline comments when:
 ## Commit Messages
 
 ### Format
+
+**Header line limit**: The first line (header) must be no longer than 72 characters. This ensures proper display in
+Git logs, GitHub, and other tools.
 
 **Single-line commits**: Use for focused, single-purpose changes.
 

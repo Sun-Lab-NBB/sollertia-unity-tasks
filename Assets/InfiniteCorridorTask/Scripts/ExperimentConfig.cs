@@ -1,8 +1,8 @@
 /// <summary>
-/// Provides data classes for parsing and accessing experiment configuration from YAML files.
+/// Provides data classes for parsing and accessing task templates from YAML files.
 ///
-/// These classes mirror the Python configuration classes from sl-shared-assets, containing only
-/// the subset of data needed by Unity for the VR corridor system.
+/// These classes mirror the Python task template classes from sl-shared-assets, containing
+/// the data needed by Unity for VR corridor system prefab generation and runtime.
 /// </summary>
 using System;
 using System.Collections.Generic;
@@ -54,14 +54,24 @@ namespace SL.Config
     }
 
     /// <summary>
-    /// Base class for trial configurations. Contains the segment mapping and visibility settings.
-    /// This mirrors the _MesoscopeBaseTrial class from sl-shared-assets.
+    /// Defines the spatial configuration of a trial structure for Unity prefabs.
+    /// Contains segment mapping, zone positions, and visibility settings.
+    /// This mirrors the TrialStructure class from sl-shared-assets task_template_data module.
     /// </summary>
     [Serializable]
-    public class BaseTrial
+    public class TrialStructure
     {
-        /// <summary>The name of the Unity Segment this trial is based on.</summary>
+        /// <summary>The name of the Unity Segment this trial structure is based on.</summary>
         public string segment_name;
+
+        /// <summary>The position of the trial stimulus trigger zone starting boundary, in centimeters.</summary>
+        public float stimulus_trigger_zone_start_cm;
+
+        /// <summary>The position of the trial stimulus trigger zone ending boundary, in centimeters.</summary>
+        public float stimulus_trigger_zone_end_cm;
+
+        /// <summary>The location of the invisible boundary with which the animal must collide to elicit the stimulus.</summary>
+        public float stimulus_location_cm;
 
         /// <summary>
         /// Determines whether the stimulus collision boundary is visible to the animal during this trial type.
@@ -93,15 +103,27 @@ namespace SL.Config
     }
 
     /// <summary>
-    /// Unified experiment configuration for VR behavioral tasks.
-    /// This is the C# mirror of the Python MesoscopeExperimentConfiguration class.
-    /// Unity only needs the cue, segment, and VR environment data from the full configuration.
+    /// Defines a VR task template used by Unity for prefab generation and runtime configuration.
+    /// This mirrors the TaskTemplate class from sl-shared-assets task_template_data module.
+    /// The template name is derived from the YAML filename during loading.
     /// </summary>
     [Serializable]
-    public class MesoscopeExperimentConfiguration
+    public class TaskTemplate
     {
-        /// <summary>The name of the Virtual Reality task (Unity Scene) used during the experiment.</summary>
-        public string unity_scene_name;
+        /// <summary>The list of visual cues used in the task.</summary>
+        public List<Cue> cues;
+
+        /// <summary>The list of visual segments for the Unity corridor system.</summary>
+        public List<Segment> segments;
+
+        /// <summary>
+        /// The dictionary of trial structures mapping trial names to their spatial configurations.
+        /// Keys are trial names (e.g., 'ABC'), values contain zone positions and visibility settings.
+        /// </summary>
+        public Dictionary<string, TrialStructure> trial_structures;
+
+        /// <summary>The configuration for the Unity VR corridor system.</summary>
+        public VREnvironment vr_environment;
 
         /// <summary>
         /// The offset of the animal's starting position relative to the VR environment's
@@ -109,31 +131,16 @@ namespace SL.Config
         /// </summary>
         public float cue_offset_cm;
 
-        /// <summary>The list of all cues used in the experiment.</summary>
-        public List<Cue> cues;
-
-        /// <summary>The list of visual segments for the Unity corridor system.</summary>
-        public List<Segment> segments;
-
-        /// <summary>The configuration for the Unity VR corridor system.</summary>
-        public VREnvironment vr_environment;
-
         /// <summary>
-        /// The dictionary of trial structures mapping trial names to their configurations.
-        /// Each trial references a segment and contains visibility settings.
+        /// The template name, derived from the YAML filename during loading.
+        /// Also corresponds to the Unity scene name.
         /// </summary>
-        public Dictionary<string, BaseTrial> trial_structures;
+        public string template_name;
 
         /// <summary>Returns a map of cue name to byte code for MQTT encoding.</summary>
         public Dictionary<string, byte> GetCueNameToCode()
         {
             return cues.ToDictionary(c => c.name, c => (byte)c.code);
-        }
-
-        /// <summary>Returns a map of cue code to Cue.</summary>
-        public Dictionary<int, Cue> GetCueByCode()
-        {
-            return cues.ToDictionary(c => c.code, c => c);
         }
 
         /// <summary>Returns a map of cue name to Cue.</summary>
@@ -174,18 +181,10 @@ namespace SL.Config
             return segment.cue_sequence.Sum(cueName => cueMap[cueName].LengthUnity(cmPerUnit));
         }
 
-        /// <summary>Gets the cue codes for a segment's cue sequence.</summary>
-        public List<byte> GetSegmentCueCodes(string segmentName)
-        {
-            Segment segment = GetSegmentByName()[segmentName];
-            Dictionary<string, byte> nameToCode = GetCueNameToCode();
-            return segment.cue_sequence.Select(cueName => nameToCode[cueName]).ToList();
-        }
-
         /// <summary>
-        /// Gets whether the stimulus collision boundary should be visible for a given segment.
+        /// Returns whether the stimulus collision boundary should be visible for a given segment.
         /// Looks up the trial that references this segment and returns its visibility setting.
-        /// Returns false if no trial references this segment or if trial_structures is not defined.
+        /// Returns false if no trial references this segment.
         /// </summary>
         public bool GetSegmentMarkerVisibility(string segmentName)
         {
@@ -194,7 +193,7 @@ namespace SL.Config
                 return false;
             }
 
-            foreach (BaseTrial trial in trial_structures.Values)
+            foreach (TrialStructure trial in trial_structures.Values)
             {
                 if (trial.segment_name == segmentName)
                 {

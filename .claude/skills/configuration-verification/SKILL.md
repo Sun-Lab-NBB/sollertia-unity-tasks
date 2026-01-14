@@ -1,185 +1,198 @@
-# Configuration Verification Skill
+# Task Template Verification Skill
 
-Verifies that Unity prefabs match YAML experiment configuration files. Use this skill when creating,
-modifying, or reviewing configuration files to ensure prefab positions and settings are valid.
-
----
-
-## When to Use
-
-- Creating new YAML experiment configurations
-- Modifying existing configuration zone positions
-- Reviewing configuration files for correctness
-- Debugging zone trigger issues
-- Creating new segment prefabs
+Verifies YAML task templates against Unity prefab state using pre-baked expected values.
 
 ---
 
-## Configuration Structure
+## Verification Workflow
 
-### Zone Position Fields in YAML
+Follow this procedure exactly. Most verifications require NO bash commands.
 
-```yaml
-trial_structures:
-  trial_name:
-    segment_name: "Segment_name"
-    stimulus_trigger_zone_start_cm: 107.5      # Occupancy/trigger zone start
-    stimulus_trigger_zone_end_cm: 142.5         # Occupancy/trigger zone end
-    stimulus_location_cm: 157.5                 # Stimulus boundary location
-    show_stimulus_collision_boundary: false
-    occupancy_duration_ms: 1000                 # For occupancy-based trials
-    reward_size_ul: 5.0                         # For reward-based trials
+### Step 1: Compare Against Pre-Baked Values
+
+For each template being verified, compare the YAML content against the **Expected Values** tables below:
+
+1. **Read the template YAML** to extract: `cm_per_unity_unit`, `cue_offset_cm`, segment names, trial zone ranges
+2. **Look up each segment** in the Current Segment Prefabs table
+3. **Verify zone ranges** using the formula: `range = (zone_z ± size/2) × cm_per_unity_unit`
+4. **Report results**: List each template as PASS or FAIL with specific mismatches
+
+**If all values match the pre-baked tables: Verification complete. Report PASS.**
+
+### Step 2: Handle Inconsistencies
+
+If a template or prefab value does NOT match the pre-baked tables:
+
+1. **Run the Single-Pass Extraction Script** (see below) to get actual values from files
+2. **Determine the source of mismatch**:
+   - If **template changed**: Verify the new template values are correct, update Expected Values tables
+   - If **prefab changed**: Verify the prefab is correct, update Expected Values tables
+   - If **pre-baked data was wrong**: Fix the tables
+3. **Update this skill file** with corrected Expected Values
+4. **Notify the user** of what changed and the final verification result
+
+### Step 3: Report Results
+
+Provide a summary table:
+
 ```
-
-### Unit Conversion
-
-The `cm_per_unity_unit` field in `vr_environment` defines the conversion factor (typically 10.0):
-- **Config values are in centimeters**
-- **Prefab positions are in Unity units**
-- Formula: `Unity units = cm / cm_per_unity_unit`
+| Template | Status | Notes |
+|----------|--------|-------|
+| Name     | PASS   |       |
+| Name     | FAIL   | Reason|
+```
 
 ---
 
-## Prefab Zone Architecture
+## Expected Values (Pre-Baked)
 
-### StimulusTriggerZone.prefab (Reward Trials)
+Use these tables for Step 1 verification. These values were extracted from actual files and should match.
 
-Used for lick-based reward trials. Structure:
+### Templates
+
+| Template               | cm_per_unit | cue_offset | Segments Used                                                              |
+|------------------------|-------------|------------|----------------------------------------------------------------------------|
+| MF_Aversion_Reward     | 10.0        | 10.0       | Segment_airPuff1, Segment_airPuff2                                         |
+| MF_Reward              | 10.0        | 10.0       | Segment_abcdefgh                                                           |
+| SSO_Connection         | 10.0        | 10.0       | Segment_abc_40cm, Segment_abca_40cm, Segment_defg_40cm, Segment_defgd_40cm |
+| SSO_Connection_Base    | 10.0        | 10.0       | Segment_defg_40cm                                                          |
+| SSO_Extension_Shortcut | 10.0        | 10.0       | Segment_abc_40cm, Segment_abdc_40cm                                        |
+| SSO_Merging            | 10.0        | 10.0       | Segment_abc_40cm, Segment_agfe_40cm                                        |
+| SSO_Merging_Base       | 10.0        | 10.0       | Segment_agfe_40cm                                                          |
+| SSO_Shared_Base        | 10.0        | 10.0       | Segment_abc_40cm                                                           |
+| SSO_Shortcut_Base      | 10.0        | 10.0       | Segment_abdc_40cm                                                          |
+
+### Segment Prefabs
+
+| Segment            | Wall Scale | Cue Count | Zone Type | Zone Z | Zone Size | Reset Z |
+|--------------------|------------|-----------|-----------|--------|-----------|---------|
+| Segment_abc_40cm   | 24         | 6         | Stimulus  | 18     | 2.4       | 1       |
+| Segment_abca_40cm  | 32         | 8         | Stimulus  | 18     | 2.4       | 1       |
+| Segment_abdc_40cm  | 32         | 8         | Stimulus  | 26     | 2.4       | 1       |
+| Segment_agfe_40cm  | 32         | 8         | Stimulus  | 18     | 2.4       | 1       |
+| Segment_defg_40cm  | 32         | 8         | Stimulus  | 26     | 2.4       | 1       |
+| Segment_defgd_40cm | 40         | 10        | Stimulus  | 26     | 2.4       | 1       |
+| Segment_abcdefgh   | 40         | 8         | Stimulus  | 37.5   | 3.5       | 1       |
+| Segment_airPuff1   | 20         | 4         | Occupancy | 17.5   | 3.5       | 1       |
+| Segment_airPuff2   | 20         | 4         | Stimulus  | 17.5   | 3.5       | 1       |
+
+### Zone Range Formulas
+
+**StimulusTriggerZone** (center=0):
 ```
-StimulusTriggerZone (root)
-├── Transform: local position defines zone location
-├── BoxCollider: trigger zone bounds (m_Size, m_Center)
-├── StimulusTriggerZone script
-└── GuidanceRegion (child)
-    ├── BoxCollider: guidance sub-zone
-    └── GuidanceZone script
+range_start_cm = (zone_z - size/2) × cm_per_unity_unit
+range_end_cm = (zone_z + size/2) × cm_per_unity_unit
 ```
 
-### OccupancyTriggerZone.prefab (Aversive/Occupancy Trials)
-
-Used for occupancy-based aversive trials. Structure:
+**OccupancyTriggerZone** (occupancy region center=-5):
 ```
-OccupancyTriggerZone (root)
-├── Transform: local position (e.g., z=17.5)
-├── BoxCollider: stimulus boundary (size z=3.5, center z=0)
-├── StimulusTriggerZone script
-└── OccupancyRegion (child)
-    ├── BoxCollider: occupancy zone (size z=3.5, center z=-5)
-    ├── OccupancyZone script
-    └── OccupancyGuidanceRegion (child)
-        ├── BoxCollider: guidance sub-zone
-        └── OccupancyGuidanceZone script
+occupancy_start_cm = (zone_z - 5 - size/2) × cm_per_unity_unit
+occupancy_end_cm = (zone_z - 5 + size/2) × cm_per_unity_unit
 ```
 
-**Key Insight**: Child colliders use `m_Center` offsets to position zones relative to parent transform.
+### Pre-Computed Zone Ranges
+
+| Segment            | Zone Range (cm)   | Calculation                        |
+|--------------------|-------------------|------------------------------------|
+| Segment_abc_40cm   | 168.0 - 192.0     | (18 ± 1.2) × 10                    |
+| Segment_abca_40cm  | 168.0 - 192.0     | (18 ± 1.2) × 10                    |
+| Segment_abdc_40cm  | 248.0 - 272.0     | (26 ± 1.2) × 10                    |
+| Segment_agfe_40cm  | 168.0 - 192.0     | (18 ± 1.2) × 10                    |
+| Segment_defg_40cm  | 248.0 - 272.0     | (26 ± 1.2) × 10                    |
+| Segment_defgd_40cm | 248.0 - 272.0     | (26 ± 1.2) × 10                    |
+| Segment_abcdefgh   | 357.5 - 392.5     | (37.5 ± 1.75) × 10                 |
+| Segment_airPuff1   | 107.5 - 142.5     | ((17.5 - 5) ± 1.75) × 10 occupancy |
+| Segment_airPuff2   | 157.5 - 192.5     | (17.5 ± 1.75) × 10                 |
+
+### Cue Offset Verification
+
+All templates use `cue_offset_cm: 10.0`. All prefabs have `reset_z: 1`.
+Verification: `1 × 10.0 = 10.0` cm.
 
 ---
 
-## Verification Procedure
+## Extraction Commands (Use Only When Inconsistencies Found)
 
-### Step 1: Extract Config Values
+Only run these commands if Step 1 comparison reveals mismatches or if updating pre-baked values.
 
-From the YAML configuration file:
-```yaml
-vr_environment:
-  cm_per_unity_unit: 10.0
+### Single-Pass Extraction Script
 
-trial_structures:
-  ABCD:
-    segment_name: "Segment_airPuff1"
-    stimulus_trigger_zone_start_cm: 107.5
-    stimulus_trigger_zone_end_cm: 142.5
-    stimulus_location_cm: 157.5
-```
-
-### Step 2: Locate Segment Prefab
-
-Find the prefab referenced by `segment_name`:
-```
-Assets/InfiniteCorridorTask/Prefabs/{segment_name}.prefab
-```
-
-### Step 3: Extract Prefab Zone Positions
-
-Search for nested prefab instances and their transforms:
 ```bash
-# Find zone prefab references
-grep -n "m_SourcePrefab:" Segment_{name}.prefab
+TEMPLATE_DIR="Assets/InfiniteCorridorTask/Configurations"
+PREFAB_DIR="Assets/InfiniteCorridorTask/Prefabs"
 
-# Find zone transform positions
-grep -B5 -A15 "PrefabInstance:" Segment_{name}.prefab | grep "m_LocalPosition"
+echo "## Templates"
+for yaml in "$TEMPLATE_DIR"/*.yaml; do
+  name=$(basename "$yaml" .yaml)
+  cm_per_unit=$(grep "cm_per_unity_unit:" "$yaml" | grep -oP '[0-9.]+')
+  cue_offset=$(grep "cue_offset_cm:" "$yaml" | grep -oP '[0-9.]+')
+  segments=$(grep -oP 'name: "Segment_[^"]+' "$yaml" | cut -d'"' -f2 | sort -u | tr '\n' ',' | sed 's/,$//')
+  echo "$name|cm_per_unit=$cm_per_unit|cue_offset=$cue_offset|segments=[$segments]"
+done
+
+echo ""
+echo "## Segment Prefabs"
+for prefab in "$PREFAB_DIR"/Segment_*.prefab; do
+  seg=$(basename "$prefab" .prefab)
+  wall=$(awk '/m_Name: (Left|Right)Wall/{f=1} f && /m_LocalScale:/{print; f=0; exit}' "$prefab" | grep -oP 'x: \K[0-9.]+')
+  reset_z=$(grep -A15 "value: ResetZone" "$prefab" | grep "m_LocalPosition.z" -A1 | grep "value:" | head -1 | grep -oP 'value: \K[0-9.]+')
+  stim_z=$(grep -A50 "guid: e502aa673cd52774593125318db2aeb3" "$prefab" | grep "m_LocalPosition.z" -A1 | grep "value:" | head -1 | grep -oP 'value: \K[0-9.]+')
+  stim_size=$(grep -A100 "guid: e502aa673cd52774593125318db2aeb3" "$prefab" | grep "m_Size.z" -A1 | grep "value:" | head -1 | grep -oP 'value: \K[0-9.]+')
+  occ_z=$(grep -A50 "guid: 3d9e6b3219444f94e85ebcb948ade18a" "$prefab" | grep "m_LocalPosition.z" -A1 | grep "value:" | head -1 | grep -oP 'value: \K[0-9.]+')
+  echo "$seg|wall=$wall|reset_z=$reset_z|stim_z=$stim_z|stim_size=$stim_size|occ_z=$occ_z"
+done
 ```
-
-### Step 4: Calculate Effective Zone Positions
-
-For each zone, calculate the effective position:
-```
-Effective Position = Parent Local Position + Collider Center Offset
-Zone Range = Effective Position ± (Collider Size / 2)
-```
-
-**Example** (OccupancyTriggerZone at z=17.5):
-- OccupancyRegion collider: center z=-5, size z=3.5
-- Effective center: 17.5 + (-5) = 12.5 Unity units
-- Range: 12.5 ± 1.75 = 10.75 to 14.25 Unity units
-- In cm: 107.5 to 142.5 cm
-
-### Step 5: Compare Against Config
-
-| Zone              | Prefab Position | Config Range  | Status |
-|-------------------|-----------------|---------------|--------|
-| OccupancyRegion   | 107.5-142.5cm   | 107.5-142.5cm | Valid  |
-| Stimulus Boundary | 157.5-192.5cm   | 157.5cm       | Valid  |
 
 ---
 
-## Common Zone Prefab GUIDs
+## Codebase Structure Reference
 
-Reference for identifying zone types in prefab files:
+### Directory Layout
 
-| Prefab                      | GUID                             | Purpose               |
-|-----------------------------|----------------------------------|-----------------------|
-| ResetZone.prefab            | 78e4c512d0af3c44cbfbb233f81d345f | Lap reset trigger     |
-| StimulusTriggerZone.prefab  | e502aa673cd52774593125318db2aeb3 | Reward trial zones    |
-| OccupancyTriggerZone.prefab | 3d9e6b3219444f94e85ebcb948ade18a | Occupancy trial zones |
+```
+Assets/InfiniteCorridorTask/
+├── Configurations/           # YAML task templates
+│   └── {TemplateName}.yaml
+├── Prefabs/                  # Unity prefabs
+│   ├── Padding.prefab
+│   ├── ResetZone.prefab
+│   ├── StimulusTriggerZone.prefab
+│   ├── OccupancyTriggerZone.prefab
+│   └── Segment_*.prefab
+└── Scripts/
+```
+
+### Zone Prefab GUIDs (Stable)
+
+| Prefab                      | GUID                               |
+|-----------------------------|------------------------------------|
+| ResetZone.prefab            | `78e4c512d0af3c44cbfbb233f81d345f` |
+| StimulusTriggerZone.prefab  | `e502aa673cd52774593125318db2aeb3` |
+| OccupancyTriggerZone.prefab | `3d9e6b3219444f94e85ebcb948ade18a` |
+
+### Verification Formulas
+
+| Check              | Formula                                                                   |
+|--------------------|---------------------------------------------------------------------------|
+| **Segment length** | `wall_scale = sum(cue.length_cm for cue in cue_sequence) / cm_per_unit`   |
+| **Cue offset**     | `reset_z × cm_per_unity_unit = cue_offset_cm`                             |
+| **Zone range**     | `(zone_z ± size/2) × cm_per_unity_unit`                                   |
 
 ---
 
 ## Validation Checklist
 
-When verifying configuration files:
+### Schema Compliance
+1. Cue codes unique (0-255)
+2. Cue names unique
+3. Cue lengths positive
+4. Segment cue_sequence references valid cues
+5. Transition probabilities sum to 1.0 (±0.001)
+6. Trial segment_names reference valid segments
 
-1. **Segment exists**: Prefab file exists at `Prefabs/{segment_name}.prefab`
-2. **Zone present**: Segment contains appropriate zone prefab instance
-3. **Position valid**: Zone position is within segment length bounds
-4. **Range matches**: Calculated zone range matches config start/end values
-5. **Stimulus location**: Boundary trigger aligns with `stimulus_location_cm`
-
----
-
-## Known Implementation Gap
-
-**Important**: The YAML position fields (`stimulus_trigger_zone_start_cm`, etc.) are:
-- Defined in YAML configuration files
-- **NOT** declared in the `BaseTrial` C# class
-- **NOT** used by `CreateTask.cs` at runtime
-
-Zone positions are determined entirely by prefab transforms. The YAML values serve as
-documentation/specification but are not programmatically applied. Always verify prefab positions match
-intended config values manually.
-
----
-
-## Segment Length Validation
-
-Ensure zones are within segment bounds:
-
-```
-Segment Length = Sum of cue lengths (in cm)
-Zone Position < Segment Length
-```
-
-Example:
-- Segment with cues A,B,C,D (50cm each) = 200cm total
-- Zone at 175cm: Valid (175 < 200)
-- Zone at 210cm: Invalid (exceeds segment)
+### Prefab Compliance
+1. `Prefabs/{segment_name}.prefab` exists for each segment
+2. `Prefabs/Padding.prefab` exists
+3. Wall scale matches segment length
+4. ResetZone z × cm_per_unity_unit = cue_offset_cm
+5. Zone ranges match template values

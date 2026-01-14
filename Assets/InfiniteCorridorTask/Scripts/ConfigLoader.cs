@@ -1,5 +1,5 @@
 /// <summary>
-/// Provides the ConfigLoader class for loading and validating experiment configurations from YAML files.
+/// Provides the ConfigLoader class for loading and validating task templates from YAML files.
 /// </summary>
 using System.Collections.Generic;
 using System.IO;
@@ -10,18 +10,18 @@ using YamlDotNet.Serialization.NamingConventions;
 namespace SL.Config
 {
     /// <summary>
-    /// Loads and validates experiment configuration from YAML files.
+    /// Loads and validates task templates from YAML files.
     /// </summary>
     public static class ConfigLoader
     {
-        /// <summary>Loads a MesoscopeExperimentConfiguration from a YAML file.</summary>
-        /// <param name="filePath">The absolute path to the YAML configuration file.</param>
-        /// <returns>The parsed configuration, or null if loading fails.</returns>
-        public static MesoscopeExperimentConfiguration Load(string filePath)
+        /// <summary>Loads a TaskTemplate from a YAML file and derives the template name from the filename.</summary>
+        /// <param name="filePath">The absolute path to the YAML template file.</param>
+        /// <returns>The parsed template with template_name populated, or null if loading fails.</returns>
+        public static TaskTemplate LoadTemplate(string filePath)
         {
             if (!File.Exists(filePath))
             {
-                Debug.LogError($"Configuration file not found: {filePath}");
+                Debug.LogError($"Template file not found: {filePath}");
                 return null;
             }
 
@@ -31,40 +31,43 @@ namespace SL.Config
                 .Build();
 
             string yaml = File.ReadAllText(filePath);
-            MesoscopeExperimentConfiguration config = deserializer.Deserialize<MesoscopeExperimentConfiguration>(yaml);
+            TaskTemplate template = deserializer.Deserialize<TaskTemplate>(yaml);
 
-            if (!Validate(config))
+            if (!ValidateTemplate(template))
             {
                 return null;
             }
 
-            return config;
+            // Derives template name from filename (without extension)
+            template.template_name = Path.GetFileNameWithoutExtension(filePath);
+
+            return template;
         }
 
-        /// <summary>Validates the loaded configuration for required fields and data integrity.</summary>
-        /// <param name="config">The configuration to validate.</param>
-        /// <returns>True if the configuration is valid, false otherwise.</returns>
-        private static bool Validate(MesoscopeExperimentConfiguration config)
+        /// <summary>Validates the loaded template for required fields and data integrity.</summary>
+        /// <param name="template">The template to validate.</param>
+        /// <returns>True if the template is valid, false otherwise.</returns>
+        private static bool ValidateTemplate(TaskTemplate template)
         {
-            if (config == null)
+            if (template == null)
             {
-                Debug.LogError("Failed to parse configuration file.");
+                Debug.LogError("Failed to parse template file.");
                 return false;
             }
 
-            if (config.cues == null || config.cues.Count == 0)
+            if (template.cues == null || template.cues.Count == 0)
             {
-                Debug.LogError("No cues defined in configuration.");
+                Debug.LogError("No cues defined in template.");
                 return false;
             }
 
-            if (config.segments == null || config.segments.Count == 0)
+            if (template.segments == null || template.segments.Count == 0)
             {
-                Debug.LogError("No segments defined in configuration.");
+                Debug.LogError("No segments defined in template.");
                 return false;
             }
 
-            if (config.vr_environment == null)
+            if (template.vr_environment == null)
             {
                 Debug.LogError("No VR environment configuration defined.");
                 return false;
@@ -74,7 +77,7 @@ namespace SL.Config
             HashSet<int> seenCodes = new HashSet<int>();
             HashSet<string> seenNames = new HashSet<string>();
 
-            foreach (Cue cue in config.cues)
+            foreach (Cue cue in template.cues)
             {
                 if (cue.code < 0 || cue.code > 255)
                 {
@@ -102,8 +105,11 @@ namespace SL.Config
             }
 
             // Validates segment cue sequences reference valid cues
-            foreach (Segment segment in config.segments)
+            HashSet<string> segmentNames = new HashSet<string>();
+            foreach (Segment segment in template.segments)
             {
+                segmentNames.Add(segment.name);
+
                 if (segment.cue_sequence == null || segment.cue_sequence.Count == 0)
                 {
                     Debug.LogError($"Segment '{segment.name}' has no cue sequence.");
@@ -131,6 +137,22 @@ namespace SL.Config
                     if (Mathf.Abs(sum - 1.0f) > 0.001f)
                     {
                         Debug.LogError($"Segment '{segment.name}' transition probabilities sum to {sum}, must be 1.0.");
+                        return false;
+                    }
+                }
+            }
+
+            // Validates trial structures reference valid segments
+            if (template.trial_structures != null)
+            {
+                foreach (var kvp in template.trial_structures)
+                {
+                    string trialName = kvp.Key;
+                    TrialStructure trial = kvp.Value;
+
+                    if (!segmentNames.Contains(trial.segment_name))
+                    {
+                        Debug.LogError($"Trial '{trialName}' references unknown segment '{trial.segment_name}'.");
                         return false;
                     }
                 }
