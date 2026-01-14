@@ -124,8 +124,6 @@ namespace SL.Config
         /// </summary>
         public Dictionary<string, BaseTrial> trial_structures;
 
-        // ==================== Computed Properties ====================
-
         /// <summary>Returns a map of cue name to byte code for MQTT encoding.</summary>
         public Dictionary<string, byte> GetCueNameToCode()
         {

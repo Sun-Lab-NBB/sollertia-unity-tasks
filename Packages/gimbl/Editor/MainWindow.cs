@@ -4,280 +4,282 @@
 /// Renders the main editor window for MQTT settings, session configuration,
 /// and setup import/export functionality.
 /// </summary>
-using System.Collections;
-using System.Collections.Generic;
-using Gimbl;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-/// <summary>
-/// Manages the main Gimbl configuration editor window.
-/// </summary>
-public class MainWindow : EditorWindow
+namespace Gimbl
 {
-    /// <summary>The serialized property for output path.</summary>
-    private SerializedProperty outputPath;
-
-    /// <summary>The serialized property for output file.</summary>
-    private SerializedProperty outputFile;
-
-    /// <summary>The scroll position for the window content.</summary>
-    Vector2 scrollPosition = Vector2.zero;
-
-    /// <summary>The MQTT client reference for configuration.</summary>
-    private MQTTClient _client;
-
-    /// <summary>The current main window instance.</summary>
-    private static MainWindow window;
-
     /// <summary>
-    /// Stores session menu state and external control settings.
+    /// Manages the main Gimbl configuration editor window.
     /// </summary>
-    [System.Serializable]
-    private class SessionMenuSettings
+    public class MainWindow : EditorWindow
     {
-        /// <summary>Determines whether the external control foldout is expanded.</summary>
-        public bool isFold = false;
+        /// <summary>The serialized property for output path.</summary>
+        private SerializedProperty outputPath;
 
-        /// <summary>Determines whether external start trigger is enabled.</summary>
-        public bool externalStart = false;
+        /// <summary>The serialized property for output file.</summary>
+        private SerializedProperty outputFile;
 
-        /// <summary>Determines whether external log naming is enabled.</summary>
-        public bool externalLog = false;
-    }
+        /// <summary>The scroll position for the window content.</summary>
+        Vector2 scrollPosition = Vector2.zero;
 
-    /// <summary>The session menu settings instance.</summary>
-    [SerializeField]
-    private SessionMenuSettings sessionSettings = new SessionMenuSettings();
+        /// <summary>The MQTT client reference for configuration.</summary>
+        private MQTTClient _client;
 
-    /// <summary>Shows the Gimbl main window and related editor windows.</summary>
-    [MenuItem("Window/Gimbl")]
-    public static void ShowWindow()
-    {
-        if (window == null)
+        /// <summary>The current main window instance.</summary>
+        private static MainWindow window;
+
+        /// <summary>
+        /// Stores session menu state and external control settings.
+        /// </summary>
+        [System.Serializable]
+        private class SessionMenuSettings
         {
-            System.Type inspectorType = System.Type.GetType("UnityEditor.InspectorWindow,UnityEditor.dll");
-            EditorWindow window = MainWindow.GetWindow<MainWindow>("Settings", new System.Type[] { inspectorType });
-            ActorWindow.ShowWindow();
-            DisplaysWindow.ShowWindow();
-        }
-    }
+            /// <summary>Determines whether the external control foldout is expanded.</summary>
+            public bool isFold = false;
 
-    /// <summary>Initializes the scene when the window is enabled.</summary>
-    private void OnEnable()
-    {
-        InitializeScene();
-    }
+            /// <summary>Determines whether external start trigger is enabled.</summary>
+            public bool externalStart = false;
 
-    /// <summary>Renders the MQTT settings and setup import/export GUI.</summary>
-    private void OnGUI()
-    {
-        scrollPosition = EditorGUILayout.BeginScrollView(
-            scrollPosition,
-            GUILayout.Height(position.height),
-            GUILayout.Width(position.width)
-        );
-
-        if (EditorApplication.isPlaying)
-            GUI.enabled = false;
-        EditorGUILayout.BeginVertical(LayoutSettings.mainBox.style);
-        EditorGUILayout.LabelField("MQTT", LayoutSettings.sectionLabel);
-        _client.ip = EditorGUILayout.TextField("ip: ", _client.ip, GUILayout.Width(300));
-        _client.port = int.Parse(EditorGUILayout.TextField("port: ", _client.port.ToString(), GUILayout.Width(300)));
-        if (GUI.changed)
-        {
-            EditorPrefs.SetString("SunLabVRPC_MQTT_IP", _client.ip);
-            EditorPrefs.SetInt("SunLabVRPC_MQTT_Port", _client.port);
-        }
-        if (GUILayout.Button("Test Connection"))
-        {
-            _client.Connect(true);
-            _client.Disconnect();
+            /// <summary>Determines whether external log naming is enabled.</summary>
+            public bool externalLog = false;
         }
 
-        sessionSettings.isFold = EditorGUILayout.Foldout(sessionSettings.isFold, "External Control");
-        if (sessionSettings.isFold)
+        /// <summary>The session menu settings instance.</summary>
+        [SerializeField]
+        private SessionMenuSettings sessionSettings = new SessionMenuSettings();
+
+        /// <summary>Shows the Gimbl main window and related editor windows.</summary>
+        [MenuItem("Window/Gimbl")]
+        public static void ShowWindow()
         {
-            EditorGUILayout.BeginVertical(LayoutSettings.subBox.style);
-            bool newExternalStart = EditorGUILayout.Toggle(
-                "External Start Trigger",
-                sessionSettings.externalStart,
-                LayoutSettings.editFieldOp
-            );
-            if (newExternalStart != sessionSettings.externalStart)
+            if (window == null)
             {
-                sessionSettings.externalStart = newExternalStart;
-                EditorPrefs.SetBool("Gimbl_externalStart", newExternalStart);
+                System.Type inspectorType = System.Type.GetType("UnityEditor.InspectorWindow,UnityEditor.dll");
+                EditorWindow window = MainWindow.GetWindow<MainWindow>("Settings", new System.Type[] { inspectorType });
+                ActorWindow.ShowWindow();
+                DisplaysWindow.ShowWindow();
             }
-            bool newExternalLog = EditorGUILayout.Toggle(
-                "External Log Naming",
-                sessionSettings.externalLog,
-                LayoutSettings.editFieldOp
+        }
+
+        /// <summary>Initializes the scene when the window is enabled.</summary>
+        private void OnEnable()
+        {
+            InitializeScene();
+        }
+
+        /// <summary>Renders the MQTT settings and setup import/export GUI.</summary>
+        private void OnGUI()
+        {
+            scrollPosition = EditorGUILayout.BeginScrollView(
+                scrollPosition,
+                GUILayout.Height(position.height),
+                GUILayout.Width(position.width)
             );
-            if (newExternalLog != sessionSettings.externalLog)
+
+            if (EditorApplication.isPlaying)
+                GUI.enabled = false;
+            EditorGUILayout.BeginVertical(LayoutSettings.mainBox.style);
+            EditorGUILayout.LabelField("MQTT", LayoutSettings.sectionLabel);
+            _client.ip = EditorGUILayout.TextField("ip: ", _client.ip, GUILayout.Width(300));
+            _client.port = int.Parse(
+                EditorGUILayout.TextField("port: ", _client.port.ToString(), GUILayout.Width(300))
+            );
+            if (GUI.changed)
             {
-                sessionSettings.externalLog = newExternalLog;
-                EditorPrefs.SetBool("Gimbl_externalLog", newExternalLog);
+                EditorPrefs.SetString("SunLabVRPC_MQTT_IP", _client.ip);
+                EditorPrefs.SetInt("SunLabVRPC_MQTT_Port", _client.port);
+            }
+            if (GUILayout.Button("Test Connection"))
+            {
+                _client.Connect(true);
+                _client.Disconnect();
+            }
+
+            sessionSettings.isFold = EditorGUILayout.Foldout(sessionSettings.isFold, "External Control");
+            if (sessionSettings.isFold)
+            {
+                EditorGUILayout.BeginVertical(LayoutSettings.subBox.style);
+                bool newExternalStart = EditorGUILayout.Toggle(
+                    "External Start Trigger",
+                    sessionSettings.externalStart,
+                    LayoutSettings.editFieldOp
+                );
+                if (newExternalStart != sessionSettings.externalStart)
+                {
+                    sessionSettings.externalStart = newExternalStart;
+                    EditorPrefs.SetBool("Gimbl_externalStart", newExternalStart);
+                }
+                bool newExternalLog = EditorGUILayout.Toggle(
+                    "External Log Naming",
+                    sessionSettings.externalLog,
+                    LayoutSettings.editFieldOp
+                );
+                if (newExternalLog != sessionSettings.externalLog)
+                {
+                    sessionSettings.externalLog = newExternalLog;
+                    EditorPrefs.SetBool("Gimbl_externalLog", newExternalLog);
+                }
+                EditorGUILayout.EndVertical();
+            }
+
+            GUI.enabled = true;
+            EditorGUILayout.EndVertical();
+
+            EditorGUILayout.BeginVertical(LayoutSettings.mainBox.style);
+            EditorGUILayout.LabelField("Setup", LayoutSettings.sectionLabel);
+            if (GUILayout.Button("Export Setup"))
+            {
+                ExportSetup();
+            }
+            if (GUILayout.Button("Import Setup"))
+            {
+                ImportSetup();
             }
             EditorGUILayout.EndVertical();
+
+            EditorGUILayout.EndScrollView();
         }
 
-        GUI.enabled = true;
-        EditorGUILayout.EndVertical();
-
-        EditorGUILayout.BeginVertical(LayoutSettings.mainBox.style);
-        EditorGUILayout.LabelField("Setup", LayoutSettings.sectionLabel);
-        if (GUILayout.Button("Export Setup"))
+        /// <summary>Ensures required GameObjects and folders exist in the scene.</summary>
+        private void InitializeScene()
         {
-            ExportSetup();
-        }
-        if (GUILayout.Button("Import Setup"))
-        {
-            ImportSetup();
-        }
-        EditorGUILayout.EndVertical();
+            if (!AssetDatabase.IsValidFolder("Assets/VRSettings"))
+                AssetDatabase.CreateFolder("Assets", "VRSettings");
+            if (!AssetDatabase.IsValidFolder("Assets/VRSettings/Controllers"))
+                AssetDatabase.CreateFolder("Assets/VRSettings", "Controllers");
+            if (!AssetDatabase.IsValidFolder("Assets/VRSettings/Displays"))
+                AssetDatabase.CreateFolder("Assets/VRSettings", "Displays");
+            if (!AssetDatabase.IsValidFolder("Assets/VRSettings/Actors"))
+                AssetDatabase.CreateFolder("Assets/VRSettings", "Actors");
 
-        EditorGUILayout.EndScrollView();
-    }
-
-    /// <summary>Ensures required GameObjects and folders exist in the scene.</summary>
-    private void InitializeScene()
-    {
-        if (!AssetDatabase.IsValidFolder("Assets/VRSettings"))
-            AssetDatabase.CreateFolder("Assets", "VRSettings");
-        if (!AssetDatabase.IsValidFolder("Assets/VRSettings/Controllers"))
-            AssetDatabase.CreateFolder("Assets/VRSettings", "Controllers");
-        if (!AssetDatabase.IsValidFolder("Assets/VRSettings/Displays"))
-            AssetDatabase.CreateFolder("Assets/VRSettings", "Displays");
-        if (!AssetDatabase.IsValidFolder("Assets/VRSettings/Actors"))
-            AssetDatabase.CreateFolder("Assets/VRSettings", "Actors");
-
-        GameObject sceneObject;
-        string[] defaultObjectNames = { "Actors", "Controllers", "MQTT Client" };
-        foreach (string objectName in defaultObjectNames)
-        {
-            if (!GameObject.Find(objectName))
+            GameObject sceneObject;
+            string[] defaultObjectNames = { "Actors", "Controllers", "MQTT Client" };
+            foreach (string objectName in defaultObjectNames)
             {
-                Debug.Log(string.Format("Creating Object: {0}..", objectName));
-                sceneObject = new GameObject(objectName);
+                if (!GameObject.Find(objectName))
+                {
+                    Debug.Log(string.Format("Creating Object: {0}..", objectName));
+                    sceneObject = new GameObject(objectName);
+                    switch (objectName)
+                    {
+                        case "MQTT Client":
+                            sceneObject.AddComponent<Gimbl.MQTTClient>();
+                            break;
+                    }
+                    UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
+                }
+                else
+                    sceneObject = GameObject.Find(objectName);
                 switch (objectName)
                 {
                     case "MQTT Client":
-                        sceneObject.AddComponent<Gimbl.MQTTClient>();
+                        _client = sceneObject.GetComponent<Gimbl.MQTTClient>();
+                        sceneObject.hideFlags = HideFlags.HideInHierarchy;
+                        break;
+                    case "Paths":
+                        break;
+                    case "Controllers":
+                        sceneObject.hideFlags = HideFlags.None;
+                        break;
+                    case "Actors":
                         break;
                 }
-                UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
             }
-            else
-                sceneObject = GameObject.Find(objectName);
-            switch (objectName)
-            {
-                case "MQTT Client":
-                    _client = sceneObject.GetComponent<Gimbl.MQTTClient>();
-                    sceneObject.hideFlags = HideFlags.HideInHierarchy;
-                    break;
-                case "Paths":
-                    break;
-                case "Controllers":
-                    sceneObject.hideFlags = HideFlags.None;
-                    break;
-                case "Actors":
-                    break;
-            }
+
+            _client.ip = EditorPrefs.GetString("SunLabVRPC_MQTT_IP");
+            if (_client.ip == "")
+                _client.ip = "127.0.0.1";
+            _client.port = EditorPrefs.GetInt("SunLabVRPC_MQTT_Port");
+            if (_client.port == 0)
+                _client.port = 1883;
+
+            sessionSettings.externalStart = EditorPrefs.GetBool("Gimbl_externalStart", false);
+            sessionSettings.externalLog = EditorPrefs.GetBool("Gimbl_externalLog", false);
         }
 
-        _client.ip = EditorPrefs.GetString("SunLabVRPC_MQTT_IP");
-        if (_client.ip == "")
-            _client.ip = "127.0.0.1";
-        _client.port = EditorPrefs.GetInt("SunLabVRPC_MQTT_Port");
-        if (_client.port == 0)
-            _client.port = 1883;
-
-        sessionSettings.externalStart = EditorPrefs.GetBool("Gimbl_externalStart", false);
-        sessionSettings.externalLog = EditorPrefs.GetBool("Gimbl_externalLog", false);
-    }
-
-    /// <summary>Exports the current setup to a .gimblsetup package file.</summary>
-    private void ExportSetup()
-    {
-        string[] pathParts = Application.dataPath.Split('/');
-        string projectName = pathParts[pathParts.Length - 2];
-        string exportFilePath = EditorUtility.SaveFilePanel("Save Setup as..", "", projectName, "gimblsetup");
-        if (exportFilePath.Length == 0)
-            return;
-
-        PrefabUtility.SaveAsPrefabAsset(GameObject.Find("Actors"), "Assets/tempActors.prefab");
-        PrefabUtility.SaveAsPrefabAsset(GameObject.Find("Controllers"), "Assets/tempControllers.prefab");
-
-        string[] assetBundle = new string[]
+        /// <summary>Exports the current setup to a .gimblsetup package file.</summary>
+        private void ExportSetup()
         {
-            "Assets/tempActors.prefab",
-            "Assets/tempControllers.prefab",
-            "Assets/VRSettings/Displays/savedFullScreenViews.asset",
-        };
-        AssetDatabase.ExportPackage(assetBundle, exportFilePath, ExportPackageOptions.IncludeDependencies);
+            string[] pathParts = Application.dataPath.Split('/');
+            string projectName = pathParts[pathParts.Length - 2];
+            string exportFilePath = EditorUtility.SaveFilePanel("Save Setup as..", "", projectName, "gimblsetup");
+            if (exportFilePath.Length == 0)
+                return;
 
-        AssetDatabase.DeleteAsset("Assets/tempActors.prefab");
-        AssetDatabase.DeleteAsset("Assets/tempControllers.prefab");
-    }
+            PrefabUtility.SaveAsPrefabAsset(GameObject.Find("Actors"), "Assets/tempActors.prefab");
+            PrefabUtility.SaveAsPrefabAsset(GameObject.Find("Controllers"), "Assets/tempControllers.prefab");
 
-    /// <summary>Imports a setup from a .gimblsetup package file.</summary>
-    private void ImportSetup()
-    {
-        bool confirmImport = EditorUtility.DisplayDialog(
-            "Erase current setup?",
-            "Importing this setup will remove all current Actors,Controllers and Displays",
-            "Continue",
-            "Cancel"
-        );
-        if (!confirmImport)
-            return;
+            string[] assetBundle = new string[]
+            {
+                "Assets/tempActors.prefab",
+                "Assets/tempControllers.prefab",
+                "Assets/VRSettings/Displays/savedFullScreenViews.asset",
+            };
+            AssetDatabase.ExportPackage(assetBundle, exportFilePath, ExportPackageOptions.IncludeDependencies);
 
-        string importFilePath = EditorUtility.OpenFilePanel("Import Setup", Application.dataPath, "gimblsetup");
-        if (importFilePath.Length == 0)
-            return;
+            AssetDatabase.DeleteAsset("Assets/tempActors.prefab");
+            AssetDatabase.DeleteAsset("Assets/tempControllers.prefab");
+        }
 
-        DestroyImmediate(GameObject.Find("Actors"));
-        DestroyImmediate(GameObject.Find("Controllers"));
-
-        AssetDatabase.ImportPackage(importFilePath, false);
-
-        Object actorsPrefab = AssetDatabase.LoadAssetAtPath("Assets/tempActors.prefab", typeof(Object));
-        GameObject actors = Instantiate(actorsPrefab) as GameObject;
-        actors.name = "Actors";
-
-        Object controllersPrefab = AssetDatabase.LoadAssetAtPath("Assets/tempControllers.prefab", typeof(Object));
-        GameObject controllers = Instantiate(controllersPrefab) as GameObject;
-        controllers.name = "Controllers";
-
-        DisplaysWindow displaysWindow = (DisplaysWindow)GetWindow(typeof(DisplaysWindow));
-        displaysWindow.fullScreenManager.LoadCameras();
-
-        foreach (ActorObject actor in actors.GetComponentsInChildren<ActorObject>())
+        /// <summary>Imports a setup from a .gimblsetup package file.</summary>
+        private void ImportSetup()
         {
-            if (LayerMask.NameToLayer(actor.name) == -1)
-            {
-                TagLayerEditor.TagsAndLayers.AddLayer(actor.name);
-            }
-            GameObject model = actor.GetComponentInChildren<MeshRenderer>().gameObject;
-            model.layer = LayerMask.NameToLayer(actor.name);
+            bool confirmImport = EditorUtility.DisplayDialog(
+                "Erase current setup?",
+                "Importing this setup will remove all current Actors,Controllers and Displays",
+                "Continue",
+                "Cancel"
+            );
+            if (!confirmImport)
+                return;
 
-            if (actor.gameObject.GetComponentInChildren<DisplayObject>() != null)
+            string importFilePath = EditorUtility.OpenFilePanel("Import Setup", Application.dataPath, "gimblsetup");
+            if (importFilePath.Length == 0)
+                return;
+
+            DestroyImmediate(GameObject.Find("Actors"));
+            DestroyImmediate(GameObject.Find("Controllers"));
+
+            AssetDatabase.ImportPackage(importFilePath, false);
+
+            Object actorsPrefab = AssetDatabase.LoadAssetAtPath("Assets/tempActors.prefab", typeof(Object));
+            GameObject actors = Instantiate(actorsPrefab) as GameObject;
+            actors.name = "Actors";
+
+            Object controllersPrefab = AssetDatabase.LoadAssetAtPath("Assets/tempControllers.prefab", typeof(Object));
+            GameObject controllers = Instantiate(controllersPrefab) as GameObject;
+            controllers.name = "Controllers";
+
+            DisplaysWindow displaysWindow = (DisplaysWindow)GetWindow(typeof(DisplaysWindow));
+            displaysWindow.fullScreenManager.LoadCameras();
+
+            foreach (ActorObject actor in actors.GetComponentsInChildren<ActorObject>())
             {
-                foreach (
-                    Camera camera in actor
-                        .gameObject.GetComponentInChildren<DisplayObject>()
-                        .GetComponentsInChildren<Camera>()
-                )
+                if (LayerMask.NameToLayer(actor.name) == -1)
                 {
-                    camera.cullingMask = -1;
-                    camera.cullingMask &= ~(1 << LayerMask.NameToLayer(actor.name));
+                    TagLayerEditor.TagsAndLayers.AddLayer(actor.name);
+                }
+                GameObject model = actor.GetComponentInChildren<MeshRenderer>().gameObject;
+                model.layer = LayerMask.NameToLayer(actor.name);
+
+                if (actor.gameObject.GetComponentInChildren<DisplayObject>() != null)
+                {
+                    foreach (
+                        Camera camera in actor
+                            .gameObject.GetComponentInChildren<DisplayObject>()
+                            .GetComponentsInChildren<Camera>()
+                    )
+                    {
+                        camera.cullingMask = -1;
+                        camera.cullingMask &= ~(1 << LayerMask.NameToLayer(actor.name));
+                    }
                 }
             }
-        }
 
-        AssetDatabase.DeleteAsset("Assets/tempActors.prefab");
-        AssetDatabase.DeleteAsset("Assets/tempControllers.prefab");
+            AssetDatabase.DeleteAsset("Assets/tempActors.prefab");
+            AssetDatabase.DeleteAsset("Assets/tempControllers.prefab");
+        }
     }
 }

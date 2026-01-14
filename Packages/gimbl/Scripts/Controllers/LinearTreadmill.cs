@@ -18,7 +18,7 @@ namespace Gimbl
         public LinearTreadmillSettings settings;
 
         /// <summary>The MQTT message class containing movement data.</summary>
-        public class MSG
+        public class TreadmillMessage
         {
             public float movement;
         }
@@ -27,7 +27,7 @@ namespace Gimbl
         private float _moved;
 
         /// <summary>The cached actor position for updates.</summary>
-        private Vector3 _pos;
+        private Vector3 _position;
 
         /// <summary>The cached actor rotation for updates.</summary>
         private Quaternion _newRot;
@@ -35,9 +35,11 @@ namespace Gimbl
         /// <summary>Sets up the MQTT listener for this treadmill on start.</summary>
         void Start()
         {
-            if (this.GetType() == typeof(LinearTreadmill))
+            if (this.GetType() == typeof(LinearTreadmill) && settings != null)
             {
-                MQTTChannel<MSG> channel = new MQTTChannel<MSG>($"{settings.deviceName}/Data");
+                MQTTChannel<TreadmillMessage> channel = new MQTTChannel<TreadmillMessage>(
+                    $"{settings.deviceName}/Data"
+                );
                 channel.Event.AddListener(OnMessage);
             }
         }
@@ -53,18 +55,18 @@ namespace Gimbl
         {
             lock (movement)
             {
-                if (Actor != null && settings.isActive)
+                if (Actor != null && (settings == null || settings.isActive))
                 {
                     _moved = movement.Sum();
 
-                    _pos = Actor.transform.position;
+                    _position = Actor.transform.position;
                     _newRot = Actor.transform.rotation;
 
-                    _pos.z = _pos.z + _moved;
+                    _position.z = _position.z + _moved;
 
                     if (Actor.isActive)
                     {
-                        Actor.transform.position = _pos;
+                        Actor.transform.position = _position;
                         Actor.transform.rotation = _newRot;
                     }
                 }
@@ -75,7 +77,7 @@ namespace Gimbl
 
         /// <summary>MQTT callback that receives movement data from the treadmill.</summary>
         /// <param name="msg">The message containing the movement value.</param>
-        public void OnMessage(MSG msg)
+        public void OnMessage(TreadmillMessage msg)
         {
             lock (movement)
             {

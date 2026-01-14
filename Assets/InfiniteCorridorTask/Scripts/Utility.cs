@@ -6,7 +6,7 @@ using UnityEngine;
 /// <summary>
 /// Static utility class for prefab measurements and other helper functions.
 /// </summary>
-public class Utility : MonoBehaviour
+public static class Utility
 {
     /// <summary>Calculates the z-axis lengths of an array of segment prefabs.</summary>
     /// <param name="segmentPrefabs">The array of segment prefab GameObjects.</param>

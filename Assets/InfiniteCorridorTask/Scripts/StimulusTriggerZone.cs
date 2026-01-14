@@ -82,9 +82,7 @@ public class StimulusTriggerZone : MonoBehaviour
     void Update()
     {
         if (!isActive)
-        {
             return;
-        }
 
         if (IsOccupancyMode)
         {
@@ -147,7 +145,7 @@ public class StimulusTriggerZone : MonoBehaviour
         // The OccupancyZone handles the timer and MQTT messages.
 
         // Boundary collision triggers stimulus only when boundary is ARMED
-        if (_inZone && !_occupancyZone.boundaryDisarmed)
+        if (_inZone && _occupancyZone != null && !_occupancyZone.boundaryDisarmed)
         {
             TriggerStimulus();
         }
@@ -168,7 +166,7 @@ public class StimulusTriggerZone : MonoBehaviour
     /// <summary>Triggers the stimulus, hides the boundary, and sends the MQTT message.</summary>
     private void TriggerStimulus()
     {
-        Debug.Log("Stimulus");
+        Debug.Log("StimulusTriggerZone: Stimulus triggered");
         if (TryGetComponent<MeshRenderer>(out var meshRenderer))
         {
             meshRenderer.enabled = false; // Hides boundary

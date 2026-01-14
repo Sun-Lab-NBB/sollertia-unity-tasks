@@ -68,14 +68,14 @@ namespace Gimbl
                 if (_controller != value)
                 {
                     // Abandons previous controller
-                    if (_controller != null)
+                    if (_controller != null && _controller.master != null)
                     {
                         _controller.master.Actor = null;
                     }
 
                     _controller = value;
 
-                    if (value != null)
+                    if (value != null && value.master != null)
                     {
                         value.master.Actor = this;
 

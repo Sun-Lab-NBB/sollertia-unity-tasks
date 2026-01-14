@@ -100,7 +100,7 @@ public class Task : MonoBehaviour
     private int _depth;
 
     /// <summary>The total number of unique segment types.</summary>
-    private int _nSegments;
+    private int _segmentCount;
 
     /// <summary>The loaded experiment configuration.</summary>
     private MesoscopeExperimentConfiguration _config;
@@ -124,7 +124,7 @@ public class Task : MonoBehaviour
     private List<int> _curSegment;
 
     /// <summary>The cached actor position for updates.</summary>
-    private Vector3 _pos;
+    private Vector3 _position;
 
     /// <summary>Validates and auto-assigns the actor reference in the editor.</summary>
     void OnValidate()
@@ -170,7 +170,7 @@ public class Task : MonoBehaviour
         }
 
         // Extracts configuration values
-        _nSegments = _config.segments.Count;
+        _segmentCount = _config.segments.Count;
         _cueIds = _config.GetCueNameToCode();
         _segmentLengths = _config.GetSegmentLengthsUnity();
         _cueLengths = _config.GetCueLengthsUnity();
@@ -184,12 +184,12 @@ public class Task : MonoBehaviour
         float curCorridorX = 0;
         float corridorXShift = _config.vr_environment.CorridorSpacingUnity;
 
-        for (int i = 0; i < Mathf.Pow(_nSegments, _depth); i++)
+        for (int i = 0; i < Mathf.Pow(_segmentCount, _depth); i++)
         {
             // Generates segment combination for current corridor index
             for (int j = 0; j < _depth; j++)
             {
-                corridorSegments[j] = i / (int)Mathf.Pow(_nSegments, _depth - j - 1) % _nSegments;
+                corridorSegments[j] = i / (int)Mathf.Pow(_segmentCount, _depth - j - 1) % _segmentCount;
             }
 
             _corridorMap[string.Join("-", corridorSegments)] = (curCorridorX, _segmentLengths[corridorSegments[0]]);
@@ -209,9 +209,9 @@ public class Task : MonoBehaviour
             string corridorKey = string.Join("-", _curSegment);
             if (_corridorMap.TryGetValue(corridorKey, out var corridorData))
             {
-                _pos = actor.transform.position;
-                _pos.x = corridorData.Item1;
-                actor.transform.position = _pos;
+                _position = actor.transform.position;
+                _position.x = corridorData.Item1;
+                actor.transform.position = _position;
             }
             else
             {
@@ -249,9 +249,7 @@ public class Task : MonoBehaviour
     void Update()
     {
         if (actor == null)
-        {
             return;
-        }
 
         string corridorKey = string.Join("-", _curSegment);
         if (!_corridorMap.TryGetValue(corridorKey, out var corridorData))
@@ -260,13 +258,13 @@ public class Task : MonoBehaviour
             return;
         }
 
-        _pos = actor.transform.position;
+        _position = actor.transform.position;
 
         // Checks if animal has traveled through the current segment
-        if (_pos.z > corridorData.Item2)
+        if (_position.z > corridorData.Item2)
         {
             // Teleports animal back to start of corridor
-            _pos.z -= corridorData.Item2;
+            _position.z -= corridorData.Item2;
 
             // Advances to next corridor based on future segments
             _currentSegmentIndex++;
@@ -284,8 +282,8 @@ public class Task : MonoBehaviour
             string newCorridorKey = string.Join("-", _curSegment);
             if (_corridorMap.TryGetValue(newCorridorKey, out var newCorridorData))
             {
-                _pos.x = newCorridorData.Item1;
-                actor.transform.position = _pos;
+                _position.x = newCorridorData.Item1;
+                actor.transform.position = _position;
             }
             else
             {
@@ -307,9 +305,7 @@ public class Task : MonoBehaviour
         {
             cumulative += probabilities[i];
             if (r < cumulative)
-            {
                 return i;
-            }
         }
 
         return probabilities.Length - 1;
@@ -328,7 +324,7 @@ public class Task : MonoBehaviour
         List<int> segmentSequence = new List<int>();
         List<byte> cueSequence = new List<byte>();
 
-        int choice = random.Next(_nSegments);
+        int choice = random.Next(_segmentCount);
 
         while (sequenceLength < length)
         {
@@ -349,7 +345,7 @@ public class Task : MonoBehaviour
             }
             else
             {
-                choice = random.Next(_nSegments);
+                choice = random.Next(_segmentCount);
             }
         }
 
@@ -359,7 +355,7 @@ public class Task : MonoBehaviour
     /// <summary>MQTT callback that sends the cue sequence when requested.</summary>
     private void OnCueSequenceTrigger()
     {
-        Debug.Log("received request for cue sequence");
+        Debug.Log("Task: Received request for cue sequence");
         _cueSequenceChannel.Send(new SequenceMsg() { cue_sequence = _cueSequenceArray });
     }
 

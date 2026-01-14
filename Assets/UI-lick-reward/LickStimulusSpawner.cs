@@ -44,14 +44,9 @@ public class LickStimulusSpawner : MonoBehaviour
     void Update()
     {
         if (_showLick)
-        {
             CreateLickMsg();
-        }
-
         if (_showStimulus)
-        {
             CreateStimulusMsg();
-        }
     }
 
     /// <summary>MQTT callback that flags a lick message to be shown.</summary>
