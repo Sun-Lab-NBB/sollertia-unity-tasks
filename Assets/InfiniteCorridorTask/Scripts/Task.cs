@@ -102,8 +102,8 @@ public class Task : MonoBehaviour
     /// <summary>The total number of unique segment types.</summary>
     private int _segmentCount;
 
-    /// <summary>The loaded experiment configuration.</summary>
-    private MesoscopeExperimentConfiguration _config;
+    /// <summary>The loaded task template.</summary>
+    private TaskTemplate _template;
 
     /// <summary>The mapping of cue names to their byte codes.</summary>
     private Dictionary<string, byte> _cueIds;
@@ -161,20 +161,20 @@ public class Task : MonoBehaviour
             return;
         }
 
-        // Loads and validates configuration
-        _config = ConfigLoader.Load(globalConfigPath);
-        if (_config == null)
+        // Loads and validates task template
+        _template = ConfigLoader.LoadTemplate(globalConfigPath);
+        if (_template == null)
         {
-            Debug.LogError("Failed to load configuration from YAML file.");
+            Debug.LogError("Failed to load task template from YAML file.");
             return;
         }
 
         // Extracts configuration values
-        _segmentCount = _config.segments.Count;
-        _cueIds = _config.GetCueNameToCode();
-        _segmentLengths = _config.GetSegmentLengthsUnity();
-        _cueLengths = _config.GetCueLengthsUnity();
-        _depth = _config.vr_environment.segments_per_corridor;
+        _segmentCount = _template.segments.Count;
+        _cueIds = _template.GetCueNameToCode();
+        _segmentLengths = _template.GetSegmentLengthsUnity();
+        _cueLengths = _template.GetCueLengthsUnity();
+        _depth = _template.vr_environment.segments_per_corridor;
 
         // Builds corridor map for teleportation.
         // Maps corridor segment combination to (x-position, first segment length).
@@ -182,7 +182,7 @@ public class Task : MonoBehaviour
 
         int[] corridorSegments = new int[_depth];
         float curCorridorX = 0;
-        float corridorXShift = _config.vr_environment.CorridorSpacingUnity;
+        float corridorXShift = _template.vr_environment.CorridorSpacingUnity;
 
         for (int i = 0; i < Mathf.Pow(_segmentCount, _depth); i++)
         {
@@ -330,7 +330,7 @@ public class Task : MonoBehaviour
         {
             segmentSequence.Add(choice);
 
-            Segment segment = _config.segments[choice];
+            Segment segment = _template.segments[choice];
             foreach (string cue in segment.cue_sequence)
             {
                 cueSequence.Add(_cueIds[cue]);

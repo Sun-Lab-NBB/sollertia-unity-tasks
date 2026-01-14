@@ -3,7 +3,9 @@
 A C# Unity project that provides assets to create and execute Virtual Reality (VR) tasks used to facilitate
 experiments in the Sun (NeuroAI) lab.
 
----
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+
+___
 
 ## Detailed Description
 
@@ -41,9 +43,10 @@ ___
 - [Usage](#usage)
 - [Creating New Tasks](#creating-new-tasks)
 - [Developer Notes](#developer-notes)
+- [Versioning](#versioning)
 - [Authors](#authors)
 - [License](#license)
-- [Acknowledgements](#Acknowledgments)
+- [Acknowledgements](#acknowledgments)
 
 ___
 
@@ -62,7 +65,7 @@ These dependencies are automatically installed with the project either as .dll f
 The user must install these dependencies before working with this Unity project:
 
 - [MQTT broker](https://mosquitto.org/) version **2.0.21**. This project was tested with the broker running locally,
-  using the **default** IP (27.0.0.1) and Port (1883) configuration.
+  using the **default** IP (127.0.0.1) and Port (1883) configuration.
 - [Unity Game Engine](https://unity.com/products/unity-engine) version **6000.1.12f1**.
 - [Blender](https://www.blender.org/download/) version **4.5.0 LTS**.
 
@@ -73,7 +76,7 @@ ___
 ### Source
 
 1. Install the [Unity hub](https://unity.com/download) and use it to install the required Unity Game Engine version.
-2. Download this repository to your local machine using your preferred method, such as Git-cloning. Use one
+2. Download this repository to a local machine using a preferred method, such as Git-cloning. Use one
    of the stable releases from [GitHub](https://github.com/Sun-Lab-NBB/sl-unity-tasks/releases).
 3. From the Unity Hub, select `add project from disk` and navigate to the local folder containing the downloaded
    repository: <br> <img src="imgs/AddProjectFromDisk.png" width="300"/>
@@ -86,7 +89,7 @@ ___
 
 ## Usage
 
-This section discusses how to use existing tasks to conduct experiment and create new tasks using the project.
+This section discusses how to use existing tasks to conduct experiments and create new tasks using the project.
 **Note!** This library is specifically written to work with
 [sl-experiment](https://github.com/Sun-Lab-NBB/sl-experiment) library and will likely not work in other
 contexts.
@@ -99,7 +102,7 @@ without probabilistic transitions between corridor segments (trial motifs).
 #### Task Definition
 
 Each **task** can be conceptualized as a set of infinite corridor **segments** and the **transition probabilities**
-between then. Each segment is split into **cues*, which are portions of the corridor walls that have different
+between then. Each segment is split into **cues**, which are portions of the corridor walls that have different
 colors/textures. Since each task segment typically contains a stimulus trigger zone that conditionally delivers water to
 the
 animal, traversing each segment typically constitutes a single **experiment trial**. Therefore, the sequence of wall
@@ -110,6 +113,7 @@ Overall, a set of segments can represent any task graph depicting transitions be
 example, the cue graph below can be represented by two segments with uniform transition probabilities between
 each other:
 
+<!--suppress CheckImageSize -->
 <img src="imgs/cue_graph.png" width="233" alt="graph picture">
 
 1. **Segment 1**: A, B, C
@@ -140,7 +144,7 @@ All segment prefabs must be placed in the directory **Assets/InfiniteCorridorTas
 opens up Unity's prefab editor. **Hint!** To verify that the file being edited is a prefab and not a GameObject, ensure
 that the scene has a **blue** background.
 
-<img src="imgs/segment_prefab.png" width="600">
+<img src="imgs/segment_prefab.png" width="600" alt="">
 
 Each prefab includes two key elements: the **stimulus trigger zone** and the **reset zone**. For most tasks, the animal
 has to lick in the stimulus trigger zone to receive the stimulus. After successfully triggering a stimulus delivery, the
@@ -153,7 +157,7 @@ empty corridor, and it is used during task runtime to give the animal an illusio
 #### Metadata JSON File
 
 The **task metadata file**, also referred to as the **maze specification file**, ties the segment prefabs together and
-is requisite for creating and running tasks. The structure of this file is shown below and should be matched exactly for
+is requisite for creating and running tasks. The structure of this file is shown below and must be matched exactly for
 all custom metadata files for the project to work as intended:
 
 - **cues** *(array\<Cue>)*: The list of all cues from any segment. The order of this list determines the integer id's
@@ -195,7 +199,7 @@ To then create the task prefab, use the **CreateTask → New Task** command. Thi
 metadata .json file. Once the file is selected, a secondary prompt will open to name and save the prefab. Once created,
 the prefab can be loaded and executed as any pre-created task that comes with the project (see below).
 
-<img src="imgs/createTask.png" width="700">
+<img src="imgs/createTask.png" width="700" alt="">
 
 ### Loading Existing Tasks
 
@@ -245,29 +249,29 @@ Unity project and follow these steps:
       non-functional. To fix this, change this parameter to specify the correct path (relative to the local root) or
       recreate the task. See the ['creating new tasks'](#creating-new-tasks) section for more details about this file.
 5. Select File > Save As to save the scene in *Assets/Scenes*.
-6. Click on the **DisplaysWindow** tab located to the right of the Inspector tab. If the tab is not present, reopen it
-   by clicking on Window > Gimbl. Press `Refresh Monitor Positions`. Doing this reveals a list of the monitors connected
+6. Select the **DisplaysWindow** tab located to the right of the Inspector tab. If the tab is not present, reopen it
+   by selecting Window > Gimbl. Press `Refresh Monitor Positions`. This reveals a list of the monitors connected
    to the computer. Assign **Camera: LeftMonitor**, **Camera: RightMonitor**, and **Camera: CenterMonitor** to the
-   corresponding monitors used for display to the animal. To check that the monitors were assigned correctly, press
-   `Show Full-Screen Views`. For more information about configuring displays, check the
+   corresponding monitors used for display to the animal. To verify that the monitors were assigned correctly, press
+   `Show Full-Screen Views`. For more information about configuring displays, consult the
    [original GIMBL repository](https://github.com/winnubstj/Gimbl?tab=readme-ov-file#setting-up-the-actor).
-   **Warning!** Since rebooting the system frequently changes the Monitor output ports, it is strongly advised to
-   **always** check the monitors before running experiment tasks.
+   **Warning!** Since rebooting the system frequently changes the Monitor output ports, always verify
+   monitor assignments before running experiment tasks.
    <br> <img src="imgs/display_tab.png" width="300">
 7. Press the play button to run the VR task. Verify that there are no errors displayed in the console window after
-   starting (playing) the task. **Hint!** If there are errors, start debugging by looking at the **first** error
-   printed, which is likely the true error. Other errors are likely a result of running a broken game loop after the
-   first error. **Note!** The template environment is designed for experiments, where motion and licks should be sent
-   over the MQTT protocol. To test the task manually, replace the *linear controller* with a
-   *simulated linear controller*. See
+   starting (playing) the task. **Hint!** If errors appear, start debugging by examining the **first** error
+   printed, which is likely the true error. Subsequent errors are likely a result of running a broken game loop after
+   the initial error. **Note!** The template environment is designed for experiments, where motion and licks should be
+   sent over the MQTT protocol. To test the task manually, replace the *linear controller* with a
+   *simulated linear controller*. Consult
    [Setting Up the Actor](https://github.com/winnubstj/Gimbl?tab=readme-ov-file#setting-up-the-actor) for instructions
-   on how to do this.
+   on this process.
 
 ___
 
 ## Developer Notes
 
-These notes are primarily directory to project developers and task creators.
+These notes are primarily directed to project developers and task creators.
 
 * Be careful about modifying segment prefabs. Even after task creation, the task prefab relies on the existence of the
   segment prefabs to run as expected. This means that if segment prefabs are modified later, it will also modify all
@@ -282,7 +286,7 @@ These notes are primarily directory to project developers and task creators.
   prefab modification. If the newly created task uses the same name as the old task, it will replace the old task
   prefab.
 * The [Loading Existing Tasks](#loading-existing-tasks) section explains how to create a scene to hold the desired task.
-  When running multiple experiments (using different tasks) from the same computer, it may be cumbersome to have
+  When running multiple experiments (using different tasks) from the same computer, it may be cumbersome to maintain
   multiple Unity projects or to have one Unity project and switch the active task between experiments (within the same
   scene). The best practice is to create a separate scene for each experiment as part of the same Unity project and
   switch between scenes by double-clicking on them. When starting a new experiment, open the desired scene and run the
@@ -300,12 +304,19 @@ These notes are primarily directory to project developers and task creators.
 
 * Additional cues can be found [here](https://github.com/sprustonlab/vr-visual-cues). To use a new cue:
     1. Convert a .ai file to .png
-    1. Import the png into Unity as an asset. Put the asset in the Assets/InfiniteCorridorTask/Textures folder.
-    1. Create a new material or just duplicate one of the existing materials. Currently all cues are prefab variants of
-       cue A. To keep this structure, duplicate any other material (eg CueB). Materials are saved in the
+    2. Import the png into Unity as an asset. Put the asset in the Assets/InfiniteCorridorTask/Textures folder.
+    3. Create a new material or just duplicate one of the existing materials. Currently, all cues are prefab variants of
+       cue A. To keep this structure, duplicate any other material (e.g. CueB). Materials are saved in the
        Assets/InfiniteCorridorTask/Materials folder.
-    1. Set the material's texture to the new png.
-    1. On the segment you are modifying, use the Mesh Renderer component to select the new material.
+    4. Set the material's texture to the new png.
+    5. On the segment being modified, use the Mesh Renderer component to select the new material.
+
+___
+
+## Versioning
+
+This project uses [Semantic Versioning](https://semver.org/). For available versions, see the
+[tags on this repository](https://github.com/Sun-Lab-NBB/sl-unity-tasks/tags).
 
 ___
 

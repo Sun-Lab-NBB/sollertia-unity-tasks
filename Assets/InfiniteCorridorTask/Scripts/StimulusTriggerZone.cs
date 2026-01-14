@@ -24,7 +24,7 @@ public class StimulusTriggerZone : MonoBehaviour
 {
     /// <summary>
     /// Determines whether the stimulus boundary should be visible when this zone is active.
-    /// Set at task creation time from the experiment config's show_stimulus_collision_boundary per trial type.
+    /// Set at task creation time from the task template's show_stimulus_collision_boundary per trial type.
     /// </summary>
     public bool showBoundary = false;
 

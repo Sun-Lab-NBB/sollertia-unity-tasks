@@ -19,7 +19,7 @@ public class OccupancyZone : MonoBehaviour
 {
     /// <summary>
     /// The duration in milliseconds that the animal must occupy the zone to disarm the boundary.
-    /// Set at task creation time from the experiment config.
+    /// Set at task creation time from the task template.
     /// </summary>
     public float occupancyDurationMs = 1000f;
 

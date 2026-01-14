@@ -7,7 +7,7 @@ using UnityEditor;
 using UnityEngine;
 
 /// <summary>
-/// Unity Editor script that creates Task prefabs from experiment configuration files.
+/// Unity Editor script that creates Task prefabs from task template files.
 /// Generates all corridor combinations by instantiating segment prefabs and configuring zones.
 /// </summary>
 public class CreateTask : MonoBehaviour
@@ -19,10 +19,10 @@ public class CreateTask : MonoBehaviour
     [MenuItem("CreateTask/New Task")]
     public static void CreateNewTask()
     {
-        // Opens file dialog for YAML configuration file
+        // Opens file dialog for YAML task template file
         string configPath = EditorUtility
             .OpenFilePanel(
-                "Select Experiment Configuration YAML",
+                "Select Task Template YAML",
                 Application.dataPath + "/InfiniteCorridorTask/Configurations/",
                 "yaml,yml"
             )
@@ -34,18 +34,18 @@ public class CreateTask : MonoBehaviour
             return;
         }
 
-        // Loads and validates configuration
-        MesoscopeExperimentConfiguration config = ConfigLoader.Load(Application.dataPath + configPath);
-        if (config == null)
+        // Loads and validates task template
+        TaskTemplate template = ConfigLoader.LoadTemplate(Application.dataPath + configPath);
+        if (template == null)
         {
-            Debug.LogError("Failed to load configuration from YAML file.");
+            Debug.LogError("Failed to load task template from YAML file.");
             return;
         }
 
         string prefabsPath = "Assets/InfiniteCorridorTask/Prefabs/";
 
         // Loads padding prefab
-        string paddingPath = prefabsPath + config.vr_environment.padding_prefab_name + ".prefab";
+        string paddingPath = prefabsPath + template.vr_environment.padding_prefab_name + ".prefab";
         GameObject padding = AssetDatabase.LoadAssetAtPath<GameObject>(paddingPath);
 
         if (padding == null)
@@ -54,13 +54,13 @@ public class CreateTask : MonoBehaviour
             return;
         }
 
-        int nSegments = config.segments.Count;
+        int nSegments = template.segments.Count;
 
         // Loads segment prefabs
         GameObject[] segmentPrefabs = new GameObject[nSegments];
         for (int i = 0; i < nSegments; i++)
         {
-            string segmentPath = prefabsPath + config.segments[i].name + ".prefab";
+            string segmentPath = prefabsPath + template.segments[i].name + ".prefab";
             segmentPrefabs[i] = AssetDatabase.LoadAssetAtPath<GameObject>(segmentPath);
 
             if (segmentPrefabs[i] == null)
@@ -72,21 +72,21 @@ public class CreateTask : MonoBehaviour
 
         // Measures actual prefab lengths and compares with configuration
         float[] measuredSegmentLengths = Utility.GetSegmentLengths(segmentPrefabs);
-        float[] segmentLengths = config.GetSegmentLengthsUnity();
+        float[] segmentLengths = template.GetSegmentLengthsUnity();
 
         for (int i = 0; i < nSegments; i++)
         {
             if (Mathf.Abs(measuredSegmentLengths[i] - segmentLengths[i]) > LengthComparisonEpsilon)
             {
                 Debug.Log(
-                    $"Warning: For {config.segments[i].name}, there is a mismatch between the prefab length "
+                    $"Warning: For {template.segments[i].name}, there is a mismatch between the prefab length "
                         + $"({measuredSegmentLengths[i]}) and the sum of all the cue lengths ({segmentLengths[i]}). "
                         + $"Using {segmentLengths[i]} for the length of the segment."
                 );
             }
         }
 
-        int depth = config.vr_environment.segments_per_corridor;
+        int depth = template.vr_environment.segments_per_corridor;
         float paddingZShift = depth * Mathf.Min(segmentLengths) - 1;
 
         // Creates task GameObject hierarchy
@@ -99,7 +99,7 @@ public class CreateTask : MonoBehaviour
         int[] corridorSegments = new int[depth];
         int segment;
         float curCorridorX = 0;
-        float corridorXShift = config.vr_environment.CorridorSpacingUnity;
+        float corridorXShift = template.vr_environment.CorridorSpacingUnity;
         float zShift;
 
         // Iterates through all possible corridor combinations
@@ -143,8 +143,8 @@ public class CreateTask : MonoBehaviour
                     StimulusTriggerZone stimulusTriggerZone = instance.GetComponentInChildren<StimulusTriggerZone>();
                     if (stimulusTriggerZone != null)
                     {
-                        string segmentName = config.segments[segment].name;
-                        stimulusTriggerZone.showBoundary = config.GetSegmentMarkerVisibility(segmentName);
+                        string segmentName = template.segments[segment].name;
+                        stimulusTriggerZone.showBoundary = template.GetSegmentMarkerVisibility(segmentName);
                     }
                 }
 
