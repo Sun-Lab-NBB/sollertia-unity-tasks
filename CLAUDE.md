@@ -3,7 +3,7 @@
 ## Session Start Behavior
 
 At the beginning of each coding session, before making any code changes, you should build a comprehensive
-understanding of the codebase by invoking the `/explore-codebase` skill.
+understanding of the codebase by invoking the `/exploring-codebase` skill.
 
 This ensures you:
 - Understand the Unity project architecture before modifying code
@@ -12,8 +12,8 @@ This ensures you:
 
 ## Style Guide Compliance
 
-Before writing, modifying, or reviewing any code or documentation, you MUST invoke the `/sun-lab-style` skill to load
-the Sun Lab conventions. This applies to ALL file types including:
+Before writing, modifying, or reviewing any code or documentation, you MUST invoke the `/applying-sun-lab-style` skill
+to load the Sun Lab conventions. This applies to ALL file types including:
 - C# source files (`.cs`)
 - Documentation files (`README.md`)
 - YAML configuration files when adding comments or descriptions
@@ -56,9 +56,40 @@ actual library state to prevent integration errors.
 
 ## Available Skills
 
-- `/explore-codebase` - Perform in-depth codebase exploration for Unity/C# projects
-- `/sun-lab-style` - Apply Sun Lab C# and Unity coding conventions (REQUIRED for all code and documentation changes)
-- `/configuration-verification` - Verify prefab positions match YAML task template constants (REQUIRED when working with template files)
+- `/exploring-codebase` - Perform in-depth codebase exploration for Unity/C# projects
+- `/applying-sun-lab-style` - Apply Sun Lab C# and Unity coding conventions (REQUIRED for all code and documentation changes)
+- `/verifying-task-templates` - Verify prefab positions match YAML task template constants (REQUIRED when working with template files)
+
+## Skill Workflow Guide
+
+Use skills in combination for different tasks:
+
+| Task Type                    | Skills to Invoke (in order)                                            |
+|------------------------------|------------------------------------------------------------------------|
+| Session start                | `/exploring-codebase`                                                  |
+| Writing C# code              | `/exploring-codebase` (if new session), `/applying-sun-lab-style`      |
+| Creating task templates      | `/applying-sun-lab-style`, `/verifying-task-templates`                 |
+| Modifying task templates     | `/verifying-task-templates`                                            |
+| Modifying segment prefabs    | `/verifying-task-templates` (after changes)                            |
+| Writing/updating README      | `/exploring-codebase`, `/applying-sun-lab-style`                       |
+| Writing commit messages      | `/applying-sun-lab-style`                                              |
+| Code review                  | `/applying-sun-lab-style`                                              |
+| Creating new skills          | `/applying-sun-lab-style` (see SKILL_STYLE.md)                         |
+
+**Workflow examples:**
+
+1. **New coding session**: Invoke `/exploring-codebase` first to understand the project, then `/applying-sun-lab-style`
+   before writing any code.
+
+2. **Adding a new task template**: Invoke `/applying-sun-lab-style` to review naming and header conventions, create the
+   template, then invoke `/verifying-task-templates` to validate against prefabs.
+
+3. **Fixing a bug in Task.cs**: If unfamiliar with the codebase, invoke `/exploring-codebase`. Then invoke
+   `/applying-sun-lab-style` before making changes. After fixing, use the style guide's commit conventions.
+
+4. **Updating README documentation**: Invoke `/exploring-codebase` to understand the current implementation. Then
+   invoke `/applying-sun-lab-style` and cross-reference all technical claims against actual source files before
+   writing. Verify file paths, class names, and API examples match the codebase.
 
 ## Related Libraries
 
@@ -115,7 +146,7 @@ sequences while receiving stimuli based on behavior.
 - CSharpier formatter with 120 character line limit
 - EditorConfig enforcing Allman brace style and naming conventions
 - XML documentation for all public and private members
-- See `/sun-lab-style` for complete conventions
+- See `/applying-sun-lab-style` for complete conventions
 
 ## Formatting
 
@@ -138,7 +169,7 @@ Task template files follow:
 
 See the style guide for complete naming and header conventions.
 
-When creating or modifying YAML task template files, you MUST invoke the `/configuration-verification` skill to verify that:
+When creating or modifying YAML task template files, you MUST invoke the `/verifying-task-templates` skill to verify that:
 - Referenced segment prefabs exist
 - Zone positions in prefabs match template constants (using correct `cm_per_unity_unit` conversion)
 - Zone ranges are within segment length bounds
@@ -147,31 +178,27 @@ This ensures task templates are valid before task generation.
 
 ### Maintaining Pre-Baked Verification Data
 
-The `/configuration-verification` skill contains pre-baked codebase structure (GUIDs, expected values, directory layout)
-that enables efficient single-pass verification. This data MUST be updated when:
+The `/verifying-task-templates` skill contains pre-baked expected values that enable efficient verification. This data
+MUST be updated when:
 
 1. **Template changes**: Adding, removing, or modifying any YAML file in `Configurations/`
 2. **Prefab changes**: Adding, removing, or modifying segment prefabs (`Segment_*.prefab`) or zone prefabs
-3. **Directory structure changes**: Reorganizing the `Assets/InfiniteCorridorTask/` directory
-4. **Zone prefab GUID changes**: If zone prefabs are recreated (new GUIDs assigned)
+3. **Zone prefab GUID changes**: If zone prefabs are recreated (new GUIDs assigned)
 
-**When any of these changes occur, you MUST update the following sections in
-`.claude/skills/configuration-verification/SKILL.md`:**
+**When any of these changes occur, update `.claude/skills/configuration-verification/EXPECTED_VALUES.md`:**
 
-| Section                                | Update When                                    |
-|----------------------------------------|------------------------------------------------|
-| Directory Layout                       | Directory structure changes                    |
-| Zone Prefab GUIDs (Stable)             | Zone prefabs recreated with new GUIDs          |
-| Zone Collider Hierarchies              | Zone prefab internal structure changes         |
-| Current Templates (Pre-Computed)       | Any template added, removed, or modified       |
-| Current Segment Prefabs (Pre-Computed) | Any segment prefab added, removed, or modified |
-
-Run the single-pass verification script after updates to confirm the pre-baked values match actual state.
+| Section                    | Update When                                    |
+|----------------------------|------------------------------------------------|
+| Templates                  | Any template added, removed, or modified       |
+| Template Trial Structures  | Trial trigger_type values change               |
+| Segment Prefabs            | Any segment prefab added, removed, or modified |
+| Pre-Computed Zone Ranges   | Zone positions or sizes change                 |
+| Zone Prefab GUIDs          | Zone prefabs recreated with new GUIDs          |
 
 ## Creating New Tasks
 
 1. Create or modify a YAML task template file in `Assets/InfiniteCorridorTask/Configurations/`
-2. Run `/configuration-verification` to validate prefab/template alignment
+2. Run `/verifying-task-templates` to validate prefab/template alignment
 3. Use the CreateTask editor tool: `CreateTask > New Task` menu
 4. Select the YAML file and save the generated prefab
 5. Create a new scene from ExperimentTemplate and add the task prefab

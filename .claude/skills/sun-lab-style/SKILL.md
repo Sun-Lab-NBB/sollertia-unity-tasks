@@ -1,25 +1,56 @@
 ---
-name: sun-lab-style
+name: applying-sun-lab-style
 description: >-
-  Apply Sun Lab C# and Unity coding conventions when writing, reviewing, or refactoring code. Covers
-  XML documentation, naming conventions, code organization, MQTT patterns, and formatting standards.
+  Applies Sun Lab C# and Unity coding conventions when writing, reviewing, or refactoring code. Covers
+  .cs files, XML documentation, naming conventions, MQTT patterns, README.md files, git commit messages,
+  and YAML task templates. Use when writing or modifying any .cs, .md, or .yaml files in Sun Lab projects.
 ---
 
 # Sun Lab Style Guide
 
-When writing, reviewing, or refactoring C# code, apply the conventions defined in the Sun Lab style guide.
+Applies Sun Lab coding and documentation conventions.
 
-See @SUN_LAB_STYLE_GUIDE.md for complete guidelines.
+**You MUST read the appropriate style guide and apply its conventions when writing or modifying any code,
+documentation, commits, or skills. You MUST verify your changes against the style guide's checklist before submitting.**
 
 ---
 
-## Key Conventions
+## Style Guides
 
-- **XML Documentation**: Triple-slash `///` comments with `<summary>`, `<param>`, `<returns>` tags
-- **Naming**: Private fields with `_camelCase`; public members with `PascalCase`; full words over abbreviations
-- **Brace Style**: Allman style (braces on new lines)
+| Guide                              | Use When                                                                  |
+|------------------------------------|---------------------------------------------------------------------------|
+| [CSHARP_STYLE.md](CSHARP_STYLE.md) | Writing C# code (naming, formatting, XML docs, inline comments, patterns) |
+| [README_STYLE.md](README_STYLE.md) | Creating or updating README files                                         |
+| [COMMIT_STYLE.md](COMMIT_STYLE.md) | Writing git commit messages                                               |
+| [SKILL_STYLE.md](SKILL_STYLE.md)   | Creating Claude skills or YAML task templates                             |
+
+---
+
+## Quick Reference
+
+### C# Code (includes API docs and inline comments)
+
+- **XML Documentation**: Triple-slash `///` with `<summary>`, `<param>`, `<returns>` tags
+- **Prose Over Lists**: Use prose in all documentation; bullet lists are forbidden in code comments
+- **Inline Comments**: Third person imperative, above the code, explain non-obvious logic
+- **Naming**: Private fields `_camelCase`, public members `PascalCase`
+- **Brace Style**: Allman (braces on new lines)
 - **Line Length**: Maximum 120 characters
-- **Formatting**: Use CSharpier formatter (`csharpier .`) before committing
-- **MQTT Patterns**: Type-safe channels with MQTTChannel and MQTTChannel<T> classes
-- **Unity Patterns**: MonoBehaviour lifecycle methods, component references, coroutines
-- **Comments**: Third-person imperative mood; explain non-obvious logic, not implementation details
+- **Formatting**: Run `csharpier .` before committing
+
+### Commit Messages
+
+- Start with past tense verb: Added, Fixed, Updated, Refactored, Removed
+- Header line ≤ 72 characters
+- End with a period
+
+### README Files
+
+- Third person voice throughout
+- Present tense as default
+
+### Skills & Templates
+
+- SKILL.md frontmatter: `name` (gerund form), `description` (third person)
+- YAML templates: Header with Project, Purpose, Layout, Related fields
+- Line length ≤ 120 characters
