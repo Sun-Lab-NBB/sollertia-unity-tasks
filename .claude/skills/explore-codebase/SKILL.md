@@ -1,92 +1,101 @@
 ---
-name: explore-codebase
+name: exploring-codebase
 description: >-
-  Perform in-depth codebase exploration at the start of a coding session. Builds comprehensive
-  understanding of Unity project structure, architecture, key components, and patterns.
+  Performs in-depth codebase exploration at the start of a coding session. Builds comprehensive
+  understanding of project structure, architecture, key components, and patterns. Use at session
+  start or when the user asks to understand the codebase.
 ---
 
 # Codebase Exploration
 
-When this skill is invoked, perform a thorough exploration of the codebase to build deep understanding before any
-coding work begins.
+Performs thorough codebase exploration to build deep understanding before coding work begins.
 
 ---
 
-## Exploration Requirements
+## Exploration Approach
 
-You MUST use the Task tool with `subagent_type: Explore` to investigate the following areas:
+Use the Task tool with `subagent_type: Explore` to investigate the codebase. Focus on understanding:
 
-### 1. Project Overview
-- Read README.md, package.json files, and documentation
-- Understand the project's purpose, goals, and primary use cases
-- Identify the target users/audience (neuroscience researchers, VR experiments)
+1. **Project purpose and structure** - README, documentation, directory layout
+2. **Architecture** - Main components, how they interact, communication patterns
+3. **Core code** - Key classes, data models, utilities
+4. **Configuration** - How the project is configured and customized
+5. **Dependencies** - External libraries and integrations
+6. **Patterns and conventions** - Coding style, naming conventions, design patterns
 
-### 2. Unity Project Structure
-- Map the complete directory structure under Assets/
-- Identify scene files, prefabs, scripts, materials, and configurations
-- Understand the Packages/ directory and custom packages (gimbl)
-- Review ProjectSettings/ for Unity configuration
+Adapt exploration depth based on project size and complexity. For small projects, a quick overview
+suffices. For large projects, explore systematically.
 
-### 3. Architecture
-- Understand the overall system architecture
-- Identify main components and how they interact
-- Document communication patterns (MQTT topics, Unity events, collider callbacks)
-- Note external system integrations (MQTT broker, sl-experiment)
+---
 
-### 4. Core Scripts
-- **MonoBehaviour classes**: Task, Zone components, UI elements
-- **Data models**: Configuration classes, message types
-- **Utilities**: ConfigLoader, helper functions
-- **Editor tools**: CreateTask menu items, custom inspectors
+## Guiding Questions
 
-### 5. Configuration System
-- Review YAML configuration files in Configurations/
-- Understand cue, segment, and trial structure definitions
-- Note VR environment parameters and their effects
-- Document how configurations drive prefab generation
+Answer these questions during exploration:
 
-### 6. MQTT Integration
-- List all MQTT topics and their purposes
-- Understand message flow between Unity and sl-experiment
-- Note channel patterns (trigger-only vs typed payload)
-- Document subscription and publication patterns
+### Architecture
+- What is the main entry point or controller?
+- How do components communicate (events, callbacks, messaging)?
+- What external systems does this integrate with?
 
-### 7. Prefab System
-- Understand segment prefab structure
-- Review zone prefab hierarchy (StimulusTriggerZone, GuidanceZone, OccupancyZone)
-- Note how prefabs are combined in CreateTask workflow
-- Document padding and corridor spacing
+### Patterns
+- What naming conventions are used?
+- What design patterns appear (singleton, observer, factory)?
+- How is configuration managed?
 
-### 8. Dependencies
-- Review gimbl package for display, controller, and MQTT functionality
-- Understand third-party libraries (YamlDotNet, M2Mqtt)
-- Note Unity package dependencies from manifest.json
-
-### 9. Design Patterns & Conventions
-- Document coding patterns used (MQTT event system, zone hierarchy, teleportation)
-- Note naming conventions from .editorconfig
-- Identify formatting standards from .csharpierrc.yaml
-
-### 10. Key Files
-- List the most important files with brief descriptions
-- Include file paths and line counts where relevant
+### Structure
+- Where is the core business logic?
+- Where are tests located?
+- What build/tooling configuration exists?
 
 ---
 
 ## Output Format
 
-After exploration, provide a structured summary with:
+Provide a structured summary including:
+
 - Project purpose (1-2 sentences)
-- Architecture diagram (ASCII if helpful)
 - Key components table
 - Important files list with paths
-- MQTT topic reference
 - Notable patterns or conventions
 - Any areas of complexity or concern
+
+### Example Output
+
+```
+## Project Purpose
+
+Provides VR behavioral experiment tasks for mesoscope experiments. Animals navigate infinite
+corridors while receiving stimuli based on behavior.
+
+## Key Components
+
+| Component       | Location                           | Purpose                              |
+|-----------------|------------------------------------|--------------------------------------|
+| Task Controller | Assets/.../Scripts/Task.cs         | Manages corridor generation and MQTT |
+| Zone System     | Assets/.../Scripts/Zones/          | Handles trigger and occupancy zones  |
+| Config Loader   | Assets/.../Scripts/ConfigLoader.cs | Loads YAML task templates            |
+
+## Important Files
+
+- `Assets/InfiniteCorridorTask/Scripts/Task.cs` - Main task controller (450 lines)
+- `Assets/InfiniteCorridorTask/Configurations/*.yaml` - Task templates
+- `Packages/gimbl/` - VR framework package
+
+## Notable Patterns
+
+- MQTT event system using MQTTChannel<T> for type-safe messaging
+- Corridor teleportation for infinite hallway illusion
+- YAML-driven task configuration
+
+## Areas of Concern
+
+- Zone position calculations require precise cm/unit conversion
+- Prefab GUIDs must match expected values for verification
+```
 
 ---
 
 ## Usage
 
-This skill should be invoked at the start of coding sessions to ensure full context before making
-changes. It prevents blind modifications and ensures understanding of existing patterns.
+Invoke at session start to ensure full context before making changes. Prevents blind modifications
+and ensures understanding of existing patterns.

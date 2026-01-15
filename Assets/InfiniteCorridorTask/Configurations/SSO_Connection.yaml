@@ -65,6 +65,7 @@ trial_structures:
     stimulus_trigger_zone_end_cm: 192.0
     stimulus_location_cm: 188.0
     show_stimulus_collision_boundary: false
+    trigger_type: "lick"
 
   ABCA:
     segment_name: "Segment_abca_40cm"
@@ -72,6 +73,7 @@ trial_structures:
     stimulus_trigger_zone_end_cm: 192.0
     stimulus_location_cm: 188.0
     show_stimulus_collision_boundary: false
+    trigger_type: "lick"
 
   DEFG:
     segment_name: "Segment_defg_40cm"
@@ -79,6 +81,7 @@ trial_structures:
     stimulus_trigger_zone_end_cm: 272.0
     stimulus_location_cm: 268.0
     show_stimulus_collision_boundary: false
+    trigger_type: "lick"
 
   DEFGD:
     segment_name: "Segment_defgd_40cm"
@@ -86,3 +89,4 @@ trial_structures:
     stimulus_trigger_zone_end_cm: 272.0
     stimulus_location_cm: 268.0
     show_stimulus_collision_boundary: false
+    trigger_type: "lick"

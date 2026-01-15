@@ -1,13 +1,12 @@
 /// <summary>
 /// Provides the OccupancyZone class that tracks whether an animal has occupied a zone for a required duration.
 ///
-/// Used for trial types that require occupancy-based stimulus disarming (e.g., GasPuffTrial).
+/// Used for trial types that require occupancy-based stimulus disarming. The occupancy mode specifies
+/// how a stimulus is triggered, not what stimulus is delivered.
 ///
-/// Behavior:
-/// - When the animal enters the zone, a high-precision timer starts
-/// - If the animal stays for occupancy_duration_ms, the boundary is disarmed
-/// - If the animal leaves early, the boundary remains armed
-/// - The parent StimulusTriggerZone reads the boundaryDisarmed state to determine collision behavior
+/// When the animal enters the zone, a high-precision timer starts. If the animal stays for the configured
+/// occupancy duration, the boundary is disarmed. If the animal leaves early, the boundary remains armed.
+/// The parent StimulusTriggerZone reads the boundaryDisarmed state to determine collision behavior.
 /// </summary>
 using System.Diagnostics;
 using UnityEngine;

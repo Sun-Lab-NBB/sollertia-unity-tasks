@@ -1,17 +1,16 @@
 /// <summary>
 /// Provides the StimulusTriggerZone class that manages stimulus delivery based on animal behavior.
 ///
-/// Supports two trigger modes determined by the presence of child zones:
+/// Supports two trigger modes determined by the presence of child zones. The trigger mode specifies
+/// how a stimulus is triggered, not what stimulus is delivered. Any stimulus type can be paired
+/// with either trigger mode.
 ///
-/// Lick Mode (WaterRewardTrial behavior):
-/// - Requires GuidanceZone child for guidance mode support
-/// - When guidance is disabled: Animal must lick in the zone to trigger stimulus
-/// - When guidance is enabled: Stimulus delivered when animal reaches GuidanceZone
+/// In lick mode (with GuidanceZone child), when guidance is disabled the animal must lick in the zone
+/// to trigger stimulus. When guidance is enabled, the stimulus is delivered when the animal reaches
+/// the GuidanceZone.
 ///
-/// Occupancy Mode (GasPuffTrial behavior):
-/// - Requires OccupancyZone child
-/// - Animal must occupy zone for duration to DISARM the boundary
-/// - Boundary collision triggers stimulus only when boundary is ARMED
+/// In occupancy mode (with OccupancyZone child), the animal must occupy the zone for the required
+/// duration to disarm the boundary. Boundary collision triggers stimulus only when the boundary is armed.
 /// </summary>
 using Gimbl;
 using UnityEngine;
@@ -95,10 +94,9 @@ public class StimulusTriggerZone : MonoBehaviour
     }
 
     /// <summary>
-    /// Handles lick mode behavior (for WaterRewardTrial and similar):
-    /// - When guidance disabled: Animal must lick in zone
-    /// - When guidance enabled with GuidanceZone: Animal can lick in zone OR reach guidance zone
-    /// - When guidance enabled without GuidanceZone: Stimulus on zone entry
+    /// Handles lick mode behavior. When guidance is disabled, the animal must lick in the zone.
+    /// When guidance is enabled with a GuidanceZone, the animal can lick in the zone or reach the
+    /// guidance zone. When guidance is enabled without a GuidanceZone, stimulus triggers on zone entry.
     /// </summary>
     private void UpdateLickMode()
     {
@@ -133,10 +131,9 @@ public class StimulusTriggerZone : MonoBehaviour
     }
 
     /// <summary>
-    /// Handles occupancy mode behavior (for GasPuffTrial and similar):
-    /// - Animal must occupy OccupancyZone for duration to disarm boundary
-    /// - Boundary collision only triggers stimulus when boundary is ARMED
-    /// - In guidance mode, OccupancyFailed triggers movement blocking via MQTT
+    /// Handles occupancy mode behavior. The animal must occupy the OccupancyZone for the required
+    /// duration to disarm the boundary. Boundary collision only triggers stimulus when the boundary
+    /// is armed. In guidance mode, occupancy failure triggers movement blocking via MQTT.
     /// </summary>
     private void UpdateOccupancyMode()
     {

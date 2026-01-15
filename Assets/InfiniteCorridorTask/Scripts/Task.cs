@@ -17,17 +17,15 @@ using UnityEngine.SceneManagement;
 /// Controls the infinite corridor VR task, managing segment generation, animal positioning, and MQTT communication.
 /// </summary>
 /// <remarks>
-/// Terminology:
-/// - Cue: A visual pattern displayed on the corridor walls.
-/// - Segment: A portion of the maze composed of a sequence of cues.
-/// - Corridor: A grouping of adjacent segments forming a visual unit.
+/// A "cue" refers to a visual pattern displayed on the corridor walls. A "segment" is a portion of the
+/// maze composed of a sequence of cues. A "corridor" is a grouping of adjacent segments forming a visual unit.
 /// </remarks>
 public class Task : MonoBehaviour
 {
     /// <summary>The actor (animal) being tracked in the VR environment.</summary>
     public ActorObject actor = null;
 
-    /// <summary>Determines whether the animal must lick to receive a reward (lick guidance mode toggle).</summary>
+    /// <summary>Determines whether the animal must lick to trigger the stimulus (lick guidance mode toggle).</summary>
     public bool requireLick = false;
 
     /// <summary>Determines whether the animal must wait in the occupancy zone (occupancy guidance mode toggle).</summary>

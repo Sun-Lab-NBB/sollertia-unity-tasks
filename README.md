@@ -149,27 +149,31 @@ Each prefab includes several key elements:
 
 - **Stimulus Trigger Zone**: The parent zone that manages stimulus delivery. Its behavior depends on which child zone
   is present (Guidance Zone or Occupancy Zone).
-- **Guidance Zone**: A child of the Stimulus Trigger Zone used in reward trials (e.g., water delivery).
+- **Guidance Zone**: A child of the Stimulus Trigger Zone used in lick mode trials.
 - **Reset Zone**: After successfully triggering a stimulus delivery, the animal must pass through this zone before
   another stimulus can be triggered.
-- **Occupancy Zone** *(optional)*: A child of the Stimulus Trigger Zone used in aversion trials (e.g., air puff).
+- **Occupancy Zone** *(optional)*: A child of the Stimulus Trigger Zone used in occupancy mode trials.
 
 **Zone Behavior Modes:**
 
-The Stimulus Trigger Zone operates in one of two modes based on which child zone is present:
+The Stimulus Trigger Zone operates in one of two modes based on which child zone is present. The trigger mode
+determines *how* a stimulus is delivered, not *what* stimulus is delivered. Any stimulus type (water, air puff, etc.)
+can be paired with either trigger mode.
 
-1. **Lick Mode** (with Guidance Zone child, for reward trials):
-   - When **Require Lick** is enabled: The animal must lick within the Stimulus Trigger Zone to receive the reward.
-   - When **Require Lick** is disabled (guidance mode): The reward is delivered automatically when the animal reaches
-     the Guidance Zone. The animal can still lick anywhere in the Stimulus Trigger Zone to receive the reward early.
+1. **Lick Mode** (with Guidance Zone child):
+   - When **Require Lick** is enabled: The animal must lick within the Stimulus Trigger Zone to receive the stimulus.
+   - When **Require Lick** is disabled (guidance mode): The stimulus is delivered automatically when the animal reaches
+     the Guidance Zone. The animal can still lick anywhere in the Stimulus Trigger Zone to receive the stimulus early.
 
-2. **Occupancy Mode** (with Occupancy Zone child, for aversion trials):
-   - The animal must remain in the Occupancy Zone for the required duration to **disarm** the trigger zone's start
-     boundary.
-   - If the animal leaves early and collides with the start boundary while it is still **armed**, the aversive stimulus
-     (e.g., air puff) is delivered.
+2. **Occupancy Mode** (with Occupancy Zone child):
+   - The animal must remain in the Occupancy Zone for the required duration to **disarm** the trigger zone's boundary.
+   - If the animal leaves early and collides with the boundary while it is still **armed**, the stimulus is delivered.
    - When **Require Wait** is disabled (guidance mode): The library sends an MQTT message requesting the treadmill
      brakes to lock, enforcing the occupancy requirement by preventing the animal from leaving early.
+
+**Note:** The Sun Lab currently uses lick mode for reward delivery (water) and occupancy mode for aversion stimuli
+(air puff), but this pairing is a convention rather than a technical requirement. Future experiments may use different
+stimulus-trigger combinations.
 
 Once each prefab segment is created, an additional prefab must be made for padding. This padding prefab should be a long
 empty corridor, and it is used during task runtime to give the animal an illusion that the corridor is infinite.
@@ -182,6 +186,39 @@ files are stored in `Assets/InfiniteCorridorTask/Configurations/` with a `.yaml`
 **Note:** The configuration schema is derived from the
 [sl-shared-assets](https://github.com/Sun-Lab-NBB/sl-shared-assets) library and always matches the current state of
 that library's data classes. See `task_template_data.py` in sl-shared-assets for the authoritative schema definition.
+
+**File Naming Convention:**
+
+Template files follow the pattern `ProjectAbbreviation_TaskDescription.yaml`:
+
+| Abbreviation | Project Name      |
+|--------------|-------------------|
+| MF           | MaalstroomicFlow  |
+| SSO          | StateSpaceOdyssey |
+
+- Use `_Base` suffix for single-segment training configurations (e.g., `SSO_Shared_Base.yaml`).
+- Capitalize each word in the task description.
+- The template name and Unity scene name are derived from the filename (without `.yaml`).
+
+**Header Format:**
+
+Each template file must begin with a YAML comment header containing four fields:
+
+```yaml
+# Project: [Full project name]
+# Purpose: [Single sentence describing the task structure]
+# Layout:  [Segment names with cue letters and zone placements]
+# Related: [Related template file (parenthetical explanation)]
+```
+
+For multi-line fields, align continuation text with the first character after the field name:
+
+```yaml
+# Layout:  Segment ABC with the rewarding stimulus (water) trigger zone in cue C.
+#          Segment ABDC with the rewarding stimulus (water) trigger zone in cue C.
+```
+
+**Schema:**
 
 The structure is:
 
@@ -216,10 +253,13 @@ The structure is:
         - **stimulus_location_cm** *(number)*: Position of the stimulus boundary in centimeters.
         - **show_stimulus_collision_boundary** *(boolean)*: Determines whether to show the stimulus boundary to the
           animal.
+        - **trigger_type** *(string)*: The trigger mode for the zone. Must be `"lick"` for segments with a
+          Guidance Zone child or `"occupancy"` for segments with an Occupancy Zone child. This field specifies the
+          trigger mechanism, not the stimulus type.
 
 See existing configuration files in `Assets/InfiniteCorridorTask/Configurations/` for examples.
 
-**Important:** This project includes an agentic skill (`/configuration-verification`) that validates configuration
+**Important:** This project includes an agentic skill (`/verifying-task-templates`) that validates configuration
 template files against existing prefabs. Developers and AI agents are highly encouraged to use this skill when creating
 or modifying configuration files to ensure zone positions, segment lengths, and other spatial parameters match the
 actual prefab state.
