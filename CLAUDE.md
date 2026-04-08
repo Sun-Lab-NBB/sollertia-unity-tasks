@@ -185,7 +185,7 @@ MUST be updated when:
 2. **Prefab changes**: Adding, removing, or modifying segment prefabs (`Segment_*.prefab`) or zone prefabs
 3. **Zone prefab GUID changes**: If zone prefabs are recreated (new GUIDs assigned)
 
-**When any of these changes occur, update `.claude/skills/configuration-verification/EXPECTED_VALUES.md`:**
+**When any of these changes occur, update the `EXPECTED_VALUES.md` companion file alongside the `configuration-verification` skill in the central [sollertia](https://github.com/Sun-Lab-NBB/sollertia) marketplace plugin (`plugins/experiment/skills/configuration-verification/EXPECTED_VALUES.md`). The file no longer lives in this repository — the per-repo `.claude/skills/` copy was removed when the skill was lifted into the central marketplace.**
 
 | Section                    | Update When                                    |
 |----------------------------|------------------------------------------------|
