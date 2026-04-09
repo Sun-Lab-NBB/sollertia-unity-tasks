@@ -33,7 +33,7 @@ namespace SL.Config
             string yaml = File.ReadAllText(filePath);
             TaskTemplate template = deserializer.Deserialize<TaskTemplate>(yaml);
 
-            if (!ValidateTemplate(template))
+            if (!ValidateTemplate(template, filePath))
             {
                 return null;
             }
@@ -46,8 +46,9 @@ namespace SL.Config
 
         /// <summary>Validates the loaded template for required fields and data integrity.</summary>
         /// <param name="template">The template to validate.</param>
+        /// <param name="filePath">The absolute path to the template file, used for resolving asset paths.</param>
         /// <returns>True if the template is valid, false otherwise.</returns>
-        private static bool ValidateTemplate(TaskTemplate template)
+        private static bool ValidateTemplate(TaskTemplate template, string filePath)
         {
             if (template == null)
             {
@@ -102,6 +103,27 @@ namespace SL.Config
                     Debug.LogError($"Cue '{cue.name}' has invalid length {cue.length_cm}. Must be positive.");
                     return false;
                 }
+
+                if (string.IsNullOrEmpty(cue.texture))
+                {
+                    Debug.LogError($"Cue '{cue.name}' is missing required 'texture' field.");
+                    return false;
+                }
+
+                string texturesDir = Path.Combine(
+                    Path.GetDirectoryName(filePath),
+                    "..",
+                    "Textures"
+                );
+                string texturePath = Path.GetFullPath(Path.Combine(texturesDir, cue.texture));
+                if (!File.Exists(texturePath))
+                {
+                    Debug.LogError(
+                        $"Cue '{cue.name}' references texture '{cue.texture}' "
+                            + $"but no file found at {texturePath}."
+                    );
+                    return false;
+                }
             }
 
             // Validates segment cue sequences reference valid cues
@@ -153,6 +175,21 @@ namespace SL.Config
                     if (!segmentNames.Contains(trial.segment_name))
                     {
                         Debug.LogError($"Trial '{trialName}' references unknown segment '{trial.segment_name}'.");
+                        return false;
+                    }
+
+                    if (string.IsNullOrEmpty(trial.trigger_type))
+                    {
+                        Debug.LogError($"Trial '{trialName}' is missing required 'trigger_type' field.");
+                        return false;
+                    }
+
+                    if (trial.trigger_type != "lick" && trial.trigger_type != "occupancy")
+                    {
+                        Debug.LogError(
+                            $"Trial '{trialName}' has invalid trigger_type '{trial.trigger_type}'. "
+                                + "Must be 'lick' or 'occupancy'."
+                        );
                         return false;
                     }
                 }
