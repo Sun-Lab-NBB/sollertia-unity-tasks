@@ -17,7 +17,7 @@ public class CreateTask : MonoBehaviour
     /// <summary>The tolerance for comparing measured prefab lengths against configured lengths.</summary>
     private const float LengthComparisonEpsilon = 0.01f;
 
-    /// <summary>Creates a new Task prefab from a selected YAML configuration file.</summary>
+    /// <summary>Creates a new Task prefab from a selected YAML configuration file via the Editor menu.</summary>
     [MenuItem("CreateTask/New Task")]
     public static void CreateNewTask()
     {
@@ -36,23 +36,57 @@ public class CreateTask : MonoBehaviour
             return;
         }
 
+        // Opens save file panel for user to specify location and name of prefab
+        string savePath = EditorUtility.SaveFilePanel(
+            "Save Task Prefab",
+            Application.dataPath + "/InfiniteCorridorTask/Tasks/",
+            "newTask.prefab",
+            "prefab"
+        );
+
+        if (string.IsNullOrEmpty(savePath))
+        {
+            Debug.LogError("User did not select a save location.");
+            return;
+        }
+
+        savePath = FileUtil.GetProjectRelativePath(savePath);
+        string result = CreateFromTemplate(Application.dataPath + configPath, configPath, savePath);
+        Debug.Log(result);
+    }
+
+    /// <summary>
+    /// Creates a Task prefab from a YAML template file and saves it to the specified path.
+    /// This is the parameterized entry point used by both the Editor menu and the MCP bridge.
+    /// </summary>
+    /// <param name="absoluteTemplatePath">The absolute path to the YAML template file.</param>
+    /// <param name="relativeConfigPath">
+    /// The config path relative to Application.dataPath, stored on the Task component for runtime loading.
+    /// </param>
+    /// <param name="savePath">The project-relative path where the prefab will be saved (e.g., "Assets/.../Task.prefab").</param>
+    /// <returns>A status message describing success or the error encountered.</returns>
+    public static string CreateFromTemplate(
+        string absoluteTemplatePath,
+        string relativeConfigPath,
+        string savePath
+    )
+    {
         // Loads and validates task template
-        TaskTemplate template = ConfigLoader.LoadTemplate(Application.dataPath + configPath);
+        TaskTemplate template = ConfigLoader.LoadTemplate(absoluteTemplatePath);
         if (template == null)
         {
-            Debug.LogError("Failed to load task template from YAML file.");
-            return;
+            return "error: Failed to load task template from YAML file.";
         }
 
         // Builds cue and segment prefabs from template data when they do not already exist
         if (!BuildCuePrefabs(template))
         {
-            return;
+            return "error: Failed to build cue prefabs.";
         }
 
         if (!BuildSegmentPrefabs(template))
         {
-            return;
+            return "error: Failed to build segment prefabs.";
         }
 
         string prefabsPath = "Assets/InfiniteCorridorTask/Prefabs/";
@@ -63,8 +97,7 @@ public class CreateTask : MonoBehaviour
 
         if (padding == null)
         {
-            Debug.LogError("No padding found at " + paddingPath);
-            return;
+            return "error: No padding found at " + paddingPath;
         }
 
         int nSegments = template.segments.Count;
@@ -78,8 +111,7 @@ public class CreateTask : MonoBehaviour
 
             if (segmentPrefabs[i] == null)
             {
-                Debug.LogError("No segment found at " + segmentPath);
-                return;
+                return "error: No segment found at " + segmentPath;
             }
         }
 
@@ -103,11 +135,11 @@ public class CreateTask : MonoBehaviour
         float paddingZShift = depth * Mathf.Min(segmentLengths) - 1;
 
         // Creates task GameObject hierarchy
-        string taskName = "newTask";
+        string taskName = Path.GetFileNameWithoutExtension(savePath);
         GameObject task = new GameObject(taskName);
         Task taskScript = task.AddComponent<Task>();
         taskScript.requireLick = true;
-        taskScript.configPath = configPath;
+        taskScript.configPath = relativeConfigPath;
 
         int[] corridorSegments = new int[depth];
         int segment;
@@ -138,7 +170,8 @@ public class CreateTask : MonoBehaviour
                 // since the later segments are just for visual illusion
                 if (j > 0)
                 {
-                    StimulusTriggerZone stimulusTriggerZone = instance.GetComponentInChildren<StimulusTriggerZone>();
+                    StimulusTriggerZone stimulusTriggerZone =
+                        instance.GetComponentInChildren<StimulusTriggerZone>();
                     if (stimulusTriggerZone != null)
                     {
                         DestroyImmediate(stimulusTriggerZone.gameObject);
@@ -153,7 +186,8 @@ public class CreateTask : MonoBehaviour
                 else
                 {
                     // For the first segment, sets showBoundary from config's trial visibility setting
-                    StimulusTriggerZone stimulusTriggerZone = instance.GetComponentInChildren<StimulusTriggerZone>();
+                    StimulusTriggerZone stimulusTriggerZone =
+                        instance.GetComponentInChildren<StimulusTriggerZone>();
                     if (stimulusTriggerZone != null)
                     {
                         string segmentName = template.segments[segment].name;
@@ -173,26 +207,10 @@ public class CreateTask : MonoBehaviour
             curCorridorX += corridorXShift;
         }
 
-        // Opens save file panel for user to specify location and name of prefab
-        string savePath = EditorUtility.SaveFilePanel(
-            "Save Task Prefab",
-            Application.dataPath + "/InfiniteCorridorTask/Tasks/",
-            taskName + ".prefab",
-            "prefab"
-        );
-
-        if (string.IsNullOrEmpty(savePath))
-        {
-            Debug.LogError("User did not select a save location.");
-            DestroyImmediate(task);
-            return;
-        }
-
-        savePath = FileUtil.GetProjectRelativePath(savePath);
         PrefabUtility.SaveAsPrefabAsset(task, savePath);
         DestroyImmediate(task);
 
-        Debug.Log($"Task prefab saved to {savePath}");
+        return $"success: Task prefab saved to {savePath}";
     }
 
     /// <summary>
