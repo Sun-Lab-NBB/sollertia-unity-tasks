@@ -71,8 +71,8 @@ namespace Gimbl
         void Start()
         {
             // Loads connection settings from EditorPrefs
-            ip = UnityEditor.EditorPrefs.GetString("JaneliaVR_MQTT_IP");
-            port = UnityEditor.EditorPrefs.GetInt("JaneliaVR_MQTT_Port");
+            ip = UnityEditor.EditorPrefs.GetString("SollertiaVR_MQTT_IP");
+            port = UnityEditor.EditorPrefs.GetInt("SollertiaVR_MQTT_Port");
 
             // Subscribes to standard session channels
             _startChannel = new MQTTChannel("Gimbl/Session/Start", false);
