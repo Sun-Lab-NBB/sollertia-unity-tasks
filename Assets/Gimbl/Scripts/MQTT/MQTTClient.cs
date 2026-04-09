@@ -7,12 +7,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
 using System.Text;
 using System.Threading.Tasks;
+using MQTTnet;
+using MQTTnet.Client;
+using MQTTnet.Protocol;
 using UnityEngine;
-using uPLibrary.Networking.M2Mqtt;
-using uPLibrary.Networking.M2Mqtt.Messages;
 
 namespace Gimbl
 {
@@ -37,8 +37,8 @@ namespace Gimbl
         [HideInInspector]
         public int port;
 
-        /// <summary>The underlying M2Mqtt client instance.</summary>
-        public MqttClient client;
+        /// <summary>The underlying MQTTnet client instance.</summary>
+        public IMqttClient client;
 
         /// <summary>The internal class that maps topics to their corresponding channel handlers.</summary>
         private class Channel
@@ -99,12 +99,19 @@ namespace Gimbl
         {
             _stopChannel.Send();
 
-            if (_channelList.Count > 0)
+            if (_channelList.Count > 0 && IsConnected())
             {
-                client.Unsubscribe(_channelList.Select(x => x.topic).ToArray());
+                var unsubscribeOptions = new MqttClientUnsubscribeOptionsBuilder();
+                foreach (string topic in _channelList.Select(x => x.topic))
+                {
+                    unsubscribeOptions.WithTopicFilter(topic);
+                }
+                client.UnsubscribeAsync(unsubscribeOptions.Build()).GetAwaiter().GetResult();
             }
 
             _channelList = new List<Channel>();
+
+            Disconnect();
 
             if (Instance == this)
             {
@@ -116,31 +123,48 @@ namespace Gimbl
         /// <param name="verbose">If true, logs successful connection to the console.</param>
         public void Connect(bool verbose)
         {
-            IPAddress ipAddress = IPAddress.Parse(ip);
+            var factory = new MqttFactory();
+            client = factory.CreateMqttClient();
 
-#pragma warning disable 618
-            client = new MqttClient(ipAddress, port, false, null, null, MqttSslProtocols.None);
-#pragma warning restore 618
+            // Routes received messages to the appropriate subscribed channels.
+            client.ApplicationMessageReceivedAsync += e =>
+            {
+                string payload = Encoding.UTF8.GetString(
+                    e.ApplicationMessage.PayloadSegment.Array ?? Array.Empty<byte>(),
+                    e.ApplicationMessage.PayloadSegment.Offset,
+                    e.ApplicationMessage.PayloadSegment.Count
+                );
+
+                lock (_channelList)
+                {
+                    foreach (Channel chn in _channelList)
+                    {
+                        if (string.Equals(e.ApplicationMessage.Topic, chn.topic))
+                        {
+                            chn.channel.ReceivedMessage(payload);
+                        }
+                    }
+                }
+
+                return Task.CompletedTask;
+            };
+
+            var options = new MqttClientOptionsBuilder()
+                .WithTcpServer(ip, port)
+                .WithClientId(Guid.NewGuid().ToString())
+                .WithProtocolVersion(MQTTnet.Formatter.MqttProtocolVersion.V500)
+                .Build();
 
             // Runs connection in a task with timeout to avoid blocking
-            Task t = Task.Run(() =>
-            {
-                byte msg = client.Connect(Guid.NewGuid().ToString());
-                MqttMsgConnack connack = new MqttMsgConnack();
-                connack.GetBytes(msg);
-
-                client.MqttMsgPublishReceived += ReceivedMessage;
-
-                if (verbose)
-                {
-                    UnityEngine.Debug.Log($"Successfully connected to MQTT Broker at: {ip}:{port}");
-                }
-            });
-
+            Task t = Task.Run(() => client.ConnectAsync(options));
             TimeSpan timeout = TimeSpan.FromMilliseconds(1000);
             if (!t.Wait(timeout))
             {
-                UnityEngine.Debug.LogError($"Could not connect to MQTT broker at {ip}:{port}");
+                Debug.LogError($"Could not connect to MQTT broker at {ip}:{port}");
+            }
+            else if (verbose)
+            {
+                Debug.Log($"Successfully connected to MQTT Broker at: {ip}:{port}");
             }
         }
 
@@ -149,7 +173,7 @@ namespace Gimbl
         {
             if (IsConnected())
             {
-                client.Disconnect();
+                client.DisconnectAsync().GetAwaiter().GetResult();
             }
         }
 
@@ -157,16 +181,15 @@ namespace Gimbl
         /// <returns>True if connected, false otherwise.</returns>
         public bool IsConnected()
         {
-            bool isConnected = false;
             try
             {
-                isConnected = client.IsConnected;
+                return client != null && client.IsConnected;
             }
             catch (Exception ex)
             {
                 Debug.LogWarning($"MQTTClient.IsConnected check failed: {ex.Message}");
+                return false;
             }
-            return isConnected;
         }
 
         /// <summary>Subscribes a channel to receive messages on the specified topic.</summary>
@@ -177,7 +200,23 @@ namespace Gimbl
         {
             if (IsConnected())
             {
-                client.Subscribe(new string[] { topic }, new byte[] { qosLevel });
+                var qos = (MqttQualityOfServiceLevel)qosLevel;
+                client
+                    .SubscribeAsync(
+                        new MqttClientSubscribeOptionsBuilder()
+                            .WithTopicFilter(f => f.WithTopic(topic).WithQualityOfServiceLevel(qos))
+                            .Build()
+                    )
+                    .ContinueWith(t =>
+                    {
+                        if (t.IsFaulted)
+                        {
+                            string message =
+                                $"MQTT subscribe failed for '{topic}': "
+                                + $"{t.Exception?.InnerException?.Message}";
+                            Debug.LogError(message);
+                        }
+                    });
 
                 lock (_channelList)
                 {
@@ -186,21 +225,27 @@ namespace Gimbl
             }
         }
 
-        /// <summary>Routes received messages to the appropriate subscribed channels.</summary>
-        /// <param name="sender">The event sender.</param>
-        /// <param name="e">The message event arguments containing topic and payload.</param>
-        public void ReceivedMessage(object sender, MqttMsgPublishEventArgs e)
+        /// <summary>Publishes a message to the specified topic.</summary>
+        /// <param name="topic">The MQTT topic to publish to.</param>
+        /// <param name="payload">The message payload as a byte array, or null for trigger messages.</param>
+        public void Publish(string topic, byte[] payload)
         {
-            lock (_channelList)
+            if (!IsConnected())
+                return;
+
+            var message = new MqttApplicationMessageBuilder()
+                .WithTopic(topic)
+                .WithPayload(payload ?? Array.Empty<byte>())
+                .WithQualityOfServiceLevel(MqttQualityOfServiceLevel.ExactlyOnce)
+                .Build();
+
+            client.PublishAsync(message).ContinueWith(t =>
             {
-                foreach (Channel chn in _channelList)
+                if (t.IsFaulted)
                 {
-                    if (string.Equals(e.Topic, chn.topic))
-                    {
-                        chn.channel.ReceivedMessage(Encoding.UTF8.GetString(e.Message));
-                    }
+                    Debug.LogError($"MQTT publish failed on '{topic}': {t.Exception?.InnerException?.Message}");
                 }
-            }
+            });
         }
     }
 }

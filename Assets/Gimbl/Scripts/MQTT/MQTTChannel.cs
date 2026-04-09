@@ -7,7 +7,6 @@
 using System.Text;
 using UnityEngine;
 using UnityEngine.Events;
-using uPLibrary.Networking.M2Mqtt.Messages;
 
 namespace Gimbl
 {
@@ -29,7 +28,7 @@ namespace Gimbl
         /// <param name="topicStr">The MQTT topic to subscribe to or publish on.</param>
         /// <param name="isListener">If true, subscribes to receive messages on this topic.</param>
         /// <param name="qosLevel">The Quality of Service level for the subscription.</param>
-        public MQTTChannel(string topicStr, bool isListener = true, byte qosLevel = MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE)
+        public MQTTChannel(string topicStr, bool isListener = true, byte qosLevel = 2)
         {
             Init(topicStr, isListener, qosLevel);
         }
@@ -64,7 +63,7 @@ namespace Gimbl
         /// <summary>Publishes a trigger message (null payload) to this channel's topic.</summary>
         public void Send()
         {
-            client.client.Publish(topic, null);
+            client.Publish(topic, null);
         }
     }
 
@@ -84,7 +83,7 @@ namespace Gimbl
         /// <param name="topicStr">The MQTT topic to subscribe to or publish on.</param>
         /// <param name="isListener">If true, subscribes to receive messages on this topic.</param>
         /// <param name="qosLevel">The Quality of Service level for the subscription.</param>
-        public MQTTChannel(string topicStr, bool isListener = true, byte qosLevel = MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE)
+        public MQTTChannel(string topicStr, bool isListener = true, byte qosLevel = 2)
             : base(topicStr, isListener, qosLevel) { }
 
         /// <summary>Handles received messages by deserializing JSON and invoking the typed Event.</summary>
@@ -106,7 +105,7 @@ namespace Gimbl
         /// <param name="msg">The message object to serialize and publish.</param>
         public void Send(T msg)
         {
-            client.client.Publish(topic, Encoding.UTF8.GetBytes(JsonUtility.ToJson(msg)));
+            client.Publish(topic, Encoding.UTF8.GetBytes(JsonUtility.ToJson(msg)));
         }
     }
 }
