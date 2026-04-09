@@ -121,12 +121,6 @@
         "com.unity.modules.imgui": "1.0.0"
       }
     },
-    "gimbl": {
-      "version": "file:gimbl",
-      "depth": 0,
-      "source": "embedded",
-      "dependencies": {}
-    },
     "com.unity.modules.animation": {
       "version": "1.0.0",
       "depth": 0,

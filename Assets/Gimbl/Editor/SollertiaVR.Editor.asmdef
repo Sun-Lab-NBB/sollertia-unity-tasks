@@ -1,10 +1,12 @@
 {
-    "name": "JaneliaVR",
+    "name": "SollertiaVR.Editor",
     "references": [
+        "SollertiaVR",
         "Unity.InputSystem"
     ],
-    "optionalUnityReferences": [],
-    "includePlatforms": [],
+    "includePlatforms": [
+        "Editor"
+    ],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,

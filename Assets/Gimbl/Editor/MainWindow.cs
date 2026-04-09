@@ -88,8 +88,8 @@ namespace Gimbl
             );
             if (GUI.changed)
             {
-                EditorPrefs.SetString("SunLabVRPC_MQTT_IP", _client.ip);
-                EditorPrefs.SetInt("SunLabVRPC_MQTT_Port", _client.port);
+                EditorPrefs.SetString("SollertiaVR_MQTT_IP", _client.ip);
+                EditorPrefs.SetInt("SollertiaVR_MQTT_Port", _client.port);
             }
             if (GUILayout.Button("Test Connection"))
             {
@@ -188,10 +188,10 @@ namespace Gimbl
                 }
             }
 
-            _client.ip = EditorPrefs.GetString("SunLabVRPC_MQTT_IP");
+            _client.ip = EditorPrefs.GetString("SollertiaVR_MQTT_IP");
             if (_client.ip == "")
                 _client.ip = "127.0.0.1";
-            _client.port = EditorPrefs.GetInt("SunLabVRPC_MQTT_Port");
+            _client.port = EditorPrefs.GetInt("SollertiaVR_MQTT_Port");
             if (_client.port == 0)
                 _client.port = 1883;
 

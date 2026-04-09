@@ -5,7 +5,6 @@
     "com.unity.sdk.linux-x86_64": "1.0.2",
     "com.unity.toolchain.linux-x86_64-linux": "1.0.2",
     "com.unity.ugui": "2.0.0",
-    "gimbl": "file:gimbl",
     "com.unity.modules.animation": "1.0.0",
     "com.unity.modules.audio": "1.0.0",
     "com.unity.modules.imageconversion": "1.0.0",
