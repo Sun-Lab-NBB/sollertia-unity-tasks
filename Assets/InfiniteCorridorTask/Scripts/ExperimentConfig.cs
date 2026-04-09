@@ -27,6 +27,12 @@ namespace SL.Config
         /// <summary>The length of the cue in centimeters.</summary>
         public float length_cm;
 
+        /// <summary>
+        /// The texture filename (e.g., "Cue 001 - 2x1 repeat.png") located in
+        /// Assets/InfiniteCorridorTask/Textures/. Applied 1:1 to the cue wall panels.
+        /// </summary>
+        public string texture;
+
         /// <summary>Returns the length in Unity units given a cm-per-unit conversion factor.</summary>
         public float LengthUnity(float cmPerUnit) => length_cm / cmPerUnit;
     }
@@ -78,6 +84,13 @@ namespace SL.Config
         /// When True, the boundary marker is displayed in the VR environment at the stimulus location.
         /// </summary>
         public bool show_stimulus_collision_boundary = false;
+
+        /// <summary>
+        /// The trigger mode for the stimulus zone. "lick" uses the StimulusTriggerZone prefab with
+        /// a GuidanceZone child. "occupancy" uses the OccupancyTriggerZone prefab with OccupancyZone
+        /// and OccupancyGuidanceZone children.
+        /// </summary>
+        public string trigger_type;
     }
 
     /// <summary>
@@ -179,6 +192,27 @@ namespace SL.Config
             Dictionary<string, Cue> cueMap = GetCueByName();
             float cmPerUnit = vr_environment.cm_per_unity_unit;
             return segment.cue_sequence.Sum(cueName => cueMap[cueName].LengthUnity(cmPerUnit));
+        }
+
+        /// <summary>
+        /// Returns the trial structure associated with the given segment name, or null if none exists.
+        /// </summary>
+        public TrialStructure GetTrialStructureForSegment(string segmentName)
+        {
+            if (trial_structures == null)
+            {
+                return null;
+            }
+
+            foreach (TrialStructure trial in trial_structures.Values)
+            {
+                if (trial.segment_name == segmentName)
+                {
+                    return trial;
+                }
+            }
+
+            return null;
         }
 
         /// <summary>
