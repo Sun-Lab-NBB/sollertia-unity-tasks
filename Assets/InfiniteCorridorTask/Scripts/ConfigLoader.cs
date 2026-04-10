@@ -1,201 +1,187 @@
 /// <summary>
 /// Provides the ConfigLoader class for loading and validating task templates from YAML files.
 /// </summary>
+using System;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
-namespace SL.Config
+namespace SL.Config;
+
+/// <summary>
+/// Loads and validates task templates from YAML files.
+/// </summary>
+public static class ConfigLoader
 {
-    /// <summary>
-    /// Loads and validates task templates from YAML files.
-    /// </summary>
-    public static class ConfigLoader
+    /// <summary>Loads a TaskTemplate from a YAML file and derives the template name from the filename.</summary>
+    /// <param name="filePath">The absolute path to the YAML template file.</param>
+    /// <returns>The parsed template with templateName populated.</returns>
+    /// <exception cref="FileNotFoundException">Thrown when the template file does not exist at the given path.</exception>
+    /// <exception cref="FormatException">Thrown when the YAML file cannot be parsed into a TaskTemplate.</exception>
+    /// <exception cref="InvalidDataException">Thrown when the parsed template fails validation.</exception>
+    public static TaskTemplate LoadTemplate(string filePath)
     {
-        /// <summary>Loads a TaskTemplate from a YAML file and derives the template name from the filename.</summary>
-        /// <param name="filePath">The absolute path to the YAML template file.</param>
-        /// <returns>The parsed template with template_name populated, or null if loading fails.</returns>
-        public static TaskTemplate LoadTemplate(string filePath)
+        if (!File.Exists(filePath))
         {
-            if (!File.Exists(filePath))
-            {
-                Debug.LogError($"Template file not found: {filePath}");
-                return null;
-            }
-
-            IDeserializer deserializer = new DeserializerBuilder()
-                .WithNamingConvention(UnderscoredNamingConvention.Instance)
-                .IgnoreUnmatchedProperties()
-                .Build();
-
-            string yaml = File.ReadAllText(filePath);
-            TaskTemplate template = deserializer.Deserialize<TaskTemplate>(yaml);
-
-            if (!ValidateTemplate(template, filePath))
-            {
-                return null;
-            }
-
-            // Derives template name from filename (without extension)
-            template.template_name = Path.GetFileNameWithoutExtension(filePath);
-
-            return template;
+            throw new FileNotFoundException($"Template file not found: {filePath}", filePath);
         }
 
-        /// <summary>Validates the loaded template for required fields and data integrity.</summary>
-        /// <param name="template">The template to validate.</param>
-        /// <param name="filePath">The absolute path to the template file, used for resolving asset paths.</param>
-        /// <returns>True if the template is valid, false otherwise.</returns>
-        private static bool ValidateTemplate(TaskTemplate template, string filePath)
+        IDeserializer deserializer = new DeserializerBuilder()
+            .WithNamingConvention(UnderscoredNamingConvention.Instance)
+            .IgnoreUnmatchedProperties()
+            .Build();
+
+        string yaml = File.ReadAllText(filePath);
+        TaskTemplate template = deserializer.Deserialize<TaskTemplate>(yaml);
+
+        ValidateTemplate(template, filePath);
+
+        // Derives template name from filename (without extension)
+        template.templateName = Path.GetFileNameWithoutExtension(filePath);
+
+        return template;
+    }
+
+    /// <summary>Validates the loaded template for required fields and data integrity.</summary>
+    /// <param name="template">The template to validate.</param>
+    /// <param name="filePath">The absolute path to the template file, used for resolving asset paths.</param>
+    /// <exception cref="FormatException">Thrown when the template is null or cannot be parsed.</exception>
+    /// <exception cref="InvalidDataException">Thrown when the template fails any validation check.</exception>
+    private static void ValidateTemplate(TaskTemplate template, string filePath)
+    {
+        if (template == null)
         {
-            if (template == null)
+            throw new FormatException("Failed to parse template file.");
+        }
+
+        if (template.cues == null || template.cues.Count == 0)
+        {
+            throw new InvalidDataException("No cues defined in template.");
+        }
+
+        if (template.segments == null || template.segments.Count == 0)
+        {
+            throw new InvalidDataException("No segments defined in template.");
+        }
+
+        if (template.vrEnvironment == null)
+        {
+            throw new InvalidDataException("No VR environment configuration defined.");
+        }
+
+        // Validates cue codes are unique and within uint8 range
+        HashSet<int> seenCodes = new HashSet<int>();
+        HashSet<string> seenNames = new HashSet<string>();
+
+        foreach (Cue cue in template.cues)
+        {
+            if (cue.code < 0 || cue.code > 255)
             {
-                Debug.LogError("Failed to parse template file.");
-                return false;
+                throw new InvalidDataException($"Cue '{cue.name}' has invalid code {cue.code}. Must be 0-255.");
             }
 
-            if (template.cues == null || template.cues.Count == 0)
+            if (!seenCodes.Add(cue.code))
             {
-                Debug.LogError("No cues defined in template.");
-                return false;
+                throw new InvalidDataException($"Duplicate cue code {cue.code} found.");
             }
 
-            if (template.segments == null || template.segments.Count == 0)
+            if (!seenNames.Add(cue.name))
             {
-                Debug.LogError("No segments defined in template.");
-                return false;
+                throw new InvalidDataException($"Duplicate cue name '{cue.name}' found.");
             }
 
-            if (template.vr_environment == null)
+            if (cue.lengthCm <= 0)
             {
-                Debug.LogError("No VR environment configuration defined.");
-                return false;
-            }
-
-            // Validates cue codes are unique and within uint8 range
-            HashSet<int> seenCodes = new HashSet<int>();
-            HashSet<string> seenNames = new HashSet<string>();
-
-            foreach (Cue cue in template.cues)
-            {
-                if (cue.code < 0 || cue.code > 255)
-                {
-                    Debug.LogError($"Cue '{cue.name}' has invalid code {cue.code}. Must be 0-255.");
-                    return false;
-                }
-
-                if (!seenCodes.Add(cue.code))
-                {
-                    Debug.LogError($"Duplicate cue code {cue.code} found.");
-                    return false;
-                }
-
-                if (!seenNames.Add(cue.name))
-                {
-                    Debug.LogError($"Duplicate cue name '{cue.name}' found.");
-                    return false;
-                }
-
-                if (cue.length_cm <= 0)
-                {
-                    Debug.LogError($"Cue '{cue.name}' has invalid length {cue.length_cm}. Must be positive.");
-                    return false;
-                }
-
-                if (string.IsNullOrEmpty(cue.texture))
-                {
-                    Debug.LogError($"Cue '{cue.name}' is missing required 'texture' field.");
-                    return false;
-                }
-
-                string texturesDir = Path.Combine(
-                    Path.GetDirectoryName(filePath),
-                    "..",
-                    "Textures"
+                throw new InvalidDataException(
+                    $"Cue '{cue.name}' has invalid length {cue.lengthCm}. Must be positive."
                 );
-                string texturePath = Path.GetFullPath(Path.Combine(texturesDir, cue.texture));
-                if (!File.Exists(texturePath))
+            }
+
+            if (string.IsNullOrEmpty(cue.texture))
+            {
+                throw new InvalidDataException($"Cue '{cue.name}' is missing required 'texture' field.");
+            }
+
+            string texturesDirectory = Path.Combine(Path.GetDirectoryName(filePath), "..", "Textures");
+            string texturePath = Path.GetFullPath(Path.Combine(texturesDirectory, cue.texture));
+            if (!File.Exists(texturePath))
+            {
+                throw new InvalidDataException(
+                    $"Cue '{cue.name}' references texture '{cue.texture}' " + $"but no file found at {texturePath}."
+                );
+            }
+        }
+
+        // Validates segment cue sequences reference valid cues
+        HashSet<string> segmentNames = new HashSet<string>();
+        foreach (Segment segment in template.segments)
+        {
+            segmentNames.Add(segment.name);
+
+            if (segment.cueSequence == null || segment.cueSequence.Count == 0)
+            {
+                throw new InvalidDataException($"Segment '{segment.name}' has no cue sequence.");
+            }
+
+            foreach (string cueName in segment.cueSequence)
+            {
+                if (!seenNames.Contains(cueName))
                 {
-                    Debug.LogError(
-                        $"Cue '{cue.name}' references texture '{cue.texture}' "
-                            + $"but no file found at {texturePath}."
+                    throw new InvalidDataException($"Segment '{segment.name}' references unknown cue '{cueName}'.");
+                }
+            }
+
+            // Validates transition probabilities sum to 1.0 if provided
+            if (segment.transitionProbabilities != null && segment.transitionProbabilities.Count > 0)
+            {
+                float sum = 0f;
+                foreach (float probability in segment.transitionProbabilities)
+                {
+                    sum += probability;
+                }
+
+                if (Mathf.Abs(sum - 1.0f) > 0.001f)
+                {
+                    throw new InvalidDataException(
+                        $"Segment '{segment.name}' transition probabilities sum to {sum}, must be 1.0."
                     );
-                    return false;
                 }
             }
+        }
 
-            // Validates segment cue sequences reference valid cues
-            HashSet<string> segmentNames = new HashSet<string>();
-            foreach (Segment segment in template.segments)
+        // Validates trial structures reference valid segments
+        if (template.trialStructures != null)
+        {
+            foreach (KeyValuePair<string, TrialStructure> trialEntry in template.trialStructures)
             {
-                segmentNames.Add(segment.name);
+                string trialName = trialEntry.Key;
+                TrialStructure trial = trialEntry.Value;
 
-                if (segment.cue_sequence == null || segment.cue_sequence.Count == 0)
+                if (!segmentNames.Contains(trial.segmentName))
                 {
-                    Debug.LogError($"Segment '{segment.name}' has no cue sequence.");
-                    return false;
+                    throw new InvalidDataException(
+                        $"Trial '{trialName}' references unknown segment '{trial.segmentName}'."
+                    );
                 }
 
-                foreach (string cueName in segment.cue_sequence)
+                if (string.IsNullOrEmpty(trial.triggerType))
                 {
-                    if (!seenNames.Contains(cueName))
-                    {
-                        Debug.LogError($"Segment '{segment.name}' references unknown cue '{cueName}'.");
-                        return false;
-                    }
+                    throw new InvalidDataException($"Trial '{trialName}' is missing required 'trigger_type' field.");
                 }
 
-                // Validates transition probabilities sum to 1.0 if provided
-                if (segment.transition_probabilities != null && segment.transition_probabilities.Count > 0)
+                if (
+                    !string.Equals(trial.triggerType, "lick", StringComparison.Ordinal)
+                    && !string.Equals(trial.triggerType, "occupancy", StringComparison.Ordinal)
+                )
                 {
-                    float sum = 0f;
-                    foreach (float p in segment.transition_probabilities)
-                    {
-                        sum += p;
-                    }
-
-                    if (Mathf.Abs(sum - 1.0f) > 0.001f)
-                    {
-                        Debug.LogError($"Segment '{segment.name}' transition probabilities sum to {sum}, must be 1.0.");
-                        return false;
-                    }
+                    throw new InvalidDataException(
+                        $"Trial '{trialName}' has invalid trigger_type '{trial.triggerType}'. "
+                            + "Must be 'lick' or 'occupancy'."
+                    );
                 }
             }
-
-            // Validates trial structures reference valid segments
-            if (template.trial_structures != null)
-            {
-                foreach (var kvp in template.trial_structures)
-                {
-                    string trialName = kvp.Key;
-                    TrialStructure trial = kvp.Value;
-
-                    if (!segmentNames.Contains(trial.segment_name))
-                    {
-                        Debug.LogError($"Trial '{trialName}' references unknown segment '{trial.segment_name}'.");
-                        return false;
-                    }
-
-                    if (string.IsNullOrEmpty(trial.trigger_type))
-                    {
-                        Debug.LogError($"Trial '{trialName}' is missing required 'trigger_type' field.");
-                        return false;
-                    }
-
-                    if (trial.trigger_type != "lick" && trial.trigger_type != "occupancy")
-                    {
-                        Debug.LogError(
-                            $"Trial '{trialName}' has invalid trigger_type '{trial.trigger_type}'. "
-                                + "Must be 'lick' or 'occupancy'."
-                        );
-                        return false;
-                    }
-                }
-            }
-
-            return true;
         }
     }
 }

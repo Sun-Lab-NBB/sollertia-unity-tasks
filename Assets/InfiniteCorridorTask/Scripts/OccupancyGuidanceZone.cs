@@ -8,8 +8,10 @@
 using Gimbl;
 using UnityEngine;
 
+namespace SL.Tasks;
+
 /// <summary>
-/// Secondary trigger zone for OccupancyZone that handles occupancy guidance mode.
+/// Handles occupancy guidance mode as a secondary trigger zone for OccupancyZone.
 /// When guidance mode is active and the animal enters, sends brake activation message with remaining duration.
 /// </summary>
 public class OccupancyGuidanceZone : MonoBehaviour
@@ -25,75 +27,79 @@ public class OccupancyGuidanceZone : MonoBehaviour
     private OccupancyZone _parentOccupancyZone;
 
     /// <summary>The MQTT channel for sending brake activation delay messages.</summary>
-    private MQTTChannel<TriggerDelayMsg> _triggerDelayChannel;
+    private MQTTChannel<TriggerDelayMessage> _triggerDelayChannel;
 
     /// <summary>Determines whether the guidance trigger has already fired this lap.</summary>
     private bool _hasTriggered = false;
 
-    /// <summary>Wrapper class for sending trigger delay duration over MQTT.</summary>
-    public class TriggerDelayMsg
-    {
-        public uint delay_ms;
-    }
-
-    /// <summary>Initializes references and sets up MQTT channel.</summary>
-    void Start()
+    /// <summary>Initializes references and sets up the MQTT channel.</summary>
+    private void Start()
     {
         _task = FindAnyObjectByType<Task>();
         if (_task == null)
         {
-            Debug.LogError($"OccupancyGuidanceZone ({gameObject.name}): No Task found in scene");
+            Debug.LogError($"OccupancyGuidanceZone ({gameObject.name}): No Task found in scene.");
             enabled = false;
             return;
         }
+
         _parentOccupancyZone = GetComponentInParent<OccupancyZone>();
-        _triggerDelayChannel = new MQTTChannel<TriggerDelayMsg>("Gimbl/TriggerDelay/", false);
+        if (_parentOccupancyZone == null)
+        {
+            Debug.LogError($"OccupancyGuidanceZone ({gameObject.name}): No parent OccupancyZone found.");
+            enabled = false;
+            return;
+        }
+
+        _triggerDelayChannel = new MQTTChannel<TriggerDelayMessage>("Gimbl/TriggerDelay/", isListener: false);
     }
 
-    /// <summary>Called when the animal enters the guidance zone collider.</summary>
-    void OnTriggerEnter(Collider other)
+    /// <summary>Sets the zone state to active when the animal enters the guidance zone collider.</summary>
+    /// <param name="other">The collider that entered or exited the trigger zone.</param>
+    private void OnTriggerEnter(Collider other)
     {
         inZone = true;
 
         // Only triggers in guidance mode (!requireWait), if not already triggered this lap,
-        // and if the boundary is still armed (occupancy requirement not yet met)
-        if (
-            !_task.requireWait
-            && !_hasTriggered
-            && _parentOccupancyZone != null
-            && !_parentOccupancyZone.boundaryDisarmed
-        )
+        // and if the boundary is still armed (occupancy requirement not yet met).
+        if (!_task.requireWait && !_hasTriggered && !_parentOccupancyZone.boundaryDisarmed)
         {
             TriggerBrakeActivation();
         }
     }
 
-    /// <summary>Called when the animal exits the guidance zone collider.</summary>
-    void OnTriggerExit(Collider other)
+    /// <summary>Sets the zone state to inactive when the animal exits the guidance zone collider.</summary>
+    /// <param name="other">The collider that entered or exited the trigger zone.</param>
+    private void OnTriggerExit(Collider other)
     {
         inZone = false;
+    }
+
+    /// <summary>Resets the guidance zone state for a new lap.</summary>
+    /// <remarks>Invoked by ResetZone when the animal enters the reset zone.</remarks>
+    public void ResetState()
+    {
+        inZone = false;
+        _hasTriggered = false;
     }
 
     /// <summary>Sends the TriggerDelay message with remaining occupancy duration to activate the brake.</summary>
     private void TriggerBrakeActivation()
     {
-        // Calculates remaining duration based on how much time has already elapsed
-        float elapsedMs = _parentOccupancyZone.GetElapsedMs();
-        uint remainingMs = (uint)Mathf.Max(0, _parentOccupancyZone.occupancyDurationMs - elapsedMs);
+        // Calculates remaining duration based on how much time has already elapsed.
+        float elapsedMilliseconds = _parentOccupancyZone.GetElapsedMilliseconds();
+        uint remainingMilliseconds = (uint)Mathf.Max(0, _parentOccupancyZone.occupancyDurationMs - elapsedMilliseconds);
 
-        UnityEngine.Debug.Log($"OccupancyGuidanceZone: Triggering brake for {remainingMs}ms");
+        Debug.Log($"OccupancyGuidanceZone: Triggering brake for {remainingMilliseconds}ms.");
 
-        _triggerDelayChannel.Send(new TriggerDelayMsg { delay_ms = remainingMs });
+        _triggerDelayChannel.Send(new TriggerDelayMessage { delayMilliseconds = remainingMilliseconds });
         _hasTriggered = true;
     }
 
-    /// <summary>
-    /// Resets the guidance zone state for a new lap.
-    /// Called by ResetZone when the animal enters the reset zone.
-    /// </summary>
-    public void ResetState()
+    /// <summary>Wraps trigger delay duration for MQTT transmission.</summary>
+    public class TriggerDelayMessage
     {
-        inZone = false;
-        _hasTriggered = false;
+        /// <summary>The delay duration in milliseconds before the brake releases.</summary>
+        public uint delayMilliseconds;
     }
 }

@@ -17,6 +17,8 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
+namespace SL.Tasks;
+
 /// <summary>
 /// HTTP listener that bridges external MCP relay requests to Unity Editor API calls.
 /// Initialized automatically when the Editor loads via <see cref="InitializeOnLoadAttribute"/>.
@@ -41,9 +43,9 @@ public static class McpBridge
             EditorApplication.update += Poll;
             Debug.Log($"McpBridge: Listening on http://localhost:{Port}/");
         }
-        catch (Exception ex)
+        catch (Exception exception)
         {
-            Debug.LogError($"McpBridge: Failed to start HTTP listener: {ex.Message}");
+            Debug.LogError($"McpBridge: Failed to start HTTP listener: {exception.Message}");
         }
     }
 
@@ -68,8 +70,12 @@ public static class McpBridge
         }
     }
 
-    /// <summary>Reads the request body, dispatches to the appropriate tool handler, and writes the response.</summary>
-    /// <param name="context">The HTTP listener context containing the request and response objects.</param>
+    /// <summary>
+    /// Reads the request body, dispatches to the appropriate tool handler, and writes the response.
+    /// </summary>
+    /// <param name="context">
+    /// The HTTP listener context containing the request and response objects.
+    /// </param>
     private static void HandleRequest(HttpListenerContext context)
     {
         string responseJson;
@@ -90,9 +96,9 @@ public static class McpBridge
 
             responseJson = Dispatch(tool, args);
         }
-        catch (Exception ex)
+        catch (Exception exception)
         {
-            responseJson = Error($"Bridge error: {ex.Message}");
+            responseJson = Error($"Bridge error: {exception.Message}");
         }
 
         byte[] buffer = Encoding.UTF8.GetBytes(responseJson);
@@ -120,49 +126,50 @@ public static class McpBridge
             "enter_play_mode" => EnterPlayMode(),
             "exit_play_mode" => ExitPlayMode(),
             "get_play_state" => GetPlayState(),
-            _ => Error($"Unknown tool: {tool}")
+            _ => Error($"Unknown tool: {tool}"),
         };
     }
 
-    // --------------------------------------------------------------------------------------------
-    //  Asset creation tools
-    // --------------------------------------------------------------------------------------------
-
-    /// <summary>Generates a Task prefab from a YAML template by delegating to CreateTask.CreateFromTemplate.</summary>
+    /// <summary>
+    /// Generates a Task prefab from a YAML template by delegating to CreateTask.CreateFromTemplate.
+    /// </summary>
+    /// <param name="args">The tool arguments containing template_name and optional save_path.</param>
+    /// <returns>A JSON response with the generated prefab path or an error message.</returns>
     private static string GenerateTaskPrefab(Dictionary<string, object> args)
     {
         string templateName = GetString(args, "template_name");
-        string savePath = GetString(args, "save_path", "");
+        string savePath = GetString(args, "save_path", defaultValue: "");
 
         if (string.IsNullOrEmpty(templateName))
         {
             return Error("Missing required argument: template_name");
         }
 
-        string configurationsDir = "Assets/InfiniteCorridorTask/Configurations/";
-        string absoluteTemplatePath = Application.dataPath
-            + "/InfiniteCorridorTask/Configurations/"
-            + templateName
-            + ".yaml";
+        string absoluteTemplatePath = Path.Combine(
+            Application.dataPath,
+            "InfiniteCorridorTask",
+            "Configurations",
+            $"{templateName}.yaml"
+        );
 
         if (!File.Exists(absoluteTemplatePath))
         {
             return Error($"Template not found: {absoluteTemplatePath}");
         }
 
-        string relativeConfigPath = "/InfiniteCorridorTask/Configurations/" + templateName + ".yaml";
+        string relativeConfigPath = Path.Combine("/InfiniteCorridorTask", "Configurations", $"{templateName}.yaml");
 
         if (string.IsNullOrEmpty(savePath))
         {
-            savePath = "Assets/InfiniteCorridorTask/Tasks/" + templateName + ".prefab";
+            savePath = Path.Combine("Assets", "InfiniteCorridorTask", "Tasks", $"{templateName}.prefab");
         }
 
         // Ensures the Tasks output directory exists
-        string tasksDir = Path.GetDirectoryName(savePath);
-        if (!string.IsNullOrEmpty(tasksDir) && !AssetDatabase.IsValidFolder(tasksDir))
+        string tasksDirectory = Path.GetDirectoryName(savePath);
+        if (!string.IsNullOrEmpty(tasksDirectory) && !AssetDatabase.IsValidFolder(tasksDirectory))
         {
-            string parent = Path.GetDirectoryName(tasksDir);
-            string folder = Path.GetFileName(tasksDir);
+            string parent = Path.GetDirectoryName(tasksDirectory);
+            string folder = Path.GetFileName(tasksDirectory);
             if (!string.IsNullOrEmpty(parent) && !string.IsNullOrEmpty(folder))
             {
                 AssetDatabase.CreateFolder(parent, folder);
@@ -171,20 +178,24 @@ public static class McpBridge
 
         string result = CreateTask.CreateFromTemplate(absoluteTemplatePath, relativeConfigPath, savePath);
 
-        if (result.StartsWith("error:"))
+        if (result.StartsWith("error:", StringComparison.Ordinal))
         {
             return Error(result.Substring(7).Trim());
         }
 
-        return Ok(new Dictionary<string, object>
-        {
-            { "message", result },
-            { "prefab_path", savePath },
-            { "template_name", templateName }
-        });
+        return Ok(
+            new Dictionary<string, object>
+            {
+                { "message", result },
+                { "prefab_path", savePath },
+                { "template_name", templateName },
+            }
+        );
     }
 
     /// <summary>Reads a prefab and returns its hierarchy, components, and zone configuration.</summary>
+    /// <param name="args">The tool arguments containing prefab_path.</param>
+    /// <returns>A JSON response with the prefab hierarchy or an error message.</returns>
     private static string InspectPrefab(Dictionary<string, object> args)
     {
         string prefabPath = GetString(args, "prefab_path");
@@ -202,14 +213,14 @@ public static class McpBridge
 
         Dictionary<string, object> hierarchy = InspectGameObject(prefab);
 
-        return Ok(new Dictionary<string, object>
-        {
-            { "prefab_path", prefabPath },
-            { "hierarchy", hierarchy }
-        });
+        return Ok(new Dictionary<string, object> { { "prefab_path", prefabPath }, { "hierarchy", hierarchy } });
     }
 
-    /// <summary>Validates that a prefab's zone positions match the template's configured values.</summary>
+    /// <summary>
+    /// Validates that a prefab's zone positions match the template's configured values.
+    /// </summary>
+    /// <param name="args">The tool arguments containing template_name.</param>
+    /// <returns>A JSON response with validation results for each segment.</returns>
     private static string ValidatePrefabAgainstTemplate(Dictionary<string, object> args)
     {
         string templateName = GetString(args, "template_name");
@@ -219,35 +230,41 @@ public static class McpBridge
             return Error("Missing required argument: template_name");
         }
 
-        string absoluteTemplatePath = Application.dataPath
-            + "/InfiniteCorridorTask/Configurations/"
-            + templateName
-            + ".yaml";
+        string absoluteTemplatePath = Path.Combine(
+            Application.dataPath,
+            "InfiniteCorridorTask",
+            "Configurations",
+            $"{templateName}.yaml"
+        );
 
         if (!File.Exists(absoluteTemplatePath))
         {
             return Error($"Template not found: {absoluteTemplatePath}");
         }
 
-        TaskTemplate template = ConfigLoader.LoadTemplate(absoluteTemplatePath);
-        if (template == null)
+        TaskTemplate template;
+        try
         {
-            return Error("Failed to load template.");
+            template = ConfigLoader.LoadTemplate(absoluteTemplatePath);
+        }
+        catch (Exception exception)
+        {
+            return Error($"Failed to load template: {exception.Message}");
         }
 
         string prefabsPath = "Assets/InfiniteCorridorTask/Prefabs/";
-        float cmPerUnit = template.vr_environment.cm_per_unity_unit;
+        float cmPerUnit = template.vrEnvironment.cmPerUnityUnit;
         List<Dictionary<string, object>> results = new List<Dictionary<string, object>>();
 
         foreach (Segment segment in template.segments)
         {
-            string segmentPath = prefabsPath + segment.name + ".prefab";
+            string segmentPath = Path.Combine(prefabsPath, $"{segment.name}.prefab");
             GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(segmentPath);
 
             Dictionary<string, object> segmentResult = new Dictionary<string, object>
             {
                 { "segment", segment.name },
-                { "prefab_exists", prefab != null }
+                { "prefab_exists", prefab != null },
             };
 
             if (prefab != null)
@@ -265,19 +282,16 @@ public static class McpBridge
                         float actualSize = collider != null ? collider.size.z : 0f;
 
                         float expectedCenter =
-                            (trial.stimulus_trigger_zone_start_cm + trial.stimulus_trigger_zone_end_cm)
-                            / (2f * cmPerUnit);
+                            (trial.stimulusTriggerZoneStartCm + trial.stimulusTriggerZoneEndCm) / (2f * cmPerUnit);
                         float expectedSize =
-                            (trial.stimulus_trigger_zone_end_cm - trial.stimulus_trigger_zone_start_cm) / cmPerUnit;
+                            (trial.stimulusTriggerZoneEndCm - trial.stimulusTriggerZoneStartCm) / cmPerUnit;
 
                         segmentResult["zone_z"] = actualZ;
                         segmentResult["expected_zone_z"] = expectedCenter;
                         segmentResult["zone_size"] = actualSize;
                         segmentResult["expected_zone_size"] = expectedSize;
-                        segmentResult["zone_z_match"] =
-                            Mathf.Abs(actualZ - expectedCenter) < 0.01f;
-                        segmentResult["zone_size_match"] =
-                            Mathf.Abs(actualSize - expectedSize) < 0.01f;
+                        segmentResult["zone_z_match"] = Mathf.Abs(actualZ - expectedCenter) < 0.01f;
+                        segmentResult["zone_size_match"] = Mathf.Abs(actualSize - expectedSize) < 0.01f;
                     }
                 }
             }
@@ -285,52 +299,55 @@ public static class McpBridge
             results.Add(segmentResult);
         }
 
-        return Ok(new Dictionary<string, object>
-        {
-            { "template_name", templateName },
-            { "segments", results }
-        });
+        return Ok(new Dictionary<string, object> { { "template_name", templateName }, { "segments", results } });
     }
 
-    /// <summary>Lists Unity assets of a given type filter (e.g., "Prefab", "Scene", "Material").</summary>
+    /// <summary>
+    /// Lists Unity assets of a given type filter (e.g., "Prefab", "Scene", "Material").
+    /// </summary>
+    /// <param name="args">The tool arguments containing optional type and path filters.</param>
+    /// <returns>A JSON response with matching asset paths.</returns>
     private static string ListUnityAssets(Dictionary<string, object> args)
     {
-        string assetType = GetString(args, "type", "Prefab");
-        string searchPath = GetString(args, "path", "Assets/InfiniteCorridorTask");
+        string assetType = GetString(args, "type", defaultValue: "Prefab");
+        string searchPath = GetString(args, "path", defaultValue: "Assets/InfiniteCorridorTask");
 
         string[] guids = AssetDatabase.FindAssets($"t:{assetType}", new[] { searchPath });
-        List<string> paths = guids.Select(AssetDatabase.GUIDToAssetPath).OrderBy(p => p).ToList();
+        List<string> paths = guids.Select(AssetDatabase.GUIDToAssetPath).OrderBy(path => path).ToList();
 
-        return Ok(new Dictionary<string, object>
-        {
-            { "type", assetType },
-            { "search_path", searchPath },
-            { "assets", paths },
-            { "count", paths.Count }
-        });
+        return Ok(
+            new Dictionary<string, object>
+            {
+                { "type", assetType },
+                { "search_path", searchPath },
+                { "assets", paths },
+                { "count", paths.Count },
+            }
+        );
     }
 
-    // --------------------------------------------------------------------------------------------
-    //  Scene tools
-    // --------------------------------------------------------------------------------------------
-
     /// <summary>Lists all scene assets in the project.</summary>
+    /// <returns>A JSON response with all scene paths and the active scene.</returns>
     private static string ListScenes()
     {
         string[] guids = AssetDatabase.FindAssets("t:Scene", new[] { "Assets" });
-        List<string> paths = guids.Select(AssetDatabase.GUIDToAssetPath).OrderBy(p => p).ToList();
+        List<string> paths = guids.Select(AssetDatabase.GUIDToAssetPath).OrderBy(path => path).ToList();
 
         string activeScene = SceneManager.GetActiveScene().path;
 
-        return Ok(new Dictionary<string, object>
-        {
-            { "scenes", paths },
-            { "active_scene", activeScene },
-            { "count", paths.Count }
-        });
+        return Ok(
+            new Dictionary<string, object>
+            {
+                { "scenes", paths },
+                { "active_scene", activeScene },
+                { "count", paths.Count },
+            }
+        );
     }
 
     /// <summary>Opens a scene in the Editor.</summary>
+    /// <param name="args">The tool arguments containing scene_path.</param>
+    /// <returns>A JSON response confirming the scene was opened or an error message.</returns>
     private static string OpenScene(Dictionary<string, object> args)
     {
         string scenePath = GetString(args, "scene_path");
@@ -349,28 +366,28 @@ public static class McpBridge
         EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo();
         EditorSceneManager.OpenScene(scenePath);
 
-        return Ok(new Dictionary<string, object>
-        {
-            { "message", $"Opened scene: {scenePath}" },
-            { "scene_path", scenePath }
-        });
+        return Ok(
+            new Dictionary<string, object> { { "message", $"Opened scene: {scenePath}" }, { "scene_path", scenePath } }
+        );
     }
 
     /// <summary>
     /// Creates a new scene by copying ExperimentTemplate.unity, optionally adding a task prefab to it.
     /// </summary>
+    /// <param name="args">The tool arguments containing scene_name and optional task_prefab_path.</param>
+    /// <returns>A JSON response with the created scene path or an error message.</returns>
     private static string CreateScene(Dictionary<string, object> args)
     {
         string sceneName = GetString(args, "scene_name");
-        string taskPrefabPath = GetString(args, "task_prefab_path", "");
+        string taskPrefabPath = GetString(args, "task_prefab_path", defaultValue: "");
 
         if (string.IsNullOrEmpty(sceneName))
         {
             return Error("Missing required argument: scene_name");
         }
 
-        string templateScenePath = "Assets/Scenes/ExperimentTemplate.unity";
-        string newScenePath = $"Assets/Scenes/{sceneName}.unity";
+        string templateScenePath = Path.Combine("Assets", "Scenes", "ExperimentTemplate.unity");
+        string newScenePath = Path.Combine("Assets", "Scenes", $"{sceneName}.unity");
 
         if (!File.Exists(templateScenePath))
         {
@@ -399,111 +416,103 @@ public static class McpBridge
             }
             else
             {
-                return Ok(new Dictionary<string, object>
-                {
-                    { "message", $"Scene created but task prefab not found at: {taskPrefabPath}" },
-                    { "scene_path", newScenePath },
-                    { "warning", "task_prefab_not_found" }
-                });
+                return Ok(
+                    new Dictionary<string, object>
+                    {
+                        { "message", $"Scene created but task prefab not found at: {taskPrefabPath}" },
+                        { "scene_path", newScenePath },
+                        { "warning", "task_prefab_not_found" },
+                    }
+                );
             }
         }
 
         EditorSceneManager.SaveScene(SceneManager.GetActiveScene());
 
-        return Ok(new Dictionary<string, object>
-        {
-            { "message", $"Scene created: {newScenePath}" },
-            { "scene_path", newScenePath }
-        });
+        return Ok(
+            new Dictionary<string, object>
+            {
+                { "message", $"Scene created: {newScenePath}" },
+                { "scene_path", newScenePath },
+            }
+        );
     }
 
-    // --------------------------------------------------------------------------------------------
-    //  Play mode tools
-    // --------------------------------------------------------------------------------------------
-
     /// <summary>Enters Play Mode in the Editor.</summary>
+    /// <returns>A JSON response with the current play state.</returns>
     private static string EnterPlayMode()
     {
         if (EditorApplication.isPlaying)
         {
-            return Ok(new Dictionary<string, object>
-            {
-                { "message", "Already in Play Mode." },
-                { "state", "playing" }
-            });
+            return Ok(
+                new Dictionary<string, object> { { "message", "Already in Play Mode." }, { "state", "playing" } }
+            );
         }
 
         EditorApplication.EnterPlaymode();
 
-        return Ok(new Dictionary<string, object>
-        {
-            { "message", "Entering Play Mode." },
-            { "state", "entering_play_mode" }
-        });
+        return Ok(
+            new Dictionary<string, object> { { "message", "Entering Play Mode." }, { "state", "entering_play_mode" } }
+        );
     }
 
     /// <summary>Exits Play Mode in the Editor.</summary>
+    /// <returns>A JSON response with the current play state.</returns>
     private static string ExitPlayMode()
     {
         if (!EditorApplication.isPlaying)
         {
-            return Ok(new Dictionary<string, object>
-            {
-                { "message", "Not in Play Mode." },
-                { "state", "edit" }
-            });
+            return Ok(new Dictionary<string, object> { { "message", "Not in Play Mode." }, { "state", "edit" } });
         }
 
         EditorApplication.ExitPlaymode();
 
-        return Ok(new Dictionary<string, object>
-        {
-            { "message", "Exiting Play Mode." },
-            { "state", "exiting_play_mode" }
-        });
+        return Ok(
+            new Dictionary<string, object> { { "message", "Exiting Play Mode." }, { "state", "exiting_play_mode" } }
+        );
     }
 
     /// <summary>Returns the current Editor play state.</summary>
+    /// <returns>A JSON response with the current state and active scene name.</returns>
     private static string GetPlayState()
     {
-        string state = EditorApplication.isPlaying ? "playing"
+        string state =
+            EditorApplication.isPlaying ? "playing"
             : EditorApplication.isCompiling ? "compiling"
             : "edit";
 
-        return Ok(new Dictionary<string, object>
-        {
-            { "state", state },
-            { "active_scene", SceneManager.GetActiveScene().name }
-        });
+        return Ok(
+            new Dictionary<string, object>
+            {
+                { "state", state },
+                { "active_scene", SceneManager.GetActiveScene().name },
+            }
+        );
     }
 
-    // --------------------------------------------------------------------------------------------
-    //  Helpers
-    // --------------------------------------------------------------------------------------------
-
     /// <summary>Recursively inspects a GameObject and returns its hierarchy as a dictionary.</summary>
-    /// <param name="go">The GameObject to inspect.</param>
+    /// <param name="gameObject">The GameObject to inspect.</param>
     /// <returns>A dictionary describing the GameObject's transform, components, and children.</returns>
-    private static Dictionary<string, object> InspectGameObject(GameObject go)
+    private static Dictionary<string, object> InspectGameObject(GameObject gameObject)
     {
         Dictionary<string, object> result = new Dictionary<string, object>
         {
-            { "name", go.name },
-            { "position", FormatVector3(go.transform.localPosition) },
-            { "rotation", FormatVector3(go.transform.localEulerAngles) },
-            { "scale", FormatVector3(go.transform.localScale) }
+            { "name", gameObject.name },
+            { "position", FormatVector3(gameObject.transform.localPosition) },
+            { "rotation", FormatVector3(gameObject.transform.localEulerAngles) },
+            { "scale", FormatVector3(gameObject.transform.localScale) },
         };
 
         // Lists component types
-        Component[] components = go.GetComponents<Component>();
+        Component[] components = gameObject.GetComponents<Component>();
         List<string> componentNames = components
-            .Where(c => c != null)
-            .Select(c => c.GetType().Name)
+            .Where(component => component != null)
+            .Select(component => component.GetType().Name)
             .ToList();
         result["components"] = componentNames;
 
         // Includes BoxCollider details if present
-        BoxCollider collider = go.GetComponent<BoxCollider>();
+        BoxCollider collider = gameObject.GetComponent<BoxCollider>();
         if (collider != null)
         {
             result["collider_center"] = FormatVector3(collider.center);
@@ -513,9 +522,9 @@ public static class McpBridge
 
         // Recurses into children
         List<Dictionary<string, object>> children = new List<Dictionary<string, object>>();
-        for (int i = 0; i < go.transform.childCount; i++)
+        for (int i = 0; i < gameObject.transform.childCount; i++)
         {
-            children.Add(InspectGameObject(go.transform.GetChild(i).gameObject));
+            children.Add(InspectGameObject(gameObject.transform.GetChild(i).gameObject));
         }
 
         if (children.Count > 0)
@@ -527,12 +536,23 @@ public static class McpBridge
     }
 
     /// <summary>Formats a Vector3 as a serializable dictionary.</summary>
-    private static Dictionary<string, float> FormatVector3(Vector3 v)
+    /// <param name="vector">The Vector3 to format.</param>
+    /// <returns>A dictionary with x, y, and z keys.</returns>
+    private static Dictionary<string, float> FormatVector3(Vector3 vector)
     {
-        return new Dictionary<string, float> { { "x", v.x }, { "y", v.y }, { "z", v.z } };
+        return new Dictionary<string, float>
+        {
+            { "x", vector.x },
+            { "y", vector.y },
+            { "z", vector.z },
+        };
     }
 
     /// <summary>Retrieves a string value from the arguments dictionary with an optional default.</summary>
+    /// <param name="args">The arguments dictionary to search.</param>
+    /// <param name="key">The key to look up.</param>
+    /// <param name="defaultValue">The default value if the key is not found.</param>
+    /// <returns>The string value, or the default if not found.</returns>
     private static string GetString(Dictionary<string, object> args, string key, string defaultValue = null)
     {
         if (args.ContainsKey(key) && args[key] != null)
@@ -544,6 +564,8 @@ public static class McpBridge
     }
 
     /// <summary>Constructs a success JSON response.</summary>
+    /// <param name="payload">The response payload dictionary.</param>
+    /// <returns>A JSON string with success set to true.</returns>
     private static string Ok(Dictionary<string, object> payload)
     {
         payload["success"] = true;
@@ -551,369 +573,10 @@ public static class McpBridge
     }
 
     /// <summary>Constructs an error JSON response.</summary>
+    /// <param name="message">The error message.</param>
+    /// <returns>A JSON string with success set to false and the error message.</returns>
     private static string Error(string message)
     {
-        return MiniJson.Serialize(new Dictionary<string, object>
-        {
-            { "success", false },
-            { "error", message }
-        });
-    }
-}
-
-/// <summary>
-/// Minimal JSON serializer and deserializer for MCP bridge communication.
-/// Handles dictionaries, lists, strings, numbers, booleans, and null values.
-/// </summary>
-public static class MiniJson
-{
-    /// <summary>Deserializes a JSON string into a dictionary.</summary>
-    /// <param name="json">The JSON string to parse.</param>
-    /// <returns>A dictionary of string keys to object values.</returns>
-    public static Dictionary<string, object> Deserialize(string json)
-    {
-        return Parse(json);
-    }
-
-    /// <summary>Serializes a dictionary to a JSON string.</summary>
-    /// <param name="obj">The object to serialize.</param>
-    /// <returns>A JSON string representation.</returns>
-    public static string Serialize(object obj)
-    {
-        if (obj == null)
-        {
-            return "null";
-        }
-
-        if (obj is bool b)
-        {
-            return b ? "true" : "false";
-        }
-
-        if (obj is string s)
-        {
-            return "\"" + EscapeString(s) + "\"";
-        }
-
-        if (obj is int || obj is long || obj is float || obj is double)
-        {
-            return obj.ToString();
-        }
-
-        if (obj is Dictionary<string, object> dict)
-        {
-            StringBuilder sb = new StringBuilder("{");
-            bool first = true;
-            foreach (KeyValuePair<string, object> kvp in dict)
-            {
-                if (!first) sb.Append(",");
-                sb.Append("\"").Append(EscapeString(kvp.Key)).Append("\":");
-                sb.Append(Serialize(kvp.Value));
-                first = false;
-            }
-
-            sb.Append("}");
-            return sb.ToString();
-        }
-
-        if (obj is Dictionary<string, float> floatDict)
-        {
-            StringBuilder sb = new StringBuilder("{");
-            bool first = true;
-            foreach (KeyValuePair<string, float> kvp in floatDict)
-            {
-                if (!first) sb.Append(",");
-                sb.Append("\"").Append(EscapeString(kvp.Key)).Append("\":").Append(kvp.Value);
-                first = false;
-            }
-
-            sb.Append("}");
-            return sb.ToString();
-        }
-
-        if (obj is IEnumerable<object> enumerable)
-        {
-            StringBuilder sb = new StringBuilder("[");
-            bool first = true;
-            foreach (object item in enumerable)
-            {
-                if (!first) sb.Append(",");
-                sb.Append(Serialize(item));
-                first = false;
-            }
-
-            sb.Append("]");
-            return sb.ToString();
-        }
-
-        if (obj is IEnumerable<string> stringEnumerable)
-        {
-            StringBuilder sb = new StringBuilder("[");
-            bool first = true;
-            foreach (string item in stringEnumerable)
-            {
-                if (!first) sb.Append(",");
-                sb.Append(Serialize(item));
-                first = false;
-            }
-
-            sb.Append("]");
-            return sb.ToString();
-        }
-
-        if (obj is IEnumerable<Dictionary<string, object>> dictEnumerable)
-        {
-            StringBuilder sb = new StringBuilder("[");
-            bool first = true;
-            foreach (Dictionary<string, object> item in dictEnumerable)
-            {
-                if (!first) sb.Append(",");
-                sb.Append(Serialize(item));
-                first = false;
-            }
-
-            sb.Append("]");
-            return sb.ToString();
-        }
-
-        return "\"" + EscapeString(obj.ToString()) + "\"";
-    }
-
-    /// <summary>Escapes special characters in a string for JSON encoding.</summary>
-    private static string EscapeString(string s)
-    {
-        return s.Replace("\\", "\\\\")
-            .Replace("\"", "\\\"")
-            .Replace("\n", "\\n")
-            .Replace("\r", "\\r")
-            .Replace("\t", "\\t");
-    }
-
-    // Unity's JsonUtility needs a wrapper class, but for MCP we need raw dictionary parsing.
-    // This uses a simple recursive-descent parser instead.
-
-    /// <summary>Wraps a JSON string for Unity's JsonUtility (unused, kept for fallback).</summary>
-    private static string WrapForUnity(string json) => json;
-
-    /// <summary>Wrapper class placeholder for JsonUtility compatibility.</summary>
-    [Serializable]
-    private class Wrapper
-    {
-        public Dictionary<string, object> ToDictionary() => new Dictionary<string, object>();
-    }
-
-    /// <summary>Parses a JSON string into a dictionary using a recursive-descent parser.</summary>
-    /// <param name="json">The raw JSON string.</param>
-    /// <returns>A parsed dictionary.</returns>
-    public static Dictionary<string, object> Parse(string json)
-    {
-        int index = 0;
-        return ParseObject(json, ref index);
-    }
-
-    /// <summary>Parses a JSON object.</summary>
-    private static Dictionary<string, object> ParseObject(string json, ref int index)
-    {
-        Dictionary<string, object> result = new Dictionary<string, object>();
-        SkipWhitespace(json, ref index);
-
-        if (index >= json.Length || json[index] != '{')
-        {
-            return result;
-        }
-
-        index++; // skip '{'
-        SkipWhitespace(json, ref index);
-
-        if (index < json.Length && json[index] == '}')
-        {
-            index++;
-            return result;
-        }
-
-        while (index < json.Length)
-        {
-            SkipWhitespace(json, ref index);
-            string key = ParseString(json, ref index);
-            SkipWhitespace(json, ref index);
-
-            if (index < json.Length && json[index] == ':')
-            {
-                index++;
-            }
-
-            SkipWhitespace(json, ref index);
-            object value = ParseValue(json, ref index);
-            result[key] = value;
-            SkipWhitespace(json, ref index);
-
-            if (index < json.Length && json[index] == ',')
-            {
-                index++;
-            }
-            else
-            {
-                break;
-            }
-        }
-
-        if (index < json.Length && json[index] == '}')
-        {
-            index++;
-        }
-
-        return result;
-    }
-
-    /// <summary>Parses a JSON value (object, array, string, number, boolean, or null).</summary>
-    private static object ParseValue(string json, ref int index)
-    {
-        SkipWhitespace(json, ref index);
-
-        if (index >= json.Length)
-        {
-            return null;
-        }
-
-        char c = json[index];
-
-        if (c == '"') return ParseString(json, ref index);
-        if (c == '{') return ParseObject(json, ref index);
-        if (c == '[') return ParseArray(json, ref index);
-        if (c == 't' || c == 'f') return ParseBool(json, ref index);
-        if (c == 'n') return ParseNull(json, ref index);
-        return ParseNumber(json, ref index);
-    }
-
-    /// <summary>Parses a JSON string.</summary>
-    private static string ParseString(string json, ref int index)
-    {
-        if (index >= json.Length || json[index] != '"')
-        {
-            return "";
-        }
-
-        index++; // skip opening quote
-        StringBuilder sb = new StringBuilder();
-
-        while (index < json.Length && json[index] != '"')
-        {
-            if (json[index] == '\\' && index + 1 < json.Length)
-            {
-                index++;
-                char escaped = json[index];
-                switch (escaped)
-                {
-                    case '"': sb.Append('"'); break;
-                    case '\\': sb.Append('\\'); break;
-                    case 'n': sb.Append('\n'); break;
-                    case 'r': sb.Append('\r'); break;
-                    case 't': sb.Append('\t'); break;
-                    default: sb.Append(escaped); break;
-                }
-            }
-            else
-            {
-                sb.Append(json[index]);
-            }
-
-            index++;
-        }
-
-        if (index < json.Length)
-        {
-            index++; // skip closing quote
-        }
-
-        return sb.ToString();
-    }
-
-    /// <summary>Parses a JSON number.</summary>
-    private static object ParseNumber(string json, ref int index)
-    {
-        int start = index;
-        while (index < json.Length && (char.IsDigit(json[index]) || json[index] == '.' || json[index] == '-'
-            || json[index] == 'e' || json[index] == 'E' || json[index] == '+'))
-        {
-            index++;
-        }
-
-        string numStr = json.Substring(start, index - start);
-
-        if (numStr.Contains('.') || numStr.Contains('e') || numStr.Contains('E'))
-        {
-            double.TryParse(numStr, System.Globalization.NumberStyles.Float,
-                System.Globalization.CultureInfo.InvariantCulture, out double d);
-            return d;
-        }
-
-        long.TryParse(numStr, out long l);
-        return l;
-    }
-
-    /// <summary>Parses a JSON boolean.</summary>
-    private static object ParseBool(string json, ref int index)
-    {
-        if (json.Substring(index).StartsWith("true"))
-        {
-            index += 4;
-            return true;
-        }
-
-        index += 5;
-        return false;
-    }
-
-    /// <summary>Parses a JSON null value.</summary>
-    private static object ParseNull(string json, ref int index)
-    {
-        index += 4;
-        return null;
-    }
-
-    /// <summary>Parses a JSON array.</summary>
-    private static List<object> ParseArray(string json, ref int index)
-    {
-        List<object> result = new List<object>();
-        index++; // skip '['
-        SkipWhitespace(json, ref index);
-
-        if (index < json.Length && json[index] == ']')
-        {
-            index++;
-            return result;
-        }
-
-        while (index < json.Length)
-        {
-            SkipWhitespace(json, ref index);
-            result.Add(ParseValue(json, ref index));
-            SkipWhitespace(json, ref index);
-
-            if (index < json.Length && json[index] == ',')
-            {
-                index++;
-            }
-            else
-            {
-                break;
-            }
-        }
-
-        if (index < json.Length && json[index] == ']')
-        {
-            index++;
-        }
-
-        return result;
-    }
-
-    /// <summary>Advances the index past whitespace characters.</summary>
-    private static void SkipWhitespace(string json, ref int index)
-    {
-        while (index < json.Length && char.IsWhiteSpace(json[index]))
-        {
-            index++;
-        }
+        return MiniJson.Serialize(new Dictionary<string, object> { { "success", false }, { "error", message } });
     }
 }

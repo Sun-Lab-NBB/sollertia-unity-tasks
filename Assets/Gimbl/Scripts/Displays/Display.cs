@@ -1,15 +1,15 @@
 /// <summary>
-/// Provides the DisplayType enumeration for available display types.
+/// Defines the DisplayType enumeration for available display types.
 /// </summary>
 using UnityEngine;
 
-namespace Gimbl
+namespace Gimbl;
+
+/// <summary>
+/// Defines the available display types in the system.
+/// </summary>
+public enum DisplayType
 {
-    /// <summary>
-    /// The available display types in the system.
-    /// </summary>
-    public enum DisplayType
-    {
-        Monitor,
-    }
+    /// <summary>A physical monitor display.</summary>
+    Monitor,
 }

@@ -6,6 +6,8 @@
 /// </summary>
 using UnityEngine;
 
+namespace SL.Tasks;
+
 /// <summary>
 /// Tracks whether the animal is inside the guidance zone collider.
 /// Used by parent StimulusTriggerZone to determine when to deliver automatic stimulus in guidance mode.
@@ -16,14 +18,16 @@ public class GuidanceZone : MonoBehaviour
     [HideInInspector]
     public bool inZone = false;
 
-    /// <summary>Called when the animal enters the guidance zone collider.</summary>
-    void OnTriggerEnter(Collider other)
+    /// <summary>Sets the zone state to active when the animal enters the guidance zone collider.</summary>
+    /// <param name="other">The collider that entered or exited the trigger zone.</param>
+    private void OnTriggerEnter(Collider other)
     {
         inZone = true;
     }
 
-    /// <summary>Called when the animal exits the guidance zone collider.</summary>
-    void OnTriggerExit(Collider other)
+    /// <summary>Sets the zone state to inactive when the animal exits the guidance zone collider.</summary>
+    /// <param name="other">The collider that entered or exited the trigger zone.</param>
+    private void OnTriggerExit(Collider other)
     {
         inZone = false;
     }

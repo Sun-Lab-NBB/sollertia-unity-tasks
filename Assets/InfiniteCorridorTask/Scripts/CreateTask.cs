@@ -1,6 +1,7 @@
 /// <summary>
 /// Provides the CreateTask class that generates Task prefabs from YAML configuration files via Unity Editor menu.
 /// </summary>
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -8,11 +9,13 @@ using SL.Config;
 using UnityEditor;
 using UnityEngine;
 
+namespace SL.Tasks;
+
 /// <summary>
-/// Unity Editor script that creates Task prefabs from task template files.
+/// Creates Task prefabs from task template files via Unity Editor.
 /// Generates all corridor combinations by instantiating segment prefabs and configuring zones.
 /// </summary>
-public class CreateTask : MonoBehaviour
+public static class CreateTask
 {
     /// <summary>The tolerance for comparing measured prefab lengths against configured lengths.</summary>
     private const float LengthComparisonEpsilon = 0.01f;
@@ -22,13 +25,10 @@ public class CreateTask : MonoBehaviour
     public static void CreateNewTask()
     {
         // Opens file dialog for YAML task template file
+        string configurationsDirectory = Path.Combine(Application.dataPath, "InfiniteCorridorTask", "Configurations");
         string configPath = EditorUtility
-            .OpenFilePanel(
-                "Select Task Template YAML",
-                Application.dataPath + "/InfiniteCorridorTask/Configurations/",
-                "yaml,yml"
-            )
-            .Replace(Application.dataPath, "");
+            .OpenFilePanel("Select Task Template YAML", configurationsDirectory, "yaml,yml")
+            .Replace(Application.dataPath, "", StringComparison.Ordinal);
 
         if (string.IsNullOrEmpty(configPath))
         {
@@ -37,12 +37,8 @@ public class CreateTask : MonoBehaviour
         }
 
         // Opens save file panel for user to specify location and name of prefab
-        string savePath = EditorUtility.SaveFilePanel(
-            "Save Task Prefab",
-            Application.dataPath + "/InfiniteCorridorTask/Tasks/",
-            "newTask.prefab",
-            "prefab"
-        );
+        string tasksDirectory = Path.Combine(Application.dataPath, "InfiniteCorridorTask", "Tasks");
+        string savePath = EditorUtility.SaveFilePanel("Save Task Prefab", tasksDirectory, "newTask.prefab", "prefab");
 
         if (string.IsNullOrEmpty(savePath))
         {
@@ -51,7 +47,8 @@ public class CreateTask : MonoBehaviour
         }
 
         savePath = FileUtil.GetProjectRelativePath(savePath);
-        string result = CreateFromTemplate(Application.dataPath + configPath, configPath, savePath);
+        string absoluteTemplatePath = Path.Combine(Application.dataPath, configPath.TrimStart('/'));
+        string result = CreateFromTemplate(absoluteTemplatePath, configPath, savePath);
         Debug.Log(result);
     }
 
@@ -63,19 +60,21 @@ public class CreateTask : MonoBehaviour
     /// <param name="relativeConfigPath">
     /// The config path relative to Application.dataPath, stored on the Task component for runtime loading.
     /// </param>
-    /// <param name="savePath">The project-relative path where the prefab will be saved (e.g., "Assets/.../Task.prefab").</param>
+    /// <param name="savePath">
+    /// The project-relative path where the prefab will be saved (e.g., "Assets/.../Task.prefab").
+    /// </param>
     /// <returns>A status message describing success or the error encountered.</returns>
-    public static string CreateFromTemplate(
-        string absoluteTemplatePath,
-        string relativeConfigPath,
-        string savePath
-    )
+    public static string CreateFromTemplate(string absoluteTemplatePath, string relativeConfigPath, string savePath)
     {
         // Loads and validates task template
-        TaskTemplate template = ConfigLoader.LoadTemplate(absoluteTemplatePath);
-        if (template == null)
+        TaskTemplate template;
+        try
         {
-            return "error: Failed to load task template from YAML file.";
+            template = ConfigLoader.LoadTemplate(absoluteTemplatePath);
+        }
+        catch (Exception exception)
+        {
+            return $"error: {exception.Message}";
         }
 
         // Builds cue and segment prefabs from template data when they do not already exist
@@ -92,26 +91,26 @@ public class CreateTask : MonoBehaviour
         string prefabsPath = "Assets/InfiniteCorridorTask/Prefabs/";
 
         // Loads padding prefab
-        string paddingPath = prefabsPath + template.vr_environment.padding_prefab_name + ".prefab";
+        string paddingPath = Path.Combine(prefabsPath, $"{template.vrEnvironment.paddingPrefabName}.prefab");
         GameObject padding = AssetDatabase.LoadAssetAtPath<GameObject>(paddingPath);
 
         if (padding == null)
         {
-            return "error: No padding found at " + paddingPath;
+            return $"error: No padding found at {paddingPath}";
         }
 
-        int nSegments = template.segments.Count;
+        int segmentCount = template.segments.Count;
 
         // Loads segment prefabs
-        GameObject[] segmentPrefabs = new GameObject[nSegments];
-        for (int i = 0; i < nSegments; i++)
+        GameObject[] segmentPrefabs = new GameObject[segmentCount];
+        for (int i = 0; i < segmentCount; i++)
         {
-            string segmentPath = prefabsPath + template.segments[i].name + ".prefab";
+            string segmentPath = Path.Combine(prefabsPath, $"{template.segments[i].name}.prefab");
             segmentPrefabs[i] = AssetDatabase.LoadAssetAtPath<GameObject>(segmentPath);
 
             if (segmentPrefabs[i] == null)
             {
-                return "error: No segment found at " + segmentPath;
+                return $"error: No segment found at {segmentPath}";
             }
         }
 
@@ -119,19 +118,20 @@ public class CreateTask : MonoBehaviour
         float[] measuredSegmentLengths = Utility.GetSegmentLengths(segmentPrefabs);
         float[] segmentLengths = template.GetSegmentLengthsUnity();
 
-        for (int i = 0; i < nSegments; i++)
+        for (int i = 0; i < segmentCount; i++)
         {
             if (Mathf.Abs(measuredSegmentLengths[i] - segmentLengths[i]) > LengthComparisonEpsilon)
             {
-                Debug.Log(
-                    $"Warning: For {template.segments[i].name}, there is a mismatch between the prefab length "
-                        + $"({measuredSegmentLengths[i]}) and the sum of all the cue lengths ({segmentLengths[i]}). "
-                        + $"Using {segmentLengths[i]} for the length of the segment."
+                Debug.LogWarning(
+                    $"For {template.segments[i].name}, there is a mismatch between the prefab "
+                        + $"length ({measuredSegmentLengths[i]}) and the sum of all the cue "
+                        + $"lengths ({segmentLengths[i]}). Using {segmentLengths[i]} for the "
+                        + "length of the segment."
                 );
             }
         }
 
-        int depth = template.vr_environment.segments_per_corridor;
+        int depth = template.vrEnvironment.segmentsPerCorridor;
         float paddingZShift = depth * Mathf.Min(segmentLengths) - 1;
 
         // Creates task GameObject hierarchy
@@ -143,22 +143,22 @@ public class CreateTask : MonoBehaviour
 
         int[] corridorSegments = new int[depth];
         int segment;
-        float curCorridorX = 0;
-        float corridorXShift = template.vr_environment.CorridorSpacingUnity;
+        float currentCorridorX = 0;
+        float corridorXShift = template.vrEnvironment.CorridorSpacingUnity;
         float zShift;
 
         // Iterates through all possible corridor combinations
-        for (int i = 0; i < Mathf.Pow(nSegments, depth); i++)
+        for (int i = 0; i < Mathf.Pow(segmentCount, depth); i++)
         {
             // Generates the combination for the current index
             for (int j = 0; j < depth; j++)
             {
-                corridorSegments[j] = i / (int)Mathf.Pow(nSegments, depth - j - 1) % nSegments;
+                corridorSegments[j] = i / (int)Mathf.Pow(segmentCount, depth - j - 1) % segmentCount;
             }
 
             GameObject corridor = new GameObject($"Corridor{string.Join("", corridorSegments)}");
             corridor.transform.SetParent(task.transform);
-            corridor.transform.localPosition = new Vector3(curCorridorX, 0, 0);
+            corridor.transform.localPosition = new Vector3(currentCorridorX, 0, 0);
 
             zShift = 0;
             for (int j = 0; j < depth; j++)
@@ -166,28 +166,26 @@ public class CreateTask : MonoBehaviour
                 segment = corridorSegments[j];
                 GameObject instance = PrefabUtility.InstantiatePrefab(segmentPrefabs[segment]) as GameObject;
 
-                // Only the first segment in each corridor should have a stimulus trigger zone and reset zone
-                // since the later segments are just for visual illusion
+                // Only the first segment in each corridor should have a stimulus trigger zone
+                // and reset zone since the later segments are just for visual illusion
                 if (j > 0)
                 {
-                    StimulusTriggerZone stimulusTriggerZone =
-                        instance.GetComponentInChildren<StimulusTriggerZone>();
+                    StimulusTriggerZone stimulusTriggerZone = instance.GetComponentInChildren<StimulusTriggerZone>();
                     if (stimulusTriggerZone != null)
                     {
-                        DestroyImmediate(stimulusTriggerZone.gameObject);
+                        UnityEngine.Object.DestroyImmediate(stimulusTriggerZone.gameObject);
                     }
 
                     ResetZone resetZone = instance.GetComponentInChildren<ResetZone>();
                     if (resetZone != null)
                     {
-                        DestroyImmediate(resetZone.gameObject);
+                        UnityEngine.Object.DestroyImmediate(resetZone.gameObject);
                     }
                 }
                 else
                 {
-                    // For the first segment, sets showBoundary from config's trial visibility setting
-                    StimulusTriggerZone stimulusTriggerZone =
-                        instance.GetComponentInChildren<StimulusTriggerZone>();
+                    // For the first segment, sets showBoundary from config's trial visibility
+                    StimulusTriggerZone stimulusTriggerZone = instance.GetComponentInChildren<StimulusTriggerZone>();
                     if (stimulusTriggerZone != null)
                     {
                         string segmentName = template.segments[segment].name;
@@ -195,20 +193,20 @@ public class CreateTask : MonoBehaviour
                     }
                 }
 
-                instance.transform.SetParent(corridor.transform, false);
+                instance.transform.SetParent(corridor.transform, worldPositionStays: false);
                 instance.transform.localPosition += new Vector3(0, 0, zShift);
                 zShift += segmentLengths[segment];
             }
 
             GameObject paddingInstance = PrefabUtility.InstantiatePrefab(padding) as GameObject;
-            paddingInstance.transform.SetParent(corridor.transform, false);
+            paddingInstance.transform.SetParent(corridor.transform, worldPositionStays: false);
             paddingInstance.transform.localPosition += new Vector3(0, 0, paddingZShift);
 
-            curCorridorX += corridorXShift;
+            currentCorridorX += corridorXShift;
         }
 
         PrefabUtility.SaveAsPrefabAsset(task, savePath);
-        DestroyImmediate(task);
+        UnityEngine.Object.DestroyImmediate(task);
 
         return $"success: Task prefab saved to {savePath}";
     }
@@ -224,7 +222,7 @@ public class CreateTask : MonoBehaviour
         string cuesPath = "Assets/InfiniteCorridorTask/Cues/";
         string materialsPath = "Assets/InfiniteCorridorTask/Materials/";
         string texturesPath = "Assets/InfiniteCorridorTask/Textures/";
-        float cmPerUnit = template.vr_environment.cm_per_unity_unit;
+        float cmPerUnit = template.vrEnvironment.cmPerUnityUnit;
 
         // Ensures the Cues directory exists
         if (!AssetDatabase.IsValidFolder("Assets/InfiniteCorridorTask/Cues"))
@@ -236,7 +234,7 @@ public class CreateTask : MonoBehaviour
 
         foreach (Cue cue in template.cues)
         {
-            string cuePrefabPath = cuesPath + "Cue_" + cue.name + ".prefab";
+            string cuePrefabPath = Path.Combine(cuesPath, $"Cue_{cue.name}.prefab");
 
             if (AssetDatabase.LoadAssetAtPath<GameObject>(cuePrefabPath) != null)
             {
@@ -246,45 +244,45 @@ public class CreateTask : MonoBehaviour
             float lengthUnity = cue.LengthUnity(cmPerUnit);
 
             // Creates or loads the cue material
-            string matPath = materialsPath + "Cue_" + cue.name + ".mat";
-            Material cueMat = AssetDatabase.LoadAssetAtPath<Material>(matPath);
+            string materialPath = Path.Combine(materialsPath, $"Cue_{cue.name}.mat");
+            Material cueMaterial = AssetDatabase.LoadAssetAtPath<Material>(materialPath);
 
-            if (cueMat == null)
+            if (cueMaterial == null)
             {
-                Texture2D tex = AssetDatabase.LoadAssetAtPath<Texture2D>(texturesPath + cue.texture);
-                if (tex == null)
+                Texture2D texture = AssetDatabase.LoadAssetAtPath<Texture2D>(Path.Combine(texturesPath, cue.texture));
+                if (texture == null)
                 {
                     Debug.LogError($"BuildCuePrefabs: Failed to load texture '{cue.texture}'.");
                     return false;
                 }
 
-                cueMat = new Material(Shader.Find("Standard"));
-                cueMat.name = "Cue_" + cue.name;
-                cueMat.SetTexture("_MainTex", tex);
-                AssetDatabase.CreateAsset(cueMat, matPath);
+                cueMaterial = new Material(Shader.Find("Standard"));
+                cueMaterial.name = $"Cue_{cue.name}";
+                cueMaterial.SetTexture("_MainTex", texture);
+                AssetDatabase.CreateAsset(cueMaterial, materialPath);
             }
 
             // Creates cue GameObject with Left and Right Quad children
-            GameObject cueGO = new GameObject("Cue_" + cue.name);
+            GameObject cueGameObject = new GameObject($"Cue_{cue.name}");
 
             GameObject right = new GameObject("Right");
-            right.transform.SetParent(cueGO.transform);
+            right.transform.SetParent(cueGameObject.transform);
             right.transform.localPosition = new Vector3(0.49f, 0.5f, lengthUnity / 2f);
             right.transform.localRotation = Quaternion.Euler(0, 90, 0);
             right.transform.localScale = new Vector3(-lengthUnity, 1, 1);
             right.AddComponent<MeshFilter>().sharedMesh = quadMesh;
-            right.AddComponent<MeshRenderer>().sharedMaterial = cueMat;
+            right.AddComponent<MeshRenderer>().sharedMaterial = cueMaterial;
 
             GameObject left = new GameObject("Left");
-            left.transform.SetParent(cueGO.transform);
+            left.transform.SetParent(cueGameObject.transform);
             left.transform.localPosition = new Vector3(-0.49f, 0.5f, lengthUnity / 2f);
             left.transform.localRotation = Quaternion.Euler(0, -90, 0);
             left.transform.localScale = new Vector3(lengthUnity, 1, 1);
             left.AddComponent<MeshFilter>().sharedMesh = quadMesh;
-            left.AddComponent<MeshRenderer>().sharedMaterial = cueMat;
+            left.AddComponent<MeshRenderer>().sharedMaterial = cueMaterial;
 
-            PrefabUtility.SaveAsPrefabAsset(cueGO, cuePrefabPath);
-            DestroyImmediate(cueGO);
+            PrefabUtility.SaveAsPrefabAsset(cueGameObject, cuePrefabPath);
+            UnityEngine.Object.DestroyImmediate(cueGameObject);
 
             Debug.Log($"BuildCuePrefabs: Created {cuePrefabPath}");
         }
@@ -305,17 +303,17 @@ public class CreateTask : MonoBehaviour
         string prefabsPath = "Assets/InfiniteCorridorTask/Prefabs/";
         string cuesPath = "Assets/InfiniteCorridorTask/Cues/";
         string materialsPath = "Assets/InfiniteCorridorTask/Materials/";
-        float cmPerUnit = template.vr_environment.cm_per_unity_unit;
+        float cmPerUnit = template.vrEnvironment.cmPerUnityUnit;
         Dictionary<string, Cue> cueMap = template.GetCueByName();
 
         Mesh quadMesh = Resources.GetBuiltinResource<Mesh>("Quad.fbx");
         Mesh planeMesh = Resources.GetBuiltinResource<Mesh>("New-Plane.fbx");
 
         // Loads shared materials
-        Material floorMat = AssetDatabase.LoadAssetAtPath<Material>(materialsPath + "Floor.mat");
-        Material wallMat = AssetDatabase.LoadAssetAtPath<Material>(materialsPath + "Wall.mat");
+        Material floorMaterial = AssetDatabase.LoadAssetAtPath<Material>(Path.Combine(materialsPath, "Floor.mat"));
+        Material wallMaterial = AssetDatabase.LoadAssetAtPath<Material>(Path.Combine(materialsPath, "Wall.mat"));
 
-        if (floorMat == null || wallMat == null)
+        if (floorMaterial == null || wallMaterial == null)
         {
             Debug.LogError("BuildSegmentPrefabs: Missing Floor.mat or Wall.mat.");
             return false;
@@ -323,18 +321,18 @@ public class CreateTask : MonoBehaviour
 
         // Loads zone template prefabs
         GameObject stimulusZonePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
-            prefabsPath + "StimulusTriggerZone.prefab"
+            Path.Combine(prefabsPath, "StimulusTriggerZone.prefab")
         );
         GameObject occupancyZonePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
-            prefabsPath + "OccupancyTriggerZone.prefab"
+            Path.Combine(prefabsPath, "OccupancyTriggerZone.prefab")
         );
         GameObject resetZonePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
-            prefabsPath + "ResetZone.prefab"
+            Path.Combine(prefabsPath, "ResetZone.prefab")
         );
 
         foreach (Segment segment in template.segments)
         {
-            string segmentPrefabPath = prefabsPath + segment.name + ".prefab";
+            string segmentPrefabPath = Path.Combine(prefabsPath, $"{segment.name}.prefab");
 
             if (AssetDatabase.LoadAssetAtPath<GameObject>(segmentPrefabPath) != null)
             {
@@ -342,36 +340,33 @@ public class CreateTask : MonoBehaviour
             }
 
             // Calculates total segment length in Unity units
-            float totalLengthUnity = segment
-                .cue_sequence.Sum(cn => cueMap[cn].LengthUnity(cmPerUnit));
-            float cueOffsetUnity = template.cue_offset_cm / cmPerUnit;
+            float totalLengthUnity = segment.cueSequence.Sum(cueName => cueMap[cueName].LengthUnity(cmPerUnit));
+            float cueOffsetUnity = template.cueOffsetCm / cmPerUnit;
 
             // Creates segment root with cue offset
-            GameObject segmentGO = new GameObject(segment.name);
-            segmentGO.transform.localPosition = new Vector3(0, 0, -cueOffsetUnity);
+            GameObject segmentGameObject = new GameObject(segment.name);
+            segmentGameObject.transform.localPosition = new Vector3(0, 0, -cueOffsetUnity);
 
             // Places cue instances along the Z axis
             float cumulativeZ = 0f;
-            foreach (string cueName in segment.cue_sequence)
+            foreach (string cueName in segment.cueSequence)
             {
                 Cue cue = cueMap[cueName];
                 float cueLengthUnity = cue.LengthUnity(cmPerUnit);
 
-                string cuePrefabPath = cuesPath + "Cue_" + cueName + ".prefab";
+                string cuePrefabPath = Path.Combine(cuesPath, $"Cue_{cueName}.prefab");
                 GameObject cuePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(cuePrefabPath);
 
                 if (cuePrefab == null)
                 {
-                    Debug.LogError(
-                        $"BuildSegmentPrefabs: Missing cue prefab at {cuePrefabPath}."
-                    );
-                    DestroyImmediate(segmentGO);
+                    Debug.LogError($"BuildSegmentPrefabs: Missing cue prefab at {cuePrefabPath}.");
+                    UnityEngine.Object.DestroyImmediate(segmentGameObject);
                     return false;
                 }
 
                 GameObject cueInstance = PrefabUtility.InstantiatePrefab(cuePrefab) as GameObject;
-                cueInstance.name = "Cue" + cueName;
-                cueInstance.transform.SetParent(segmentGO.transform);
+                cueInstance.name = $"Cue{cueName}";
+                cueInstance.transform.SetParent(segmentGameObject.transform);
                 cueInstance.transform.localPosition = new Vector3(0, 0, cumulativeZ);
 
                 cumulativeZ += cueLengthUnity;
@@ -379,87 +374,81 @@ public class CreateTask : MonoBehaviour
 
             // Creates Floor
             GameObject floor = new GameObject("Floor");
-            floor.transform.SetParent(segmentGO.transform);
+            floor.transform.SetParent(segmentGameObject.transform);
             floor.transform.localPosition = new Vector3(0, 0, totalLengthUnity / 2f);
             floor.transform.localScale = new Vector3(0.1f, 1, totalLengthUnity / 10f);
             floor.AddComponent<MeshFilter>().sharedMesh = planeMesh;
-            floor.AddComponent<MeshRenderer>().sharedMaterial = floorMat;
+            floor.AddComponent<MeshRenderer>().sharedMaterial = floorMaterial;
 
             // Creates Walls group with LeftWall and RightWall
             GameObject walls = new GameObject("Walls");
-            walls.transform.SetParent(segmentGO.transform);
+            walls.transform.SetParent(segmentGameObject.transform);
             walls.transform.localPosition = Vector3.zero;
 
             GameObject leftWall = new GameObject("LeftWall");
             leftWall.transform.SetParent(walls.transform);
-            leftWall.transform.localPosition = new Vector3(
-                -0.5f,
-                0.5f,
-                totalLengthUnity / 2f
-            );
+            leftWall.transform.localPosition = new Vector3(-0.5f, 0.5f, totalLengthUnity / 2f);
             leftWall.transform.localRotation = Quaternion.Euler(0, -90, 0);
             leftWall.transform.localScale = new Vector3(totalLengthUnity, 1, 1);
             leftWall.AddComponent<MeshFilter>().sharedMesh = quadMesh;
-            leftWall.AddComponent<MeshRenderer>().sharedMaterial = wallMat;
+            leftWall.AddComponent<MeshRenderer>().sharedMaterial = wallMaterial;
 
             GameObject rightWall = new GameObject("RightWall");
             rightWall.transform.SetParent(walls.transform);
-            rightWall.transform.localPosition = new Vector3(
-                0.5f,
-                0.5f,
-                totalLengthUnity / 2f
-            );
+            rightWall.transform.localPosition = new Vector3(0.5f, 0.5f, totalLengthUnity / 2f);
             rightWall.transform.localRotation = Quaternion.Euler(0, 90, 0);
             rightWall.transform.localScale = new Vector3(totalLengthUnity, 1, 1);
             rightWall.AddComponent<MeshFilter>().sharedMesh = quadMesh;
-            rightWall.AddComponent<MeshRenderer>().sharedMaterial = wallMat;
+            rightWall.AddComponent<MeshRenderer>().sharedMaterial = wallMaterial;
 
             // Places zones from trial structure
             TrialStructure trial = template.GetTrialStructureForSegment(segment.name);
 
             if (trial != null)
             {
-                float zoneStartUnity = trial.stimulus_trigger_zone_start_cm / cmPerUnit;
-                float zoneEndUnity = trial.stimulus_trigger_zone_end_cm / cmPerUnit;
+                float zoneStartUnity = trial.stimulusTriggerZoneStartCm / cmPerUnit;
+                float zoneEndUnity = trial.stimulusTriggerZoneEndCm / cmPerUnit;
                 float zoneCenterUnity = (zoneStartUnity + zoneEndUnity) / 2f;
                 float zoneSizeUnity = zoneEndUnity - zoneStartUnity;
-                float stimLocUnity = trial.stimulus_location_cm / cmPerUnit;
+                float stimulusLocationUnity = trial.stimulusLocationCm / cmPerUnit;
 
-                if (trial.trigger_type == "lick" && stimulusZonePrefab != null)
+                if (string.Equals(trial.triggerType, "lick", StringComparison.Ordinal) && stimulusZonePrefab != null)
                 {
                     PlaceLickZone(
-                        segmentGO,
-                        stimulusZonePrefab,
-                        zoneCenterUnity,
-                        zoneSizeUnity,
-                        stimLocUnity,
-                        trial.show_stimulus_collision_boundary
+                        parent: segmentGameObject,
+                        zonePrefab: stimulusZonePrefab,
+                        zoneCenterUnity: zoneCenterUnity,
+                        zoneSizeUnity: zoneSizeUnity,
+                        stimulusLocationUnity: stimulusLocationUnity,
+                        showBoundary: trial.showStimulusCollisionBoundary
                     );
                 }
-                else if (trial.trigger_type == "occupancy" && occupancyZonePrefab != null)
+                else if (
+                    string.Equals(trial.triggerType, "occupancy", StringComparison.Ordinal)
+                    && occupancyZonePrefab != null
+                )
                 {
                     PlaceOccupancyZone(
-                        segmentGO,
-                        occupancyZonePrefab,
-                        zoneCenterUnity,
-                        zoneSizeUnity,
-                        stimLocUnity,
-                        trial.show_stimulus_collision_boundary
+                        parent: segmentGameObject,
+                        zonePrefab: occupancyZonePrefab,
+                        zoneCenterUnity: zoneCenterUnity,
+                        zoneSizeUnity: zoneSizeUnity,
+                        stimulusLocationUnity: stimulusLocationUnity,
+                        showBoundary: trial.showStimulusCollisionBoundary
                     );
                 }
 
                 // Places ResetZone at segment start
                 if (resetZonePrefab != null)
                 {
-                    GameObject resetZone =
-                        PrefabUtility.InstantiatePrefab(resetZonePrefab) as GameObject;
-                    resetZone.transform.SetParent(segmentGO.transform);
+                    GameObject resetZone = PrefabUtility.InstantiatePrefab(resetZonePrefab) as GameObject;
+                    resetZone.transform.SetParent(segmentGameObject.transform);
                     resetZone.transform.localPosition = new Vector3(0, 0.5f, 1);
                 }
             }
 
-            PrefabUtility.SaveAsPrefabAsset(segmentGO, segmentPrefabPath);
-            DestroyImmediate(segmentGO);
+            PrefabUtility.SaveAsPrefabAsset(segmentGameObject, segmentPrefabPath);
+            UnityEngine.Object.DestroyImmediate(segmentGameObject);
 
             Debug.Log($"BuildSegmentPrefabs: Created {segmentPrefabPath}");
         }
@@ -473,12 +462,18 @@ public class CreateTask : MonoBehaviour
     /// Instantiates and configures a StimulusTriggerZone (lick mode) within a segment.
     /// Positions the root collider to span the trigger zone and the GuidanceRegion at the stimulus location.
     /// </summary>
+    /// <param name="parent">The parent segment GameObject.</param>
+    /// <param name="zonePrefab">The StimulusTriggerZone prefab to instantiate.</param>
+    /// <param name="zoneCenterUnity">The center position of the trigger zone in Unity units.</param>
+    /// <param name="zoneSizeUnity">The size of the trigger zone in Unity units.</param>
+    /// <param name="stimulusLocationUnity">The stimulus location in Unity units.</param>
+    /// <param name="showBoundary">Determines whether the zone boundary is visible.</param>
     private static void PlaceLickZone(
         GameObject parent,
         GameObject zonePrefab,
         float zoneCenterUnity,
         float zoneSizeUnity,
-        float stimLocUnity,
+        float stimulusLocationUnity,
         bool showBoundary
     )
     {
@@ -502,15 +497,15 @@ public class CreateTask : MonoBehaviour
             if (guidanceCollider != null)
             {
                 guidanceCollider.size = new Vector3(1, 1, 0.4f);
-                guidanceCollider.center = new Vector3(0, 0, stimLocUnity - zoneCenterUnity);
+                guidanceCollider.center = new Vector3(0, 0, stimulusLocationUnity - zoneCenterUnity);
             }
         }
 
         // Sets boundary visibility
-        StimulusTriggerZone stimZone = zone.GetComponent<StimulusTriggerZone>();
-        if (stimZone != null)
+        StimulusTriggerZone stimulusZone = zone.GetComponent<StimulusTriggerZone>();
+        if (stimulusZone != null)
         {
-            stimZone.showBoundary = showBoundary;
+            stimulusZone.showBoundary = showBoundary;
         }
     }
 
@@ -519,17 +514,23 @@ public class CreateTask : MonoBehaviour
     /// The root is positioned at the stimulus boundary (past the occupancy zone).
     /// The OccupancyRegion child covers the start-to-end range where the animal must wait.
     /// </summary>
+    /// <param name="parent">The parent segment GameObject.</param>
+    /// <param name="zonePrefab">The OccupancyTriggerZone prefab to instantiate.</param>
+    /// <param name="zoneCenterUnity">The center position of the occupancy zone in Unity units.</param>
+    /// <param name="zoneSizeUnity">The size of the occupancy zone in Unity units.</param>
+    /// <param name="stimulusLocationUnity">The stimulus location in Unity units.</param>
+    /// <param name="showBoundary">Determines whether the zone boundary is visible.</param>
     private static void PlaceOccupancyZone(
         GameObject parent,
         GameObject zonePrefab,
         float zoneCenterUnity,
         float zoneSizeUnity,
-        float stimLocUnity,
+        float stimulusLocationUnity,
         bool showBoundary
     )
     {
-        // Root position: stimulus boundary area, starting at stimulus_location and extending by zone size
-        float rootZ = stimLocUnity + zoneSizeUnity / 2f;
+        // Root position: stimulus boundary area, starting at stimulus_location and extending
+        float rootZ = stimulusLocationUnity + zoneSizeUnity / 2f;
 
         GameObject zone = PrefabUtility.InstantiatePrefab(zonePrefab) as GameObject;
         zone.transform.SetParent(parent.transform);
@@ -544,41 +545,36 @@ public class CreateTask : MonoBehaviour
         }
 
         // Configures OccupancyRegion to cover the occupancy zone range
-        float occCenterOffset = zoneCenterUnity - rootZ;
+        float occupancyCenterOffset = zoneCenterUnity - rootZ;
 
         OccupancyZone occupancyZone = zone.GetComponentInChildren<OccupancyZone>();
         if (occupancyZone != null)
         {
-            BoxCollider occCollider = occupancyZone.GetComponent<BoxCollider>();
-            if (occCollider != null)
+            BoxCollider occupancyCollider = occupancyZone.GetComponent<BoxCollider>();
+            if (occupancyCollider != null)
             {
-                occCollider.size = new Vector3(1, 1, zoneSizeUnity);
-                occCollider.center = new Vector3(0, 0, occCenterOffset);
+                occupancyCollider.size = new Vector3(1, 1, zoneSizeUnity);
+                occupancyCollider.center = new Vector3(0, 0, occupancyCenterOffset);
             }
         }
 
         // Configures OccupancyGuidanceRegion at the downstream end of the occupancy zone
-        OccupancyGuidanceZone occGuidanceZone =
-            zone.GetComponentInChildren<OccupancyGuidanceZone>();
-        if (occGuidanceZone != null)
+        OccupancyGuidanceZone occupancyGuidanceZone = zone.GetComponentInChildren<OccupancyGuidanceZone>();
+        if (occupancyGuidanceZone != null)
         {
-            BoxCollider occGuidanceCollider = occGuidanceZone.GetComponent<BoxCollider>();
-            if (occGuidanceCollider != null)
+            BoxCollider occupancyGuidanceCollider = occupancyGuidanceZone.GetComponent<BoxCollider>();
+            if (occupancyGuidanceCollider != null)
             {
-                occGuidanceCollider.size = new Vector3(1, 1, 0.4f);
-                occGuidanceCollider.center = new Vector3(
-                    0,
-                    0,
-                    occCenterOffset + zoneSizeUnity / 2f - 0.2f
-                );
+                occupancyGuidanceCollider.size = new Vector3(1, 1, 0.4f);
+                occupancyGuidanceCollider.center = new Vector3(0, 0, occupancyCenterOffset + zoneSizeUnity / 2f - 0.2f);
             }
         }
 
         // Sets boundary visibility
-        StimulusTriggerZone stimZone = zone.GetComponent<StimulusTriggerZone>();
-        if (stimZone != null)
+        StimulusTriggerZone stimulusZone = zone.GetComponent<StimulusTriggerZone>();
+        if (stimulusZone != null)
         {
-            stimZone.showBoundary = showBoundary;
+            stimulusZone.showBoundary = showBoundary;
         }
     }
 }

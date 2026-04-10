@@ -15,3 +15,4 @@ Packages/com.google.*
 
 # Auto-generated Unity InputSystem code
 Packages/gimbl/Scripts/Controllers/SimulatedInput.cs
+Assets/Gimbl/Scripts/Controllers/SimulatedInput.cs

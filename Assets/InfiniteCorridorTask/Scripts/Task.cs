@@ -13,8 +13,11 @@ using SL.Config;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
+namespace SL.Tasks;
+
 /// <summary>
-/// Controls the infinite corridor VR task, managing segment generation, animal positioning, and MQTT communication.
+/// Controls the infinite corridor VR task, managing segment generation, animal positioning, and MQTT
+/// communication.
 /// </summary>
 /// <remarks>
 /// A "cue" refers to a visual pattern displayed on the corridor walls. A "segment" is a portion of the
@@ -28,7 +31,9 @@ public class Task : MonoBehaviour
     /// <summary>Determines whether the animal must lick to trigger the stimulus (lick guidance mode toggle).</summary>
     public bool requireLick = false;
 
-    /// <summary>Determines whether the animal must wait in the occupancy zone (occupancy guidance mode toggle).</summary>
+    /// <summary>
+    /// Determines whether the animal must wait in the occupancy zone (occupancy guidance mode toggle).
+    /// </summary>
     public bool requireWait = false;
 
     /// <summary>
@@ -55,32 +60,20 @@ public class Task : MonoBehaviour
     /// <summary>The array holding the flattened cue codes for the entire sequence.</summary>
     private byte[] _cueSequenceArray;
 
-    /// <summary>Wrapper class for sending cue sequence over MQTT.</summary>
-    public class SequenceMsg
-    {
-        public byte[] cue_sequence;
-    }
-
     /// <summary>The MQTT channel that triggers sending the cue sequence.</summary>
     private MQTTChannel _cueSequenceTrigger;
 
     /// <summary>The MQTT channel for sending the cue sequence data.</summary>
-    private MQTTChannel<SequenceMsg> _cueSequenceChannel;
+    private MQTTChannel<SequenceMessage> _cueSequenceChannel;
 
     /// <summary>The name of the currently active Unity scene.</summary>
     private string _sceneName;
-
-    /// <summary>Wrapper class for sending scene name over MQTT.</summary>
-    public class SceneNameMsg
-    {
-        public string name;
-    }
 
     /// <summary>The MQTT channel that triggers sending the scene name.</summary>
     private MQTTChannel _sceneNameTrigger;
 
     /// <summary>The MQTT channel for sending the scene name data.</summary>
-    private MQTTChannel<SceneNameMsg> _sceneNameChannel;
+    private MQTTChannel<SceneNameMessage> _sceneNameChannel;
 
     /// <summary>The MQTT channel for enabling lick requirement (lick guidance mode off).</summary>
     private MQTTChannel _requireLickTrue;
@@ -116,16 +109,16 @@ public class Task : MonoBehaviour
     /// Maps corridor ID string to (x-position, first segment length).
     /// Used for teleporting the animal between corridors.
     /// </summary>
-    private Dictionary<string, (float, float)> _corridorMap;
+    private Dictionary<string, (float xPosition, float firstSegmentLength)> _corridorMap;
 
     /// <summary>The current corridor segment indices.</summary>
-    private List<int> _curSegment;
+    private List<int> _currentSegment;
 
     /// <summary>The cached actor position for updates.</summary>
     private Vector3 _position;
 
     /// <summary>Validates and auto-assigns the actor reference in the editor.</summary>
-    void OnValidate()
+    private void OnValidate()
     {
         if (actor == null)
         {
@@ -138,9 +131,9 @@ public class Task : MonoBehaviour
     }
 
     /// <summary>Initializes the task, loads configuration, and sets up MQTT channels.</summary>
-    void Start()
+    private void Start()
     {
-        // Warns if Task is not at origin
+        // Warns if Task is not at origin.
         if (transform.position != Vector3.zero)
         {
             Debug.LogWarning(
@@ -151,7 +144,7 @@ public class Task : MonoBehaviour
             transform.position = Vector3.zero;
         }
 
-        string globalConfigPath = Application.dataPath + configPath;
+        string globalConfigPath = Path.Combine(Application.dataPath, configPath);
 
         if (string.IsNullOrEmpty(configPath) || !File.Exists(globalConfigPath))
         {
@@ -159,135 +152,187 @@ public class Task : MonoBehaviour
             return;
         }
 
-        // Loads and validates task template
-        _template = ConfigLoader.LoadTemplate(globalConfigPath);
-        if (_template == null)
+        // Loads and validates task template.
+        try
         {
-            Debug.LogError("Failed to load task template from YAML file.");
+            _template = ConfigLoader.LoadTemplate(globalConfigPath);
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"Failed to load task template from YAML file: {ex.Message}");
             return;
         }
 
-        // Extracts configuration values
+        // Extracts configuration values.
         _segmentCount = _template.segments.Count;
         _cueIds = _template.GetCueNameToCode();
         _segmentLengths = _template.GetSegmentLengthsUnity();
         _cueLengths = _template.GetCueLengthsUnity();
-        _depth = _template.vr_environment.segments_per_corridor;
+        _depth = _template.vrEnvironment.segmentsPerCorridor;
 
         // Builds corridor map for teleportation.
         // Maps corridor segment combination to (x-position, first segment length).
-        _corridorMap = new Dictionary<string, (float, float)>();
+        _corridorMap = new Dictionary<string, (float xPosition, float firstSegmentLength)>();
 
         int[] corridorSegments = new int[_depth];
-        float curCorridorX = 0;
-        float corridorXShift = _template.vr_environment.CorridorSpacingUnity;
+        float currentCorridorX = 0;
+        float corridorXShift = _template.vrEnvironment.CorridorSpacingUnity;
 
         for (int i = 0; i < Mathf.Pow(_segmentCount, _depth); i++)
         {
-            // Generates segment combination for current corridor index
+            // Generates segment combination for current corridor index.
             for (int j = 0; j < _depth; j++)
             {
                 corridorSegments[j] = i / (int)Mathf.Pow(_segmentCount, _depth - j - 1) % _segmentCount;
             }
 
-            _corridorMap[string.Join("-", corridorSegments)] = (curCorridorX, _segmentLengths[corridorSegments[0]]);
-            curCorridorX += corridorXShift;
+            _corridorMap[string.Join("-", corridorSegments)] = (currentCorridorX, _segmentLengths[corridorSegments[0]]);
+            currentCorridorX += corridorXShift;
         }
 
-        // Generates random maze sequence
+        // Generates random maze sequence.
         (_segmentSequenceArray, _cueSequenceArray) = GenerateRandomMaze(trackLength, trackSeed);
 
-        // Initializes current segment tracking
+        // Initializes current segment tracking.
         _currentSegmentIndex = 0;
-        _curSegment = new List<int>(_segmentSequenceArray.Take(_depth));
+        _currentSegment = new List<int>(_segmentSequenceArray.Take(_depth));
 
-        // Positions actor at the first corridor
+        // Positions actor at the first corridor.
         if (actor != null)
         {
-            string corridorKey = string.Join("-", _curSegment);
+            string corridorKey = string.Join("-", _currentSegment);
             if (_corridorMap.TryGetValue(corridorKey, out var corridorData))
             {
                 _position = actor.transform.position;
-                _position.x = corridorData.Item1;
+                _position.x = corridorData.xPosition;
                 actor.transform.position = _position;
             }
             else
             {
-                Debug.LogError($"Task: Corridor key '{corridorKey}' not found in corridor map");
+                Debug.LogError($"Task: Corridor key '{corridorKey}' not found in corridor map.");
             }
         }
 
-        // Sets up MQTT channels for cue sequence requests
-        _cueSequenceTrigger = new MQTTChannel("CueSequenceTrigger/", true);
-        _cueSequenceTrigger.Event.AddListener(OnCueSequenceTrigger);
-        _cueSequenceChannel = new MQTTChannel<SequenceMsg>("CueSequence/", false);
+        // Sets up MQTT channels for cue sequence requests.
+        _cueSequenceTrigger = new MQTTChannel("CueSequenceTrigger/", isListener: true);
+        _cueSequenceTrigger.receivedEvent.AddListener(OnCueSequenceTrigger);
+        _cueSequenceChannel = new MQTTChannel<SequenceMessage>("CueSequence/", isListener: false);
 
-        // Sets up MQTT channels for scene name requests
+        // Sets up MQTT channels for scene name requests.
         _sceneName = SceneManager.GetActiveScene().name;
-        _sceneNameTrigger = new MQTTChannel("SceneNameTrigger/", true);
-        _sceneNameTrigger.Event.AddListener(OnSceneNameTrigger);
-        _sceneNameChannel = new MQTTChannel<SceneNameMsg>("SceneName/", false);
+        _sceneNameTrigger = new MQTTChannel("SceneNameTrigger/", isListener: true);
+        _sceneNameTrigger.receivedEvent.AddListener(OnSceneNameTrigger);
+        _sceneNameChannel = new MQTTChannel<SceneNameMessage>("SceneName/", isListener: false);
 
-        // Sets up MQTT channels for lick guidance mode control
-        _requireLickTrue = new MQTTChannel("RequireLick/True/", true);
-        _requireLickTrue.Event.AddListener(SetRequireLickTrue);
+        // Sets up MQTT channels for lick guidance mode control.
+        _requireLickTrue = new MQTTChannel("RequireLick/True/", isListener: true);
+        _requireLickTrue.receivedEvent.AddListener(SetRequireLickTrue);
 
-        _requireLickFalse = new MQTTChannel("RequireLick/False/", true);
-        _requireLickFalse.Event.AddListener(SetRequireLickFalse);
+        _requireLickFalse = new MQTTChannel("RequireLick/False/", isListener: true);
+        _requireLickFalse.receivedEvent.AddListener(SetRequireLickFalse);
 
-        // Sets up MQTT channels for occupancy guidance mode control
-        _requireWaitTrue = new MQTTChannel("RequireWait/True/", true);
-        _requireWaitTrue.Event.AddListener(SetRequireWaitTrue);
+        // Sets up MQTT channels for occupancy guidance mode control.
+        _requireWaitTrue = new MQTTChannel("RequireWait/True/", isListener: true);
+        _requireWaitTrue.receivedEvent.AddListener(SetRequireWaitTrue);
 
-        _requireWaitFalse = new MQTTChannel("RequireWait/False/", true);
-        _requireWaitFalse.Event.AddListener(SetRequireWaitFalse);
+        _requireWaitFalse = new MQTTChannel("RequireWait/False/", isListener: true);
+        _requireWaitFalse.receivedEvent.AddListener(SetRequireWaitFalse);
     }
 
     /// <summary>Checks animal position and handles corridor transitions each frame.</summary>
-    void Update()
+    private void Update()
     {
         if (actor == null)
             return;
 
-        string corridorKey = string.Join("-", _curSegment);
+        string corridorKey = string.Join("-", _currentSegment);
         if (!_corridorMap.TryGetValue(corridorKey, out var corridorData))
         {
-            Debug.LogError($"Task: Corridor key '{corridorKey}' not found in corridor map");
+            Debug.LogError($"Task: Corridor key '{corridorKey}' not found in corridor map.");
             return;
         }
 
         _position = actor.transform.position;
 
-        // Checks if animal has traveled through the current segment
-        if (_position.z > corridorData.Item2)
+        // Checks if animal has traveled through the current segment.
+        if (_position.z > corridorData.firstSegmentLength)
         {
-            // Teleports animal back to start of corridor
-            _position.z -= corridorData.Item2;
+            // Teleports animal back to start of corridor.
+            _position.z -= corridorData.firstSegmentLength;
 
-            // Advances to next corridor based on future segments
+            // Advances to next corridor based on future segments.
             _currentSegmentIndex++;
             if (_currentSegmentIndex <= _segmentSequenceArray.Length - _depth)
             {
-                _curSegment.RemoveAt(0);
-                _curSegment.Add(_segmentSequenceArray[_currentSegmentIndex + _depth - 1]);
+                _currentSegment.RemoveAt(0);
+                _currentSegment.Add(_segmentSequenceArray[_currentSegmentIndex + _depth - 1]);
             }
             else
             {
-                throw new Exception("Animal ran through all generated segments.");
+                Debug.LogError("Animal ran through all generated segments.");
+                return;
             }
 
-            // Teleports to new corridor
-            string newCorridorKey = string.Join("-", _curSegment);
+            // Teleports to new corridor.
+            string newCorridorKey = string.Join("-", _currentSegment);
             if (_corridorMap.TryGetValue(newCorridorKey, out var newCorridorData))
             {
-                _position.x = newCorridorData.Item1;
+                _position.x = newCorridorData.xPosition;
                 actor.transform.position = _position;
             }
             else
             {
-                Debug.LogError($"Task: New corridor key '{newCorridorKey}' not found in corridor map");
+                Debug.LogError($"Task: New corridor key '{newCorridorKey}' not found in corridor map.");
             }
         }
+    }
+
+    /// <summary>Removes all MQTT event listeners when the component is destroyed.</summary>
+    private void OnDestroy()
+    {
+        _cueSequenceTrigger?.receivedEvent.RemoveListener(OnCueSequenceTrigger);
+        _sceneNameTrigger?.receivedEvent.RemoveListener(OnSceneNameTrigger);
+        _requireLickTrue?.receivedEvent.RemoveListener(SetRequireLickTrue);
+        _requireLickFalse?.receivedEvent.RemoveListener(SetRequireLickFalse);
+        _requireWaitTrue?.receivedEvent.RemoveListener(SetRequireWaitTrue);
+        _requireWaitFalse?.receivedEvent.RemoveListener(SetRequireWaitFalse);
+    }
+
+    /// <summary>MQTT callback that sends the cue sequence when requested.</summary>
+    private void OnCueSequenceTrigger()
+    {
+        Debug.Log("Task: Received request for cue sequence.");
+        _cueSequenceChannel.Send(new SequenceMessage() { cueSequence = _cueSequenceArray });
+    }
+
+    /// <summary>MQTT callback that sends the scene name when requested.</summary>
+    private void OnSceneNameTrigger()
+    {
+        _sceneNameChannel.Send(new SceneNameMessage() { name = _sceneName });
+    }
+
+    /// <summary>MQTT callback that enables lick requirement (disables lick guidance mode).</summary>
+    private void SetRequireLickTrue()
+    {
+        requireLick = true;
+    }
+
+    /// <summary>MQTT callback that disables lick requirement (enables lick guidance mode).</summary>
+    private void SetRequireLickFalse()
+    {
+        requireLick = false;
+    }
+
+    /// <summary>MQTT callback that enables wait requirement (disables occupancy guidance mode).</summary>
+    private void SetRequireWaitTrue()
+    {
+        requireWait = true;
+    }
+
+    /// <summary>MQTT callback that disables wait requirement (enables occupancy guidance mode).</summary>
+    private void SetRequireWaitFalse()
+    {
+        requireWait = false;
     }
 
     /// <summary>Samples an index from a probability distribution.</summary>
@@ -296,13 +341,13 @@ public class Task : MonoBehaviour
     /// <returns>The sampled index.</returns>
     private int SampleFromDistribution(float[] probabilities, System.Random random)
     {
-        float r = (float)random.NextDouble();
+        float randomValue = (float)random.NextDouble();
         float cumulative = 0f;
 
         for (int i = 0; i < probabilities.Length; i++)
         {
             cumulative += probabilities[i];
-            if (r < cumulative)
+            if (randomValue < cumulative)
                 return i;
         }
 
@@ -329,17 +374,17 @@ public class Task : MonoBehaviour
             segmentSequence.Add(choice);
 
             Segment segment = _template.segments[choice];
-            foreach (string cue in segment.cue_sequence)
+            foreach (string cue in segment.cueSequence)
             {
                 cueSequence.Add(_cueIds[cue]);
             }
 
             sequenceLength += _segmentLengths[choice];
 
-            // Uses transition probabilities if defined, otherwise uniform random
+            // Uses transition probabilities if defined, otherwise uniform random.
             if (segment.HasTransitionProbabilities)
             {
-                choice = SampleFromDistribution(segment.transition_probabilities.ToArray(), random);
+                choice = SampleFromDistribution(segment.transitionProbabilities.ToArray(), random);
             }
             else
             {
@@ -350,40 +395,17 @@ public class Task : MonoBehaviour
         return (segmentSequence.ToArray(), cueSequence.ToArray());
     }
 
-    /// <summary>MQTT callback that sends the cue sequence when requested.</summary>
-    private void OnCueSequenceTrigger()
+    /// <summary>Wraps cue sequence data for MQTT transmission.</summary>
+    public class SequenceMessage
     {
-        Debug.Log("Task: Received request for cue sequence");
-        _cueSequenceChannel.Send(new SequenceMsg() { cue_sequence = _cueSequenceArray });
+        /// <summary>The byte array containing the encoded cue sequence for the entire track.</summary>
+        public byte[] cueSequence;
     }
 
-    /// <summary>MQTT callback that sends the scene name when requested.</summary>
-    private void OnSceneNameTrigger()
+    /// <summary>Wraps scene name data for MQTT transmission.</summary>
+    public class SceneNameMessage
     {
-        _sceneNameChannel.Send(new SceneNameMsg() { name = _sceneName });
-    }
-
-    /// <summary>MQTT callback that enables lick requirement (disables lick guidance mode).</summary>
-    private void SetRequireLickTrue()
-    {
-        requireLick = true;
-    }
-
-    /// <summary>MQTT callback that disables lick requirement (enables lick guidance mode).</summary>
-    private void SetRequireLickFalse()
-    {
-        requireLick = false;
-    }
-
-    /// <summary>MQTT callback that enables wait requirement (disables occupancy guidance mode).</summary>
-    private void SetRequireWaitTrue()
-    {
-        requireWait = true;
-    }
-
-    /// <summary>MQTT callback that disables wait requirement (enables occupancy guidance mode).</summary>
-    private void SetRequireWaitFalse()
-    {
-        requireWait = false;
+        /// <summary>The name of the currently active Unity scene.</summary>
+        public string name;
     }
 }

@@ -4,155 +4,158 @@
 /// Receives movement data from an external treadmill device and translates it
 /// to actor position updates in the VR environment.
 /// </summary>
-using UnityEditor;
 using UnityEngine;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
-namespace Gimbl
+namespace Gimbl;
+
+/// <summary>
+/// Handles linear treadmill input from MQTT and updates actor position.
+/// </summary>
+public class LinearTreadmill : ControllerObject
 {
-    /// <summary>
-    /// Handles linear treadmill input from MQTT and updates actor position.
-    /// </summary>
-    public class LinearTreadmill : ControllerObject
+    /// <summary>The settings for this treadmill controller.</summary>
+    public LinearTreadmillSettings settings;
+
+    /// <summary>The accumulated movement since last frame.</summary>
+    private float _moved;
+
+    /// <summary>The cached actor position for updates.</summary>
+    private Vector3 _position;
+
+    /// <summary>The cached actor rotation for updates.</summary>
+    private Quaternion _newRotation;
+
+    /// <summary>Sets up the MQTT listener for this treadmill on start.</summary>
+    private void Start()
     {
-        /// <summary>The settings for this treadmill controller.</summary>
-        public LinearTreadmillSettings settings;
-
-        /// <summary>The MQTT message class containing movement data.</summary>
-        public class TreadmillMessage
+        if (this is not SimulatedLinearTreadmill && settings != null)
         {
-            public float movement;
+            MQTTChannel<TreadmillMessage> channel = new MQTTChannel<TreadmillMessage>($"{settings.deviceName}/Data");
+            channel.receivedEvent.AddListener(OnMessage);
         }
+    }
 
-        /// <summary>The accumulated movement since last frame.</summary>
-        private float _moved;
+    /// <summary>Processes accumulated movement each frame.</summary>
+    public virtual void Update()
+    {
+        ProcessMovement();
+    }
 
-        /// <summary>The cached actor position for updates.</summary>
-        private Vector3 _position;
-
-        /// <summary>The cached actor rotation for updates.</summary>
-        private Quaternion _newRot;
-
-        /// <summary>Sets up the MQTT listener for this treadmill on start.</summary>
-        void Start()
+    /// <summary>Applies accumulated movement to the actor's position.</summary>
+    public void ProcessMovement()
+    {
+        lock (movement)
         {
-            if (this.GetType() == typeof(LinearTreadmill) && settings != null)
+            if (actor != null && (settings == null || settings.isActive))
             {
-                MQTTChannel<TreadmillMessage> channel = new MQTTChannel<TreadmillMessage>(
-                    $"{settings.deviceName}/Data"
-                );
-                channel.Event.AddListener(OnMessage);
-            }
-        }
+                _moved = movement.Sum();
 
-        /// <summary>Processes accumulated movement each frame.</summary>
-        public void Update()
-        {
-            ProcessMovement();
-        }
+                _position = actor.transform.position;
+                _newRotation = actor.transform.rotation;
 
-        /// <summary>Applies accumulated movement to the actor's position.</summary>
-        public void ProcessMovement()
-        {
-            lock (movement)
-            {
-                if (Actor != null && (settings == null || settings.isActive))
+                _position.z += _moved;
+
+                if (actor.isActive)
                 {
-                    _moved = movement.Sum();
-
-                    _position = Actor.transform.position;
-                    _newRot = Actor.transform.rotation;
-
-                    _position.z = _position.z + _moved;
-
-                    if (Actor.isActive)
-                    {
-                        Actor.transform.position = _position;
-                        Actor.transform.rotation = _newRot;
-                    }
+                    actor.transform.position = _position;
+                    actor.transform.rotation = _newRotation;
                 }
-
-                movement.Clear();
             }
-        }
 
-        /// <summary>MQTT callback that receives movement data from the treadmill.</summary>
-        /// <param name="msg">The message containing the movement value.</param>
-        public void OnMessage(TreadmillMessage msg)
+            movement.Clear();
+        }
+    }
+
+    /// <summary>Receives movement data from the treadmill via MQTT callback.</summary>
+    /// <param name="message">The message containing the movement value.</param>
+    public void OnMessage(TreadmillMessage message)
+    {
+        lock (movement)
         {
-            lock (movement)
-            {
-                movement.Add(msg.movement);
-            }
+            movement.Add(message.movement);
         }
+    }
 
-        /// <summary>Creates or links the settings ScriptableObject for this controller.</summary>
-        /// <param name="assetPath">The path to an existing settings asset, or empty to create new.</param>
-        public override void LinkSettings(string assetPath = "")
+    /// <summary>Creates or links the settings ScriptableObject for this controller.</summary>
+    /// <param name="assetPath">The path to an existing settings asset, or empty to create new.</param>
+    public override void LinkSettings(string assetPath = "")
+    {
+#if UNITY_EDITOR
+        LinearTreadmillSettings asset;
+
+        if (string.IsNullOrEmpty(assetPath))
         {
-            LinearTreadmillSettings asset;
-
-            if (assetPath == "")
-            {
-                asset = ScriptableObject.CreateInstance<LinearTreadmillSettings>();
-                AssetDatabase.CreateAsset(asset, $"Assets/VRSettings/Controllers/{this.gameObject.name}.asset");
-            }
-            else
-            {
-                asset = (LinearTreadmillSettings)
-                    AssetDatabase.LoadAssetAtPath(assetPath, typeof(LinearTreadmillSettings));
-            }
-
-            settings = asset;
+            asset = ScriptableObject.CreateInstance<LinearTreadmillSettings>();
+            AssetDatabase.CreateAsset(asset, $"Assets/VRSettings/Controllers/{gameObject.name}.asset");
         }
-
-        /// <summary>Renders the editor GUI for this controller.</summary>
-        public override void EditMenu()
+        else
         {
-            SerializedObject serializedObject = new SerializedObject(settings);
-
-            if (this.GetType() == typeof(SimulatedLinearTreadmill))
-            {
-                ControllerMenuTitle(settings.isActive, "Simulated Linear Treadmill");
-                EditorGUILayout.LabelField("Device", EditorStyles.boldLabel);
-
-                if (EditorApplication.isPlaying)
-                {
-                    GUI.enabled = false;
-                }
-
-                EditorGUI.indentLevel++;
-                EditorGUILayout.PropertyField(
-                    serializedObject.FindProperty("isActive"),
-                    new GUIContent("Active"),
-                    LayoutSettings.editFieldOp
-                );
-                EditorGUI.indentLevel--;
-                GUI.enabled = true;
-            }
-            else
-            {
-                ControllerMenuTitle(settings.isActive, "Linear Treadmill");
-                EditorGUILayout.LabelField("Device", EditorStyles.boldLabel);
-
-                if (EditorApplication.isPlaying)
-                {
-                    GUI.enabled = false;
-                }
-
-                EditorGUI.indentLevel++;
-                EditorGUILayout.PropertyField(
-                    serializedObject.FindProperty("isActive"),
-                    new GUIContent("Active"),
-                    LayoutSettings.editFieldOp
-                );
-                EditorGUILayout.PropertyField(
-                    serializedObject.FindProperty("deviceName"),
-                    new GUIContent("MQTT Name"),
-                    LayoutSettings.editFieldOp
-                );
-                EditorGUI.indentLevel--;
-                GUI.enabled = true;
-            }
+            asset = (LinearTreadmillSettings)AssetDatabase.LoadAssetAtPath(assetPath, typeof(LinearTreadmillSettings));
         }
+
+        settings = asset;
+#endif
+    }
+
+    /// <summary>Renders the editor GUI for this controller.</summary>
+    public override void EditMenu()
+    {
+#if UNITY_EDITOR
+        SerializedObject serializedObject = new SerializedObject(settings);
+
+        if (this is SimulatedLinearTreadmill)
+        {
+            ControllerMenuTitle(isActive: settings.isActive, type: "Simulated Linear Treadmill");
+            EditorGUILayout.LabelField("Device", EditorStyles.boldLabel);
+
+            if (EditorApplication.isPlaying)
+            {
+                GUI.enabled = false;
+            }
+
+            EditorGUI.indentLevel++;
+            EditorGUILayout.PropertyField(
+                serializedObject.FindProperty("isActive"),
+                new GUIContent("Active"),
+                LayoutSettings.EditFieldOption
+            );
+            EditorGUI.indentLevel--;
+            GUI.enabled = true;
+        }
+        else
+        {
+            ControllerMenuTitle(isActive: settings.isActive, type: "Linear Treadmill");
+            EditorGUILayout.LabelField("Device", EditorStyles.boldLabel);
+
+            if (EditorApplication.isPlaying)
+            {
+                GUI.enabled = false;
+            }
+
+            EditorGUI.indentLevel++;
+            EditorGUILayout.PropertyField(
+                serializedObject.FindProperty("isActive"),
+                new GUIContent("Active"),
+                LayoutSettings.EditFieldOption
+            );
+            EditorGUILayout.PropertyField(
+                serializedObject.FindProperty("deviceName"),
+                new GUIContent("MQTT Name"),
+                LayoutSettings.EditFieldOption
+            );
+            EditorGUI.indentLevel--;
+            GUI.enabled = true;
+        }
+#endif
+    }
+
+    /// <summary>Defines the MQTT message structure for treadmill movement data.</summary>
+    public class TreadmillMessage
+    {
+        /// <summary>The movement value received from the treadmill device.</summary>
+        public float movement;
     }
 }

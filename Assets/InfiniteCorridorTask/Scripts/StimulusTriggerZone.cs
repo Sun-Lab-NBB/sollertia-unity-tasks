@@ -15,6 +15,8 @@
 using Gimbl;
 using UnityEngine;
 
+namespace SL.Tasks;
+
 /// <summary>
 /// Manages stimulus delivery based on animal behavior within the trigger zone.
 /// The trigger mode is determined by the presence of child GuidanceZone or OccupancyZone components.
@@ -23,7 +25,7 @@ public class StimulusTriggerZone : MonoBehaviour
 {
     /// <summary>
     /// Determines whether the stimulus boundary should be visible when this zone is active.
-    /// Set at task creation time from the task template's show_stimulus_collision_boundary per trial type.
+    /// Set at task creation time from the task template's showStimulusCollisionBoundary per trial type.
     /// </summary>
     public bool showBoundary = false;
 
@@ -44,7 +46,9 @@ public class StimulusTriggerZone : MonoBehaviour
     /// <summary>The child OccupancyZone that determines occupancy mode behavior, if present.</summary>
     private OccupancyZone _occupancyZone;
 
-    /// <summary>Determines whether this zone operates in occupancy mode based on presence of OccupancyZone child.</summary>
+    /// <summary>
+    /// Determines whether this zone operates in occupancy mode based on presence of OccupancyZone child.
+    /// </summary>
     private bool IsOccupancyMode => _occupancyZone != null;
 
     /// <summary>The reference to the Task for checking guidance mode state.</summary>
@@ -57,28 +61,28 @@ public class StimulusTriggerZone : MonoBehaviour
     private MQTTChannel _lickTrigger;
 
     /// <summary>Initializes the zone by finding child zones and setting up MQTT channels.</summary>
-    void Start()
+    private void Start()
     {
         _task = FindAnyObjectByType<Task>();
         if (_task == null)
         {
-            Debug.LogError($"StimulusTriggerZone ({gameObject.name}): No Task found in scene");
+            Debug.LogError($"StimulusTriggerZone ({gameObject.name}): No Task found in scene.");
             enabled = false;
             return;
         }
 
-        // Finds child zones that determine behavior mode
+        // Finds child zones that determine behavior mode.
         _guidanceZone = GetComponentInChildren<GuidanceZone>();
         _occupancyZone = GetComponentInChildren<OccupancyZone>();
 
-        // Sets up MQTT channels
+        // Sets up MQTT channels.
         _stimulusTrigger = new MQTTChannel("Gimbl/Stimulus/");
-        _lickTrigger = new MQTTChannel("LickPort/", true);
-        _lickTrigger.Event.AddListener(OnLickDetected);
+        _lickTrigger = new MQTTChannel("LickPort/", isListener: true);
+        _lickTrigger.receivedEvent.AddListener(OnLickDetected);
     }
 
     /// <summary>Updates the zone state each frame, handling stimulus trigger logic based on mode.</summary>
-    void Update()
+    private void Update()
     {
         if (!isActive)
             return;
@@ -93,6 +97,39 @@ public class StimulusTriggerZone : MonoBehaviour
         }
     }
 
+    /// <summary>Sets the zone state to active when the animal enters the trigger zone collider.</summary>
+    /// <param name="collider">The collider that entered or exited the trigger zone.</param>
+    private void OnTriggerEnter(Collider collider)
+    {
+        _inZone = true;
+    }
+
+    /// <summary>Sets the zone state to inactive when the animal exits the trigger zone collider.</summary>
+    /// <param name="collider">The collider that entered or exited the trigger zone.</param>
+    private void OnTriggerExit(Collider collider)
+    {
+        _inZone = false;
+    }
+
+    /// <summary>Removes MQTT event listeners when the component is destroyed.</summary>
+    private void OnDestroy()
+    {
+        _lickTrigger?.receivedEvent.RemoveListener(OnLickDetected);
+    }
+
+    /// <summary>Resets the zone state for a new lap.</summary>
+    /// <remarks>Invoked by ResetZone when the animal enters the reset zone.</remarks>
+    public void ResetState()
+    {
+        isActive = true;
+        _lickDetectedInZone = false;
+        _inZone = false;
+        if (TryGetComponent<MeshRenderer>(out var meshRenderer))
+        {
+            meshRenderer.enabled = showBoundary;
+        }
+    }
+
     /// <summary>
     /// Handles lick mode behavior. When guidance is disabled, the animal must lick in the zone.
     /// When guidance is enabled with a GuidanceZone, the animal can lick in the zone or reach the
@@ -100,29 +137,29 @@ public class StimulusTriggerZone : MonoBehaviour
     /// </summary>
     private void UpdateLickMode()
     {
-        if (_task.requireLick) // Guidance mode disabled, animal must lick for stimulus
+        if (_task.requireLick)
         {
             if (_inZone && _lickDetectedInZone)
             {
                 TriggerStimulus();
             }
         }
-        else if (_guidanceZone != null) // Guidance mode with GuidanceZone
+        else if (_guidanceZone != null)
         {
-            // Animal can receive stimulus by licking anywhere in the trigger zone
+            // Animal can receive stimulus by licking anywhere in the trigger zone.
             if (_inZone && _lickDetectedInZone)
             {
                 TriggerStimulus();
             }
-            // Or if animal reaches the guidance zone, delivers the stimulus anyway
+            // Or if animal reaches the guidance zone, delivers the stimulus anyway.
             else if (_guidanceZone.inZone)
             {
                 TriggerStimulus();
             }
         }
-        else // Guidance mode but no GuidanceZone
+        else
         {
-            // Animal gets stimulus as soon as it enters the stimulus zone
+            // Animal gets stimulus as soon as it enters the stimulus zone.
             if (_inZone)
             {
                 TriggerStimulus();
@@ -137,68 +174,36 @@ public class StimulusTriggerZone : MonoBehaviour
     /// </summary>
     private void UpdateOccupancyMode()
     {
-        // In occupancy mode, stimulus is only triggered by boundary collision
-        // when the boundary is still armed (occupancy requirement not met).
-        // The OccupancyZone handles the timer and MQTT messages.
-
-        // Boundary collision triggers stimulus only when boundary is ARMED
+        // Boundary collision triggers stimulus only when boundary is armed (occupancy requirement not met).
         if (_inZone && _occupancyZone != null && !_occupancyZone.boundaryDisarmed)
         {
             TriggerStimulus();
         }
     }
 
-    /// <summary>Called when the animal enters the trigger zone collider.</summary>
-    void OnTriggerEnter(Collider collider)
-    {
-        _inZone = true;
-    }
-
-    /// <summary>Called when the animal exits the trigger zone collider.</summary>
-    void OnTriggerExit(Collider collider)
-    {
-        _inZone = false;
-    }
-
     /// <summary>Triggers the stimulus, hides the boundary, and sends the MQTT message.</summary>
     private void TriggerStimulus()
     {
-        Debug.Log("StimulusTriggerZone: Stimulus triggered");
+        Debug.Log("StimulusTriggerZone: Stimulus triggered.");
         if (TryGetComponent<MeshRenderer>(out var meshRenderer))
         {
-            meshRenderer.enabled = false; // Hides boundary
+            meshRenderer.enabled = false;
         }
-        _stimulusTrigger.Send(); // Sends stimulus message over MQTT
-        // Prevents multiple triggers
+        _stimulusTrigger.Send();
         isActive = false;
         _lickDetectedInZone = false;
     }
 
     /// <summary>
-    /// MQTT callback that handles lick detection messages.
-    /// Records that a lick occurred while in the zone (only relevant in lick mode).
+    /// Records that a lick occurred while in the zone.
+    /// Only relevant in lick mode when the zone is active.
     /// </summary>
     private void OnLickDetected()
     {
-        Debug.Log("Lick!");
+        Debug.Log("StimulusTriggerZone: Lick detected.");
         if (isActive && _inZone && !IsOccupancyMode)
         {
             _lickDetectedInZone = true;
-        }
-    }
-
-    /// <summary>
-    /// Resets the zone state for a new lap.
-    /// Called by ResetZone when the animal enters the reset zone.
-    /// </summary>
-    public void ResetState()
-    {
-        isActive = true;
-        _lickDetectedInZone = false;
-        _inZone = false;
-        if (TryGetComponent<MeshRenderer>(out var meshRenderer))
-        {
-            meshRenderer.enabled = showBoundary;
         }
     }
 }

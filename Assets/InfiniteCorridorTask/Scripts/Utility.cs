@@ -3,6 +3,8 @@
 /// </summary>
 using UnityEngine;
 
+namespace SL.Tasks;
+
 /// <summary>
 /// Static utility class for prefab measurements and other helper functions.
 /// </summary>
@@ -13,10 +15,10 @@ public static class Utility
     /// <returns>An array of lengths corresponding to each prefab's z-axis extent.</returns>
     public static float[] GetSegmentLengths(GameObject[] segmentPrefabs)
     {
-        int nSegments = segmentPrefabs.Length;
-        float[] segmentLengths = new float[nSegments];
+        int segmentCount = segmentPrefabs.Length;
+        float[] segmentLengths = new float[segmentCount];
 
-        for (int i = 0; i < nSegments; i++)
+        for (int i = 0; i < segmentCount; i++)
         {
             segmentLengths[i] = GetPrefabLength(segmentPrefabs[i]);
         }
@@ -29,16 +31,14 @@ public static class Utility
     /// <returns>The z-axis size of the combined bounds, or 0 if no renderers found.</returns>
     public static float GetPrefabLength(GameObject prefab)
     {
-        // Gets all Renderers in the prefab
         Renderer[] renderers = prefab.GetComponentsInChildren<Renderer>();
 
         if (renderers.Length == 0)
         {
-            Debug.LogWarning($"Utility.GetPrefabLength: No renderers found on prefab '{prefab.name}'");
+            Debug.LogWarning($"Utility.GetPrefabLength: No renderers found on prefab '{prefab.name}'.");
             return 0f;
         }
 
-        // Calculates the combined bounds
         Bounds combinedBounds = renderers[0].bounds;
 
         for (int i = 1; i < renderers.Length; i++)
@@ -46,7 +46,6 @@ public static class Utility
             combinedBounds.Encapsulate(renderers[i].bounds);
         }
 
-        // Returns the z-axis size of the prefab
         return combinedBounds.size.z;
     }
 }

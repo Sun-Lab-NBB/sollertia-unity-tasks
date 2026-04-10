@@ -3,8 +3,19 @@
     <option name="myName" value="Project Default" />
     <inspection_tool class="DuplicatedCode" enabled="false" level="WEAK WARNING" enabled_by_default="false" />
     <inspection_tool class="LongLine" enabled="true" level="WARNING" enabled_by_default="true" />
-    <inspection_tool class="PyAugmentAssignmentInspection" enabled="true" level="WEAK WARNING" enabled_by_default="true" />
-    <inspection_tool class="PyBroadExceptionInspection" enabled="true" level="INFORMATION" enabled_by_default="true" editorAttributes="INFORMATION_ATTRIBUTES" />
+    <inspection_tool
+      class="PyAugmentAssignmentInspection"
+      enabled="true"
+      level="WEAK WARNING"
+      enabled_by_default="true"
+    />
+    <inspection_tool
+      class="PyBroadExceptionInspection"
+      enabled="true"
+      level="INFORMATION"
+      enabled_by_default="true"
+      editorAttributes="INFORMATION_ATTRIBUTES"
+    />
     <inspection_tool class="PyPackageRequirementsInspection" enabled="false" level="WARNING" enabled_by_default="false">
       <option name="ignoredPackages">
         <list>
@@ -29,7 +40,12 @@
         </list>
       </option>
     </inspection_tool>
-    <inspection_tool class="PyShadowingBuiltinsInspection" enabled="true" level="WEAK WARNING" enabled_by_default="true">
+    <inspection_tool
+      class="PyShadowingBuiltinsInspection"
+      enabled="true"
+      level="WEAK WARNING"
+      enabled_by_default="true"
+    >
       <option name="ignoredNames">
         <list>
           <option value="print" />
