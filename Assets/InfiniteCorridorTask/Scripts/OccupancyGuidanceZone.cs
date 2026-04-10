@@ -3,7 +3,7 @@
 ///
 /// Used as a child of OccupancyZone to define where guidance mode activates the brake.
 /// When the animal enters this zone in guidance mode (!requireWait), sends a TriggerDelay message
-/// to sl-experiment instructing it to lock the brake for the remaining occupancy duration.
+/// to sollertia-experiment instructing it to lock the brake for the remaining occupancy duration.
 /// </summary>
 using Gimbl;
 using UnityEngine;

@@ -30,13 +30,13 @@ include:
 
 ## Cross-Referenced Library Verification
 
-Sun Lab projects often depend on other `ataraxis-*` or `sl-*` libraries. These libraries may be stored
+Sollertia platform projects often depend on other `ataraxis-*` or `sollertia-*` libraries. These libraries may be stored
 locally in the same parent directory as this project (`/home/cyberaxolotl/Desktop/GitHubRepos/`).
 
 **Before writing code that interacts with a cross-referenced library, you MUST:**
 
 1. **Check for local version**: Look for the library in the parent directory (e.g.,
-   `../sl-shared-assets/`, `../gimbl/`).
+   `../sollertia-shared-assets/`, `../gimbl/`).
 
 2. **Compare versions**: If a local copy exists, compare its version against the latest release or
    main branch on GitHub:
@@ -93,15 +93,15 @@ Use skills in combination for different tasks:
 
 ## Related Libraries
 
-This project integrates with other Sun Lab systems:
+This project integrates with other Sollertia platform libraries:
 
 | Library              | Relationship          | Integration Points                                    |
 |----------------------|-----------------------|-------------------------------------------------------|
-| **sl-experiment**    | Data acquisition      | MQTT communication, cue sequence exchange, scene info |
-| **sl-shared-assets** | Configuration schemas | Task template and experiment configuration classes    |
+| **sollertia-experiment**    | Data acquisition      | MQTT communication, cue sequence exchange, scene info |
+| **sollertia-shared-assets** | Configuration schemas | Task template and experiment configuration classes    |
 | **gimbl**            | VR framework          | ActorObject, MQTTChannel, Display system              |
 
-**When working on MQTT integration**, ensure topic names and message formats match sl-experiment expectations:
+**When working on MQTT integration**, ensure topic names and message formats match sollertia-experiment expectations:
 - `CueSequence/` - Sends pre-generated cue byte array
 - `SceneName/` - Sends active Unity scene name
 - `RequireLick/True/`, `RequireLick/False/` - Lick guidance mode control
@@ -111,8 +111,8 @@ This project integrates with other Sun Lab systems:
 
 ## Project Context
 
-This is **sl-unity-tasks**, a Unity 6 project that provides VR behavioral experiment tasks for the Sun Lab's
-mesoscope experiments. It creates infinite corridor environments where animals navigate through visual cue
+This is **sollertia-unity-tasks**, a Unity 6 project that provides VR behavioral experiment tasks for the Sollertia
+platform's mesoscope data acquisition systems. It creates infinite corridor environments where animals navigate through visual cue
 sequences while receiving stimuli based on behavior.
 
 ### Key Areas
@@ -130,7 +130,7 @@ sequences while receiving stimuli based on behavior.
 
 - **Task System**: MonoBehaviour-based controller managing corridor generation and animal tracking
 - **Zone System**: Hierarchical zone components (StimulusTriggerZone, GuidanceZone, OccupancyZone)
-- **MQTT Integration**: Type-safe channels for communication with sl-experiment
+- **MQTT Integration**: Type-safe channels for communication with sollertia-experiment
 - **Configuration**: YAML-based task templates loaded at runtime
 - **Prefab Generation**: Editor tool creates task prefabs from template files
 

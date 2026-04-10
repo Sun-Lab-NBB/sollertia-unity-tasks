@@ -1,7 +1,7 @@
 /// <summary>
 /// Provides the TaskTemplate class that defines a VR task template for prefab generation and runtime configuration.
 ///
-/// These classes mirror the Python task template classes from sl-shared-assets, containing
+/// These classes mirror the Python task template classes from sollertia-shared-assets, containing
 /// the data needed by Unity for VR corridor system prefab generation and runtime.
 /// </summary>
 using System;
@@ -12,7 +12,7 @@ namespace SL.Config;
 
 /// <summary>
 /// Defines a VR task template used by Unity for prefab generation and runtime configuration.
-/// This mirrors the TaskTemplate class from sl-shared-assets task_template_data module.
+/// This mirrors the TaskTemplate class from sollertia-shared-assets task_template_data module.
 /// The template name is derived from the YAML filename during loading.
 /// </summary>
 [Serializable]

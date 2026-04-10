@@ -8,7 +8,7 @@ namespace SL.Config;
 /// <summary>
 /// Defines the spatial configuration of a trial structure for Unity prefabs.
 /// Contains segment mapping, zone positions, and visibility settings.
-/// This mirrors the TrialStructure class from sl-shared-assets task_template_data module.
+/// This mirrors the TrialStructure class from sollertia-shared-assets task_template_data module.
 /// </summary>
 [Serializable]
 public class TrialStructure

@@ -2,7 +2,7 @@
 /// Provides the MQTTClient class for managing connectivity with the MQTT broker.
 ///
 /// Handles connection establishment, topic subscription, and message routing for
-/// bidirectional communication between Unity and external systems like sl-experiment.
+/// bidirectional communication between Unity and external systems like sollertia-experiment.
 /// </summary>
 using System;
 using System.Collections.Generic;
