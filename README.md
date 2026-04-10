@@ -1,29 +1,32 @@
-# sl-unity-tasks
+# sollertia-unity-tasks
 
-A C# Unity project that provides assets to create and execute Virtual Reality (VR) tasks used to facilitate
-experiments in the Sun (NeuroAI) lab.
+Provides assets to create and execute Virtual Reality (VR) tasks for Sollertia platform data acquisition systems.
 
 [![C#](https://tinyurl.com/bdd689s9)](https://docs.microsoft.com/en-us/dotnet/csharp/)
 [![Unity](https://img.shields.io/badge/Unity-6000.3.3f1_LTS-000000?logo=unity&logoColor=white)](https://unity.com/)
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
 ___
 
 ## Detailed Description
 
-This project provides assets and bindings for building Virtual Reality (VR) tasks used by some data acquisition systems
-in the Sun lab to conduct experiments. Primarily, the project is designed to construct an **infinite linear corridor**
-environment and display it to the animal during runtime using a set of three Virtual Reality monitors (screens).
+This project is part of the [Sollertia](https://github.com/Sun-Lab-NBB/sollertia) AI-assisted scientific data
+acquisition and processing platform, built on the [Ataraxis](https://github.com/Sun-Lab-NBB/ataraxis) framework and
+developed in the Sun (NeuroAI) lab at Cornell University. It provides assets and bindings for building Virtual Reality
+(VR) tasks used by Sollertia platform data acquisition systems to conduct experiments. Primarily, the project is
+designed to construct an **infinite linear corridor** environment and display it to the animal during runtime using a
+set of three Virtual Reality monitors (screens).
 
-This project is specialized to work with the main [sl-experiment](https://github.com/Sun-Lab-NBB/sl-experiment) library
-used by all Sun lab data acquisition systems. It uses [MQTT](https://mqtt.org/) to bidirectionally communicate with the
-sl-experiment runtimes and relies on sl-experiment to provide it with the data on animal's behavior during the VR task
+This project is specialized to work with the
+[sollertia-experiment](https://github.com/Sun-Lab-NBB/sollertia-experiment) library used by all Sollertia platform data
+acquisition systems. It uses [MQTT](https://mqtt.org/) to bidirectionally communicate with the sollertia-experiment
+runtimes and relies on sollertia-experiment to provide it with the data on animal's behavior during the VR task
 execution.
 
-This project extends the original [GIMBL](https://github.com/winnubstj/Gimbl) repository, refactored to improve
-flexibility for creating Unity VR tasks. It provides an interface for building and modifying tasks using prefabricated
-assets ('prefabs'), deprecates GIMBL functionality now handled by sl-experiment (logging, unused MQTT topics), and
-removes legacy technical debt.
+This project extends the original [GIMBL](https://github.com/winnubstj/Gimbl) VR framework, which has been inlined
+into the project under `Assets/Gimbl/`. The refactored framework provides an interface for building and modifying tasks
+using prefabricated assets ('prefabs'), deprecates GIMBL functionality now handled by sollertia-experiment (logging,
+unused MQTT topics), and removes legacy technical debt.
 
 ___
 
@@ -33,7 +36,8 @@ ___
 - Supports tasks with multiple corridor segments and probabilistic transitions between them.
 - Includes agentic coding support with Claude Code skills for codebase exploration and style guide compliance.
 - Provides automated task structure verification to validate prefab positions against YAML template constants.
-- GPL 3 License.
+- Exposes an HTTP-based MCP bridge for AI agent integration with the Unity Editor.
+- Apache 2.0 License.
 
 ___
 
@@ -42,12 +46,13 @@ ___
 - [Dependencies](#dependencies)
 - [Installation](#installation)
 - [Usage](#usage)
-- [Creating New Tasks](#creating-new-tasks)
+  - [Creating New Tasks](#creating-new-tasks)
+  - [Loading Existing Tasks](#loading-existing-tasks)
 - [Developer Notes](#developer-notes)
 - [Versioning](#versioning)
 - [Authors](#authors)
 - [License](#license)
-- [Acknowledgements](#acknowledgments)
+- [Acknowledgments](#acknowledgments)
 
 ___
 
@@ -55,19 +60,20 @@ ___
 
 ### Internal Dependencies
 
-These dependencies are automatically installed with the project either as .dll files or as asset collections:
+These dependencies are included in the project as .dll files in `Assets/Plugins/`:
 
-- [M2MQTT package](https://github.com/eclipse/paho.mqtt.m2mqtt) version **4.3.0** (bundled with gimbl).
-- [SharpDX package](https://github.com/sharpdx/SharpDX/tree/master) version **4.2.0** (bundled with gimbl).
+- [MQTTnet](https://github.com/dotnet/MQTTnet) — MQTT 5.0 client for broker communication.
+- [YamlDotNet](https://github.com/aaubry/YamlDotNet) — YAML parser for task template loading.
 
 ### External Dependencies
 
-The user must install these dependencies before working with this Unity project:
+The following dependencies must be installed before working with this Unity project:
 
 - [MQTT broker](https://mosquitto.org/) version **2.0.21**. This project was tested with the broker running locally,
   using the **default** IP (127.0.0.1) and Port (1883) configuration.
 - [Unity Game Engine](https://unity.com/products/unity-engine) version **6000.3.3f1 LTS**.
-- [Blender](https://www.blender.org/download/) version **4.5.0 LTS**.
+- [Blender](https://www.blender.org/download/) version **4.5.0 LTS**. Only required for creating or modifying 3D
+  assets (corridor models). Not needed to run existing tasks.
 
 ___
 
@@ -77,7 +83,7 @@ ___
 
 1. Install the [Unity hub](https://unity.com/download) and use it to install the required Unity Game Engine version.
 2. Download this repository to a local machine using a preferred method, such as Git-cloning. Use one of the stable
-   releases from [GitHub](https://github.com/Sun-Lab-NBB/sl-unity-tasks/releases).
+   releases from [GitHub](https://github.com/Sun-Lab-NBB/sollertia-unity-tasks/releases).
 3. From the Unity Hub, select `add project from disk` and navigate to the local folder containing the downloaded
    repository: <br> <img src="imgs/AddProjectFromDisk.png" width="300"/>
 
@@ -91,8 +97,8 @@ ___
 
 This section discusses how to use existing tasks to conduct experiments and create new tasks using the project.
 **Note!** This library is specifically written to work with the
-[sl-experiment](https://github.com/Sun-Lab-NBB/sl-experiment) library and will likely not work in other contexts
-without modification.
+[sollertia-experiment](https://github.com/Sun-Lab-NBB/sollertia-experiment) library and will likely not work in other 
+contexts without modification.
 
 ### Creating New Tasks
 
@@ -171,8 +177,8 @@ can be paired with either trigger mode.
    - When **Require Wait** is disabled (guidance mode): The library sends an MQTT message requesting the treadmill
      brakes to lock, enforcing the occupancy requirement by preventing the animal from leaving early.
 
-**Note:** The Sun Lab currently uses lick mode for reward delivery (water) and occupancy mode for aversion stimuli
-(air puff), but this pairing is a convention rather than a technical requirement. Future experiments may use different
+**Note:** By convention, lick mode is typically used for reward delivery (water) and occupancy mode for aversion
+stimuli (air puff), but this pairing is not a technical requirement. Future experiments may use different
 stimulus-trigger combinations.
 
 Once each prefab segment is created, an additional prefab must be made for padding. This padding prefab should be a long
@@ -184,8 +190,9 @@ The **task configuration file** ties the segment prefabs together and is require
 files are stored in `Assets/InfiniteCorridorTask/Configurations/` with a `.yaml` extension.
 
 **Note:** The configuration schema is derived from the
-[sl-shared-assets](https://github.com/Sun-Lab-NBB/sl-shared-assets) library and always matches the current state of
-that library's data classes. See `task_template_data.py` in sl-shared-assets for the authoritative schema definition.
+[sollertia-shared-assets](https://github.com/Sun-Lab-NBB/sollertia-shared-assets) library and always matches the 
+current state of that library's data classes. See `task_template_data.py` in sollertia-shared-assets for the 
+authoritative schema definition.
 
 **File Naming Convention:**
 
@@ -229,6 +236,8 @@ The structure is:
         - **name** *(string)*: The unique human-readable label for the cue (e.g., `"A"`, `"Gray"`).
         - **code** *(integer, 0-255)*: The unique integer code for the cue used in logging.
         - **length_cm** *(number)*: The length of the cue in centimeters.
+        - **texture** *(string)*: The filename of the texture image in `Assets/InfiniteCorridorTask/Textures/`
+          (e.g., `"Cue 016 - 4x1.png"`).
 
 - **segments** *(array\<Segment>)*: The list of all segments.
     - **Segment**
@@ -259,30 +268,31 @@ The structure is:
 
 See existing configuration files in `Assets/InfiniteCorridorTask/Configurations/` for examples.
 
-**Important:** This project includes an agentic skill (`/verifying-task-templates`) that validates configuration
-template files against existing prefabs. Developers and AI agents are highly encouraged to use this skill when creating
-or modifying configuration files to ensure zone positions, segment lengths, and other spatial parameters match the
-actual prefab state.
+***Note,*** the [sollertia-shared-assets](https://github.com/Sun-Lab-NBB/sollertia-shared-assets) MCP server provides a
+`validate_prefab_against_template` tool that validates configuration template files against existing prefabs via the
+McpBridge. Developers and AI agents are highly encouraged to use this tool when creating or modifying configuration
+files to ensure zone positions, segment lengths, and other spatial parameters match the actual prefab state.
 
 #### 'CreateTask' Tab
 
 Once the YAML configuration file is created, use the **CreateTask → New Task** command. This will open a file window to
-select the configuration file. Once the file is selected, a secondary prompt will open to name and save the prefab.
-Once created, the prefab can be loaded and executed as any pre-created task that comes with the project (see below).
+select the YAML configuration file. Once the file is selected, a secondary prompt will open to name and save the prefab.
+Once created, the prefab can be loaded and executed as described in [Loading Existing Tasks](#loading-existing-tasks).
 
 <img src="imgs/createTask.png" width="700" alt="">
 
 ### Loading Existing Tasks
 
-Each distribution of the project contains all tasks currently used in the Sun lab. To use an existing task, open the
-Unity project and follow these steps:
+Task prefabs are generated locally using the CreateTask editor tool and saved to
+`Assets/InfiniteCorridorTask/Tasks/`. This directory does not exist in a fresh checkout and is created when the first
+task is generated. To load a task into a scene, follow these steps:
 
 1. Create a new scene by clicking File → New Scene. Instead of using the default scene template, select
-   **ExperimentTemplate** as the template. **Note!** The first time this Unity project opens, it uses an empty scene.
+   **ExperimentTemplate** as the template. ***Note,*** the first time this Unity project opens, it uses an empty scene.
    If prompted, do ***not*** save this empty scene.
    <br> <img src="imgs/newScene.png" width="600">
-2. Navigate to **Assets/InfiniteCorridorTask/Tasks**. This folder contains prefabricated Unity assets (prefabs) for
-   all tasks actively or formerly used to conduct experiments in the Sun lab. Drag the prefab for the desired task into
+2. Navigate to **Assets/InfiniteCorridorTask/Tasks**. This folder contains task prefabs generated via the CreateTask
+   editor tool. Drag the prefab for the desired task into
    the hierarchy window and wait for it to be loaded into the scene. **Note!** If Preferences > Scene View > 3D
    Placement Mode is set to "World Origin," then dragging the prefab into the hierarchy window will automatically
    position the task correctly.
@@ -296,18 +306,20 @@ Unity project and follow these steps:
 4. The *Task* script contains additional parameters which should not need to be modified:
     - **Require Lick**: Determines whether the animal must lick within the stimulus trigger zone to receive the
       stimulus. If disabled (guidance mode), the stimulus is delivered automatically when the animal reaches the
-      guidance zone. **Note!** During sl-experiment runtimes, this parameter is automatically overridden by the
-      sl-experiment GUI and runtime logic.
+      guidance zone. **Note!** During sollertia-experiment runtimes, this parameter is automatically overridden by the
+      sollertia-experiment GUI and runtime logic.
     - **Require Wait**: Determines whether the animal must remain in the occupancy zone for the required duration to
       disarm the trigger zone's start boundary. If disabled (guidance mode), the library sends an MQTT message
-      requesting the treadmill brakes to lock, enforcing the occupancy requirement. **Note!** During sl-experiment
-      runtimes, this parameter is automatically overridden by the sl-experiment GUI and runtime logic.
+      requesting the treadmill brakes to lock, enforcing the occupancy requirement.
+      ***Note,*** during sollertia-experiment runtimes, this parameter is automatically overridden by the
+      sollertia-experiment GUI and runtime logic.
     - **Track Length**: The length of the track's wall cue sequence, in Unity units, to pre-create before runtime. This
       is most relevant for tasks with multiple segments and random transitions between them. Pre-creating the cue
-      sequence before runtime allows sl-experiment to accurately track transitions between trials and support
+      sequence before runtime allows sollertia-experiment to accurately track transitions between trials and support
       trial-specific logic while treating the experiment runtime as a monolithic sequence of trials. **Note!** If the
       animal traverses the entire pregenerated track, the Unity task starts making on the fly decisions about which
-      segment the animal enters at the end of each trial. Likely, this will cause sl-experiment to abort with an error,
+      segment the animal enters at the end of each trial. Likely, this will cause sollertia-experiment to abort
+      with an error,
       as it is not notified of these additional trials. Therefore, **it is advised to pre-generate a long cue sequence
       at each runtime, guaranteeing the animal is not able to fully traverse it at runtime**.
     - **Track seed**: The seed to use for resolving random transitions between segments. This is helpful when running
@@ -332,7 +344,8 @@ Unity project and follow these steps:
    printed, which is likely the true error. Subsequent errors are likely a result of running a broken game loop after
    the initial error. **Note!** The template environment is designed for experiments, where motion and licks should be
    sent over the MQTT protocol. To test the task manually, replace the *linear controller* with a *simulated linear
-   controller*. Consult [Setting Up the Actor](https://github.com/winnubstj/Gimbl?tab=readme-ov-file#setting-up-the-actor)
+   controller*. Consult
+   [Setting Up the Actor](https://github.com/winnubstj/Gimbl?tab=readme-ov-file#setting-up-the-actor)
    for instructions on this process.
 
 ___
@@ -348,9 +361,10 @@ These notes are primarily directed to project developers and task creators.
   that use the same prefab, make a new prefab that is a duplicate of the old one and modify the YAML configuration files
   accordingly.
 * Most changes to the task structure can be implemented by modifying the segment prefabs. However, modifying a prefab
-  may invalidate all specification files using that prefab. The specification file contains a lot of information that
-  needs to match the exact state of each prefab, so it is a good practice to ensure the validity of all specification
-  files after modifying the prefab. Also, it is good practice to recreate the task from the specification file following
+  may invalidate all configuration files using that prefab. The YAML configuration file contains a lot of
+  information that needs to match the exact state of each prefab, so it is a good practice to ensure the validity
+  of all configuration files after modifying the prefab. Also, it is good practice to recreate the task from the
+  YAML configuration file following
   prefab modification. If the newly created task uses the same name as the old task, it will replace the old task
   prefab.
 * The [Loading Existing Tasks](#loading-existing-tasks) section explains how to create a scene to hold the desired task.
@@ -365,26 +379,59 @@ These notes are primarily directed to project developers and task creators.
   changes to assets (prefabs) while avoiding making large changes to the scene. Additionally, it is a good practice to
   close the Unity project before pushing/pulling.
 * The original GIMBL package was designed to log all non-brain-activity experiment data. Since this project is
-  explicitly designed to work with sl-experiment that now does all logging, **all Unity logging has been removed from
-  this project**.
+  explicitly designed to work with sollertia-experiment that now does all logging, **all Unity logging has been removed 
+  from this project**.
 * For information on how to send MQTT messages to Unity, see
   [here](https://github.com/winnubstj/Gimbl/wiki/Example-code-of-MQTT-subscribing-and-publishing).
 
-* Additional cues can be found [here](https://github.com/sprustonlab/vr-visual-cues). To use a new cue:
+* Additional cue textures can be found [here](https://github.com/sprustonlab/vr-visual-cues). To use a new cue:
     1. Convert an `.ai` file to `.png`.
-    2. Import the `.png` into Unity as an asset. Place the asset in the Assets/InfiniteCorridorTask/Textures folder.
-    3. Create a new material or just duplicate one of the existing materials. Currently, all cues are prefab variants of
-       cue A. To keep this structure, duplicate any other material (e.g. CueB). Materials are saved in the
-       Assets/InfiniteCorridorTask/Materials folder.
-    4. Set the material's texture to the new `.png`.
-    5. On the segment being modified, use the Mesh Renderer component to select the new material.
+    2. Import the `.png` into Unity as an asset. Place the asset in the `Assets/InfiniteCorridorTask/Textures/` folder.
+    3. Reference the texture filename in the YAML configuration file's `texture` field for the desired cue entry.
+    4. The CreateTask editor tool automatically generates cue prefabs (with Left and Right Quad children) and materials
+       from the texture references in the YAML file. Existing cue prefabs and materials in
+       `Assets/InfiniteCorridorTask/Cues/` and `Assets/InfiniteCorridorTask/Materials/` are reused if already present.
+
+### MCP Bridge
+
+The project includes an MCP bridge plugin (`McpBridge`) that starts an HTTP listener on `localhost:8090` when the
+Unity Editor loads. This bridge enables AI agents (via the
+[sollertia-shared-assets](https://github.com/Sun-Lab-NBB/sollertia-shared-assets) MCP server) to control the Unity
+Editor programmatically. The following tools are available through the bridge:
+
+| Tool                              | Description                                                        |
+|-----------------------------------|--------------------------------------------------------------------|
+| `generate_task_prefab`            | Creates a task prefab from a YAML template                         |
+| `inspect_prefab`                  | Returns hierarchy, components, and zone details of a prefab        |
+| `validate_prefab_against_template`| Validates that prefab zone positions match the template            |
+| `list_unity_assets`               | Lists Unity assets by type within a search path                    |
+| `list_scenes`                     | Lists all scene assets and identifies the active scene             |
+| `open_scene`                      | Opens a scene in the Editor                                        |
+| `create_scene`                    | Creates a new scene from the ExperimentTemplate                    |
+| `enter_play_mode`                 | Enters Play Mode                                                   |
+| `exit_play_mode`                  | Exits Play Mode                                                    |
+| `get_play_state`                  | Returns the current play state and active scene name               |
+
+### AI-Assisted Development
+
+Claude Code skills and AI development assets for this project are distributed through two marketplaces:
+
+- [sollertia](https://github.com/Sun-Lab-NBB/sollertia) marketplace: Provides MCP server registration and
+  configuration-specific skills via the **configuration** plugin. Install this plugin to register the
+  sollertia-shared-assets MCP server (which relays commands to the McpBridge) with compatible MCP clients.
+- [ataraxis](https://github.com/Sun-Lab-NBB/ataraxis) marketplace: Provides shared development skills that enforce
+  coding conventions (C# style, README style, commit messages) and general-purpose codebase exploration tools via the
+  **automation** plugin.
+
+Install both marketplace plugins to make all associated skills and development tools available to compatible AI coding
+agents.
 
 ___
 
 ## Versioning
 
 This project uses [Semantic Versioning](https://semver.org/). For available versions, see the
-[tags on this repository](https://github.com/Sun-Lab-NBB/sl-unity-tasks/tags).
+[tags on this repository](https://github.com/Sun-Lab-NBB/sollertia-unity-tasks/tags).
 
 ___
 
@@ -397,7 +444,7 @@ ___
 
 ## License
 
-This project is licensed under the GPL3 License: see the [LICENSE](LICENSE) file for details.
+This project is licensed under the Apache 2.0 License: see the [LICENSE](LICENSE) file for details.
 
 ___
 
